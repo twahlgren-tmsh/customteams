@@ -163,7 +163,8 @@ async function clockifyCost(wid: string, key: string, projectId: string) {
     method: "POST",
     headers: { "X-Api-Key": key, "Content-Type": "application/json" },
     body: JSON.stringify({
-      dateRangeStart: "2023-01-01T00:00:00.000Z",
+      // plan caps how far back reports can go (~1yr); stay inside it
+      dateRangeStart: new Date(Date.now() - 360 * 864e5).toISOString(),
       dateRangeEnd: new Date().toISOString(),
       amountShown: "COST",
       summaryFilter: { groups: ["PROJECT"] },

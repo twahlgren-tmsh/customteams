@@ -197,6 +197,31 @@ Deno.serve(async (req) => {
     const { data: u } = await sb.auth.getUser(auth.replace("Bearer ", ""));
     if (!u?.user) return json({ error: "Not authorized" }, 401);
 
+    // ---- one-time labor backfill: pull Clockify cost for every linked order ----
+    const url = new URL(req.url);
+    let mode = url.searchParams.get("mode");
+    if (!mode) { try { const b = await req.clone().json(); mode = b && b.mode; } catch (_e) { /* no body */ } }
+    if (mode === "labor") {
+      if (!(CLK_KEY && CLK_WID)) return json({ error: "Clockify not configured" }, 400);
+      const { data: linked } = await sb.from("orders")
+        .select("id, clockify_project_id").not("clockify_project_id", "is", null);
+      const t0 = Date.now();
+      let done = 0, remaining = 0;
+      for (const o of (linked || [])) {
+        if (Date.now() - t0 > 120_000) { remaining++; continue; }
+        try {
+          const cost = await clockifyCost(CLK_WID, CLK_KEY, o.clockify_project_id);
+          if (cost !== null) {
+            await sb.from("order_financials").upsert(
+              { order_id: o.id, labor_cost: cost }, { onConflict: "order_id" },
+            );
+            done++;
+          }
+        } catch (_e) { /* skip */ }
+      }
+      return json({ ok: true, mode: "labor", linkedTotal: (linked || []).length, done, remaining });
+    }
+
     const shopToken = SHOP_STATIC ||
       await shopifyToken(SHOP_DOMAIN, SHOP_CLIENT_ID, SHOP_CLIENT_SECRET);
     const orders = await shopifyOrders(SHOP_DOMAIN, shopToken, 50);

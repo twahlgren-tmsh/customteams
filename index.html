@@ -387,7 +387,17 @@ document.addEventListener('click',e=>{
   else if(t.dataset.rmmock){sb.from('orders').update({mockup_url:null}).eq('id',t.dataset.rmmock).then(()=>loadData().then(render));}
 });
 document.getElementById('q').addEventListener('input',renderList);
-document.getElementById('refreshBtn').onclick=async()=>{toast('Refreshing…');await loadData();render();toast('Up to date ✓');};
+document.getElementById('refreshBtn').onclick=async()=>{
+  const b=document.getElementById('refreshBtn');b.disabled=true;const o=b.textContent;b.textContent='↻ Syncing…';
+  try{
+    toast('Pulling new orders from Shopify…');
+    const {data,error}=await sb.functions.invoke('sync-orders');
+    if(error){toast('Sync error — showing saved data');}
+    else if(data&&data.ok){toast(`Synced ✓  +${data.created} new · ${data.updated} updated`);}
+    else if(data&&data.error){toast('Sync: '+data.error);}
+  }catch(e){toast('Sync unavailable — showing saved data');}
+  await loadData();render();b.disabled=false;b.textContent=o;
+};
 document.getElementById('addCustBtn').onclick=()=>document.getElementById('addCust').classList.toggle('open');
 document.getElementById('ncCancel').onclick=()=>document.getElementById('addCust').classList.remove('open');
 document.getElementById('ncSave').onclick=()=>{const n=document.getElementById('ncName').value.trim();if(!n)return;addCustomer(n,document.getElementById('ncContact').value.trim());document.getElementById('ncName').value='';document.getElementById('ncContact').value='';document.getElementById('addCust').classList.remove('open');};

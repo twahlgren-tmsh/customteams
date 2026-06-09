@@ -166,7 +166,10 @@ async function clockifyCost(wid: string, key: string, projectId: string) {
       // plan caps how far back reports can go (~1yr); stay inside it
       dateRangeStart: new Date(Date.now() - 360 * 864e5).toISOString(),
       dateRangeEnd: new Date().toISOString(),
-      amountShown: "COST",
+      // EARNED = billable amount from per-person hourly rates (the "Amount"
+      // shown on the Clockify projects screen). COST/PROFIT need the paid
+      // cost-analysis toggle; EARNED does not.
+      amountShown: "EARNED",
       summaryFilter: { groups: ["PROJECT"] },
       projects: { ids: [projectId], contains: "CONTAINS" },
     }),

@@ -41,9 +41,14 @@ const json = (body: unknown, status = 200) =>
 // CS Classic Skull, LO LUXE Original, LP LUXE Ponytail, LT/LTE LUXE Euro, LS LUXE Skull.
 const STYLE_RE = /^CSH-(CO|CS|CP|CTE|CT|LO|LS|LP|LTE|LT)(?:-|$)/i;
 const normStyle = (c: string) => { c = c.toUpperCase(); return c === "CTE" ? "CT" : c === "LTE" ? "LT" : c; };
-// Per-hat materials cost (from TMSH business brief). Custom print = Little Cocalico; everything else = MDG solid.
-const COCALICO: Record<string, number> = { CO: 7.05, CP: 5.73, CT: 6.72, CS: 2.68, LO: 5.14, LP: 6.85, LT: 4.54, LS: 2.08 };
+// Per-hat materials cost (from TMSH business brief).
+// MDG = full materials on a solid base ($2.95/yd cotton). Used for embroidery, solid & wholesale.
 const MDG: Record<string, number> = { CO: 1.39, CP: 1.28, CT: 1.46, CS: 0.66, LO: 1.90, LP: 2.41, LT: 1.51, LS: 0.87 };
+// Custom print = Little Cocalico fabric @ $25/yd (yards rounded to nearest whole, per order) + the
+// non-fabric materials (elastic/ribbon/toggle/satin/label/bag) below.
+const COTTON_IN: Record<string, number> = { CO: 14, CP: 11, CT: 13, CS: 5, LO: 8, LP: 11, LT: 7.5, LS: 3 }; // cotton inches per hat
+const OTHER: Record<string, number> = { CO: 0.24, CP: 0.38, CT: 0.39, CS: 0.25, LO: 1.24, LP: 1.51, LT: 0.90, LS: 0.62 }; // non-fabric materials per hat
+const COCALICO_YD = 25;
 const DIGI: Record<string, number> = { SIM: 9, COM: 14 }; // digitizing fee added to materials
 
 function parseNote(note: string): Record<string, string> {
@@ -310,6 +315,7 @@ Deno.serve(async (req) => {
       // ---- line items → hats, styles, type, digitizing ----
       const styleCount: Record<string, number> = {};
       let hats = 0, hasPrint = false, hasEmb = false, hasDigit = false, hasWhole = false, materials = 0;
+      let printYards = 0, printOther = 0;
       for (const e of o.lineItems.edges) {
         const li = e.node;
         const sku = (li.sku || "");
@@ -325,11 +331,16 @@ Deno.serve(async (req) => {
           const code = normStyle(m[1]);
           styleCount[code] = (styleCount[code] || 0) + li.quantity;
           hats += li.quantity;
-          const unit = (tt === "CPSH") ? (COCALICO[code] || 0) : (MDG[code] || 0);
-          materials += li.quantity * unit;
+          if (tt === "CPSH") { // custom-printed hat → Little Cocalico fabric (by the yard) + other materials
+            printYards += li.quantity * (COTTON_IN[code] || 0) / 36;
+            printOther += li.quantity * (OTHER[code] || 0);
+          } else { // embroidery / solid / wholesale base → full MDG materials
+            materials += li.quantity * (MDG[code] || 0);
+          }
         }
       }
       if (hats < 5) { skipped++; continue; }
+      if (printYards > 0) materials += Math.round(printYards) * COCALICO_YD + printOther;
       materials = Math.round(materials * 100) / 100;
       const styles = Object.entries(styleCount).map(([c, n]) => `${n} ${c}`).join(" + ");
 

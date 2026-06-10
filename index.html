@@ -251,9 +251,22 @@ function statusPill(s){const c=s==='Delivered'?'deliv':(s==='Shipped'?'':(s==='O
 
 /* ---------- auth ---------- */
 async function initAuth(){
-  const {data:{session}}=await sb.auth.getSession();
-  if(session) enterApp(); else showLogin();
-  sb.auth.onAuthStateChange((_e,s)=>{ if(s) enterApp(); else showLogin(); });
+  const recovering=location.hash.indexOf('type=recovery')>=0;
+  sb.auth.onAuthStateChange((event,s)=>{ if(event==='PASSWORD_RECOVERY'||(recovering&&event==='SIGNED_IN')){showRecovery();return;} if(s) enterApp(); else showLogin(); });
+  if(!recovering){ const {data:{session}}=await sb.auth.getSession(); if(session) enterApp(); else showLogin(); }
+}
+function showRecovery(){
+  document.getElementById('appWrap').classList.add('hidden');
+  const lg=document.getElementById('login');lg.classList.remove('hidden');
+  lg.querySelector('.card').innerHTML='<div class="mk"><span>tm</span></div><h1>Set a new password</h1><p>Account recovery</p><input id="npPass" type="password" placeholder="New password (min 6 characters)" autocomplete="new-password"><button class="btn" id="npBtn">Update password</button><div class="err" id="npErr"></div>';
+  const go=async()=>{const pw=document.getElementById('npPass').value;const er=document.getElementById('npErr');
+    if(!pw||pw.length<6){er.textContent='Password must be at least 6 characters.';return;}
+    const {error}=await sb.auth.updateUser({password:pw});
+    if(error){er.textContent=error.message;return;}
+    er.style.color='#2c6b4f';er.textContent='Password updated! Loading your account…';
+    setTimeout(()=>{location.href=location.pathname;},1400);};
+  document.getElementById('npBtn').onclick=go;
+  document.getElementById('npPass').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
 }
 function showLogin(){document.getElementById('login').classList.remove('hidden');document.getElementById('appWrap').classList.add('hidden');}
 async function enterApp(){

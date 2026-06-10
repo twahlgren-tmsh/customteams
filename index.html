@@ -170,8 +170,18 @@ button{font-family:var(--sans);cursor:pointer}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(40px);background:var(--dark);color:#fff;padding:12px 20px;border-radius:12px;box-shadow:0 10px 30px rgba(4,88,99,.3);font-size:13.5px;font-weight:600;max-width:90%;opacity:0;transition:.25s;z-index:120;white-space:pre-line}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}#toast.err{background:#9c3b3b}
 
+.anabody{padding:16px 22px 26px}
+.anabody .drange{margin-bottom:14px}
+.anagrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:4px}
+.anagrid .stat{min-width:0}
+
+/* in-progress / analytics open above the order list on small screens */
+@media(max-width:820px){.grid.topview .detail{order:-1}}
+
 /* ---------- mobile phone ---------- */
 @media(max-width:600px){
+  .anabody{padding:14px}
+  .anagrid{grid-template-columns:repeat(2,1fr);gap:8px}
   .app{padding:0 12px 24px}
   .hero{padding:calc(14px + env(safe-area-inset-top)) 16px 18px;margin:0 -12px 14px;border-radius:0 0 18px 18px}
   .herorow{gap:12px}
@@ -359,19 +369,47 @@ let statRange='all',cFrom='',cTo='';
 function rangeStart(r){const n=new Date();if(r==='30')return new Date(n-30*864e5);if(r==='90')return new Date(n-90*864e5);if(r==='365')return new Date(n-365*864e5);if(r==='ytd')return new Date(n.getFullYear(),0,1);return null;}
 function inStatRange(ds){if(statRange==='custom'){if(!ds)return false;if(cFrom&&ds<cFrom)return false;if(cTo&&ds>cTo)return false;return true;}if(statRange==='all')return true;const s=rangeStart(statRange);if(!s)return true;return !!ds&&new Date(ds+'T00:00:00')>=s;}
 function renderStats(){
+  const act=pendingOrders().length;
+  const totAll=state.reduce((m,c)=>m+c.orders.length,0);
+  const h='<div class="stat click'+(view==='pending'?' on':'')+'" id="pendStat"><b>'+act+'</b><span>In progress ▸</span></div>'+
+    '<div class="stat click'+(view==='analytics'?' on':'')+'" id="anaStat"><b>'+totAll+'</b><span>Analytics ▸</span></div>';
+  document.getElementById('stats').innerHTML=h;
+  const ps=document.getElementById('pendStat');if(ps)ps.onclick=()=>{view=view==='pending'?'detail':'pending';render();if(view==='pending')mScroll();};
+  const as=document.getElementById('anaStat');if(as)as.onclick=()=>{view=view==='analytics'?'detail':'analytics';render();if(view==='analytics')mScroll();};
+}
+function rangeLabel(){const m={'30':'Last 30 days','90':'Last 90 days','ytd':'Year to date','365':'Last 12 months','all':'All time','custom':(cFrom||'…')+' → '+(cTo||'…')};return m[statRange]||'All time';}
+function renderAnalytics(){
   const chips=[['30','30 days'],['90','90 days'],['ytd','YTD'],['365','1 year'],['all','All time'],['custom','Custom']];
   const ord=[];state.forEach(c=>c.orders.forEach(o=>{if(inStatRange(o.date))ord.push({c,o});}));
-  const custCount=new Set(ord.map(x=>x.c.id)).size, tot=ord.length, rep=state.filter(c=>c.orders.filter(o=>inStatRange(o.date)).length>1).length, act=pendingOrders().length;
-  let h='<div class="drange">'+chips.map(([k,l])=>'<button data-range="'+k+'" class="'+(statRange===k?'on':'')+'">'+l+'</button>').join('')+(statRange==='custom'?'<input type="date" id="cfrom" value="'+cFrom+'" title="From"><span class="dsep">–</span><input type="date" id="cto" value="'+cTo+'" title="To">':'')+'</div>';
-  h+='<div class="stat"><b>'+custCount+'</b><span>Customers</span></div><div class="stat"><b>'+tot+'</b><span>Orders</span></div><div class="stat"><b>'+rep+'</b><span>Repeat</span></div>'+
-    '<div class="stat click'+(view==='pending'?' on':'')+'" id="pendStat"><b>'+act+'</b><span>In progress ▸</span></div>';
-  if(isLead){const inv=ord.reduce((m,x)=>m+(num(x.o.fin.inv)||0),0);const prof=ord.reduce((m,x)=>m+(profit(x.o.fin)||0),0);h+='<div class="stat fin"><b>'+money(inv)+'</b><span>Invoiced</span></div><div class="stat fin"><b>'+money(prof)+'</b><span>Profit</span></div>';}
-  document.getElementById('stats').innerHTML=h;
-  const ps=document.getElementById('pendStat');if(ps)ps.onclick=()=>{view=view==='pending'?'detail':'pending';render();};
-  document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{statRange=b.dataset.range;renderStats();});
+  const tot=ord.length;
+  const custCount=new Set(ord.map(x=>x.c.id)).size;
+  const rep=state.filter(c=>c.orders.filter(o=>inStatRange(o.date)).length>1).length;
+  const hats=ord.reduce((m,x)=>m+(num(x.o.hats)||0),0);
+  const avgHats=tot?Math.round(hats/tot):0;
+  const td=[],dd=[];
+  ord.forEach(({o})=>{if(o.date&&o.ship){const a=(new Date(o.ship)-new Date(o.date))/864e5;if(a>=0&&a<400)td.push(a);}if(o.date&&o.delivered){const b=(new Date(o.delivered)-new Date(o.date))/864e5;if(b>=0&&b<400)dd.push(b);}});
+  const avg=a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;
+  const tShip=avg(td),tDel=avg(dd);
+  const typeCount={};ord.forEach(({o})=>(o.type||[]).forEach(t=>typeCount[t]=(typeCount[t]||0)+1));
+  let inv=0,prof=0,mat=0,lab=0,ship=0,invN=0;
+  ord.forEach(({o})=>{const f=o.fin||{};const i=num(f.inv);if(i!=null){inv+=i;invN++;}const p=profit(f);if(p!=null)prof+=p;mat+=num(f.mat)||0;lab+=laborOf(f);ship+=num(f.shipCost)||0;});
+  const aov=invN?inv/invN:null, avgMargin=inv?Math.round(prof/inv*100):null;
+  const card=(l,v,x)=>'<div class="stat '+(x||'')+'"><b>'+v+'</b><span>'+l+'</span></div>';
+  const chipsH='<div class="drange">'+chips.map(([k,l])=>'<button data-range="'+k+'" class="'+(statRange===k?'on':'')+'">'+l+'</button>').join('')+(statRange==='custom'?'<input type="date" id="cfrom" value="'+cFrom+'" title="From"><span class="dsep">–</span><input type="date" id="cto" value="'+cTo+'" title="To">':'')+'</div>';
+  let body='<div class="secthead" style="border-top:none;padding-top:0">Volume</div><div class="anagrid">'+
+    card('Customers',custCount)+card('Orders',tot)+card('Repeat customers',rep)+card('Total hats',hats)+card('Avg hats / order',avgHats)+'</div>';
+  body+='<div class="secthead">Production timing</div><div class="anagrid">'+
+    card('Avg order → shipped',tShip==null?'—':tShip+' days')+card('Avg order → delivered',tDel==null?'—':tDel+' days')+'</div>';
+  if(isLead){body+='<div class="secthead">Financials</div><div class="anagrid">'+
+    card('Invoiced',money(inv),'fin')+card('Profit',money(prof),'fin')+card('Avg order value',money(aov),'fin')+card('Avg margin',avgMargin==null?'—':avgMargin+'%','fin')+
+    card('Avg profit / order',money(tot?prof/tot:null),'fin')+card('Avg materials / order',money(tot?mat/tot:null),'fin')+card('Avg labor / order',money(tot?lab/tot:null),'fin')+card('Avg shipping cost / order',money(tot?ship/tot:null),'fin')+'</div>';}
+  const types=Object.keys(typeCount);
+  if(types.length){body+='<div class="secthead">Order mix</div><div class="anagrid">'+types.map(t=>card(t,typeCount[t])).join('')+'</div>';}
+  document.getElementById('detail').innerHTML='<div class="dhead"><div><h2>Analytics</h2><div class="meta">'+rangeLabel()+' · '+tot+' order'+(tot===1?'':'s')+'</div></div><div class="acts"><button class="link" data-closeana="1">Close</button></div></div><div class="anabody">'+chipsH+body+'</div>';
+  document.querySelectorAll('#detail [data-range]').forEach(b=>b.onclick=()=>{statRange=b.dataset.range;renderDetail();});
   const cf=document.getElementById('cfrom'),ct=document.getElementById('cto');
-  if(cf)cf.onchange=()=>{cFrom=cf.value;renderStats();};
-  if(ct)ct.onchange=()=>{cTo=ct.value;renderStats();};
+  if(cf)cf.onchange=()=>{cFrom=cf.value;renderDetail();};
+  if(ct)ct.onchange=()=>{cTo=ct.value;renderDetail();};
 }
 function custTitle(c){const o=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return (o&&o.iname)||c.name;}
 function custInames(c){return c.orders.map(o=>o.iname||'').join(' ');}
@@ -409,12 +447,13 @@ function renderPending(){const rows=pendingOrders();
   document.getElementById('detail').innerHTML='<div class="dhead"><div><h2>In progress</h2><div class="meta">'+rows.length+' open · by deadline</div></div><div class="acts"><button class="link" data-closepend="1">Close</button></div></div><div class="pending">'+(rows.length?'<table class="ptab"><thead><tr><th>Customer</th><th>Order</th><th>Status</th><th>Type</th><th>Deadline</th></tr></thead><tbody>'+body+'</tbody></table>':'<div class="empty">All caught up! 🎉</div>')+'</div>';}
 function renderDetail(){
   if(view==='pending'){renderPending();return;}
+  if(view==='analytics'){renderAnalytics();return;}
   const c=state.find(x=>x.id===sel),el=document.getElementById('detail');
   if(!c){el.innerHTML='<div class="empty">Select a customer.</div>';return;}
   const orders=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   el.innerHTML='<div class="dhead"><div><h2>'+esc(c.name)+'</h2><div class="meta">Contact · '+esc(c.contact||'—')+' · '+c.orders.length+' order'+(c.orders.length>1?'s':'')+'</div></div><div class="acts">'+(c.orders.length>1?'<span class="badge rep">Repeat customer</span>':'')+'<button class="link" data-editcust="'+c.id+'">Edit customer</button><button class="btn tiny" data-addorder="'+c.id+'">+ Add order</button></div></div><div class="timeline-wrap"><div class="tl-label">Order history · newest first</div>'+orders.map((o,i)=>editing===o.dbid?orderEdit(c,o):orderView(c,o,i===0)).join('')+'</div>';
 }
-function render(){renderStats();renderList();renderDetail();}
+function render(){renderStats();renderList();renderDetail();const g=document.querySelector('.grid');if(g)g.classList.toggle('topview',view==='pending'||view==='analytics');}
 function mScroll(){if(window.innerWidth<=820){const d=document.getElementById('detail');if(d)setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'start'}),60);}}
 
 /* ---------- mutations ---------- */
@@ -479,8 +518,9 @@ async function importJSON(data){
 
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-cust],[data-edit],[data-save],[data-cancel],[data-del],[data-addorder],[data-editcust],[data-mock],[data-rmmock],[data-go],[data-closepend],[data-step]');
+  const t=e.target.closest('[data-cust],[data-edit],[data-save],[data-cancel],[data-del],[data-addorder],[data-editcust],[data-mock],[data-rmmock],[data-go],[data-closepend],[data-closeana],[data-step]');
   if(!t)return;
+  if(t.dataset.closeana){view='detail';render();return;}
   if(t.dataset.step){clickStep(t.dataset.so,t.dataset.step);}
   else if(t.dataset.cust){sel=t.dataset.cust;editing=null;view='detail';render();mScroll();}
   else if(t.dataset.go){sel=t.dataset.go;editing=null;view='detail';render();mScroll();}

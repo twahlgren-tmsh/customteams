@@ -174,11 +174,18 @@ async function clockifyProjects(wid: string, key: string) {
   }
   return out;
 }
-async function clockifyCreate(wid: string, key: string, name: string) {
+async function clockifyClients(wid: string, key: string) {
+  const r = await fetch(`${CLK}/workspaces/${wid}/clients?page-size=200`, { headers: { "X-Api-Key": key } });
+  if (!r.ok) return [];
+  return await r.json();
+}
+async function clockifyCreate(wid: string, key: string, name: string, clientId?: string | null) {
+  const body: Record<string, unknown> = { name, isPublic: true, billable: true };
+  if (clientId) body.clientId = clientId;
   const r = await fetch(`${CLK}/workspaces/${wid}/projects`, {
     method: "POST",
     headers: { "X-Api-Key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ name, isPublic: true, billable: true }),
+    body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error("Clockify create: " + (await r.text()));
   return await r.json();
@@ -249,6 +256,30 @@ Deno.serve(async (req) => {
         } catch (_e) { /* skip */ }
       }
       return json({ ok: true, mode: "labor", linkedTotal: (linked || []).length, done, remaining });
+    }
+
+    // ---- create a Clockify project for an order when its internal name is set ----
+    if (mode === "createproject") {
+      if (!(CLK_KEY && CLK_WID)) return json({ error: "Clockify not configured" }, 400);
+      let body: any = {}; try { body = await req.clone().json(); } catch (_e) { /* none */ }
+      const orderNumber = body.order_number;
+      if (!orderNumber) return json({ error: "order_number required" }, 400);
+      const { data: ord } = await sb.from("orders")
+        .select("id, internal_name, clockify_project_id").eq("order_number", orderNumber).maybeSingle();
+      if (!ord) return json({ error: "order not found" }, 404);
+      if (ord.clockify_project_id) return json({ ok: true, already: true, projectId: ord.clockify_project_id });
+      const iname = (ord.internal_name || "").trim();
+      if (!iname) return json({ error: "no internal name" }, 400);
+      const projName = `Custom: ${iname}`;
+      let proj: any = null;
+      try { const list = await clockifyProjects(CLK_WID, CLK_KEY); proj = list.find((p) => norm(p.name) === norm(projName)) || null; } catch (_e) { /* ignore */ }
+      if (!proj) {
+        let clientId: string | null = null;
+        try { const clients = await clockifyClients(CLK_WID, CLK_KEY); const c = (clients || []).find((c: any) => norm(c.name) === "custom"); clientId = c ? c.id : null; } catch (_e) { /* ignore */ }
+        proj = await clockifyCreate(CLK_WID, CLK_KEY, projName, clientId);
+      }
+      await sb.from("orders").update({ clockify_project_id: proj.id }).eq("id", ord.id);
+      return json({ ok: true, projectId: proj.id, name: projName });
     }
 
     // backfill mode = historical pre-2025 custom orders (no Clockify); normal = newest 50

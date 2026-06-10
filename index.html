@@ -61,6 +61,9 @@ button{font-family:var(--sans);cursor:pointer}
 .stat.click{cursor:pointer}
 .stat.click:hover{border-color:var(--aqua)}
 .stat.click.on{background:var(--soft);border-color:var(--teal)}
+.drange{display:flex;gap:6px;flex-wrap:wrap;width:100%;margin-bottom:2px}
+.drange button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--muted)}
+.drange button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
 
 .grid{display:grid;grid-template-columns:330px 1fr;gap:18px;align-items:start}
 @media(max-width:820px){.grid{grid-template-columns:1fr}}
@@ -232,7 +235,7 @@ function today(){return new Date().toISOString().slice(0,10);}
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function num(v){const n=parseFloat(v);return isNaN(n)?null:n;}
 function money(v){const n=num(v);return n===null?'—':'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function profit(f){const i=num(f.inv);if(i===null)return null;return i-(num(f.lab)||0)-(num(f.mat)||0);}
+function profit(f){const i=num(f.inv);if(i===null)return null;return i-(num(f.lab)||0)-(num(f.mat)||0)-(num(f.shipCost)||0);}
 function margin(f){const p=profit(f),i=num(f.inv);if(p===null||!i)return null;return Math.round(p/i*100);}
 function latest(c){return c.orders.map(o=>o.date).filter(Boolean).sort().slice(-1)[0]||'';}
 function typeTags(t){return (t||[]).map(x=>'<span class="badge type">'+x+'</span>').join('');}
@@ -270,7 +273,7 @@ document.getElementById('logoutBtn').onclick=async()=>{await sb.auth.signOut();}
 /* ---------- data ---------- */
 function mapOrder(o,fin){return {dbid:o.id,id:o.order_number,iname:o.internal_name||'',date:o.order_date,ship:o.ship_date||o.est_ship,est:o.est_ship,deadline:o.deadline,ideadline:o.internal_deadline,delivered:o.delivered_date,
   type:o.order_type||[],status:o.status,digitizing:o.has_digitizing,styles:o.styles,scrub:o.scrub_color,logo:o.logo,ribbon:o.ribbon,sewing:o.sewing_thread,emb:o.embroidery_thread,
-  placement:o.placement,notes:o.notes,mockup:o.mockup_url,ms:o.milestones||{},fin:fin?{inv:fin.invoice_total,lab:fin.labor_cost,mat:fin.materials_cost}:{}};}
+  placement:o.placement,notes:o.notes,mockup:o.mockup_url,ms:o.milestones||{},fin:fin?{inv:fin.invoice_total,lab:fin.labor_cost,mat:fin.materials_cost,shipCharged:fin.shipping_charged,shipCost:fin.shipping_cost}:{}};}
 async function loadData(){
   const {data:custs,error:e1}=await sb.from('customers').select('*');
   const {data:ords,error:e2}=await sb.from('orders').select('*');
@@ -282,13 +285,20 @@ async function loadData(){
 
 /* ---------- stats / list / pending / detail (render) ---------- */
 function pendingOrders(){const out=[];state.forEach(c=>c.orders.forEach(o=>{const s=derivedStatus(o);if(s!=='Shipped'&&s!=='Delivered')out.push({c,o,s});}));const k=x=>effDeadline(x.o)||x.o.ship||'9999-99-99';out.sort((a,b)=>k(a).localeCompare(k(b)));return out;}
+let statRange='all';
+function rangeStart(r){const n=new Date();if(r==='30')return new Date(n-30*864e5);if(r==='90')return new Date(n-90*864e5);if(r==='365')return new Date(n-365*864e5);if(r==='ytd')return new Date(n.getFullYear(),0,1);return null;}
+function inStatRange(ds){if(statRange==='all')return true;const s=rangeStart(statRange);if(!s)return true;return !!ds&&new Date(ds+'T00:00:00')>=s;}
 function renderStats(){
-  const tot=state.reduce((n,c)=>n+c.orders.length,0), rep=state.filter(c=>c.orders.length>1).length, act=pendingOrders().length;
-  let h='<div class="stat"><b>'+state.length+'</b><span>Customers</span></div><div class="stat"><b>'+tot+'</b><span>Total orders</span></div><div class="stat"><b>'+rep+'</b><span>Repeat customers</span></div>'+
+  const chips=[['30','30 days'],['90','90 days'],['ytd','YTD'],['365','1 year'],['all','All time']];
+  const ord=[];state.forEach(c=>c.orders.forEach(o=>{if(inStatRange(o.date))ord.push({c,o});}));
+  const custCount=new Set(ord.map(x=>x.c.id)).size, tot=ord.length, rep=state.filter(c=>c.orders.filter(o=>inStatRange(o.date)).length>1).length, act=pendingOrders().length;
+  let h='<div class="drange">'+chips.map(([k,l])=>'<button data-range="'+k+'" class="'+(statRange===k?'on':'')+'">'+l+'</button>').join('')+'</div>';
+  h+='<div class="stat"><b>'+custCount+'</b><span>Customers</span></div><div class="stat"><b>'+tot+'</b><span>Orders</span></div><div class="stat"><b>'+rep+'</b><span>Repeat</span></div>'+
     '<div class="stat click'+(view==='pending'?' on':'')+'" id="pendStat"><b>'+act+'</b><span>In progress ▸</span></div>';
-  if(isLead){const rev=state.reduce((n,c)=>n+c.orders.reduce((m,o)=>m+(num(o.fin.inv)||0),0),0);h+='<div class="stat fin"><b>'+money(rev)+'</b><span>Total invoiced</span></div>';}
+  if(isLead){const inv=ord.reduce((m,x)=>m+(num(x.o.fin.inv)||0),0);const prof=ord.reduce((m,x)=>m+(profit(x.o.fin)||0),0);h+='<div class="stat fin"><b>'+money(inv)+'</b><span>Invoiced</span></div><div class="stat fin"><b>'+money(prof)+'</b><span>Profit</span></div>';}
   document.getElementById('stats').innerHTML=h;
   const ps=document.getElementById('pendStat');if(ps)ps.onclick=()=>{view=view==='pending'?'detail':'pending';render();};
+  document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{statRange=b.dataset.range;renderStats();});
 }
 function custTitle(c){const o=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return (o&&o.iname)||c.name;}
 function custInames(c){return c.orders.map(o=>o.iname||'').join(' ');}
@@ -304,7 +314,7 @@ function timelineHTML(o){const steps=MILE.filter(m=>mApplies(o,m));const dc=step
   let fp=steps.findIndex(m=>!(o.ms[m.key]&&o.ms[m.key].done));
   return '<div class="progress"><i style="width:'+pct+'%"></i></div><div class="tl">'+steps.map((m,i)=>{const v=o.ms[m.key]||{};return '<div class="step'+(v.done?' done':'')+'" data-step="'+m.key+'" data-so="'+o.dbid+'" title="Click to mark '+esc(m.label)+(v.done?' not done':' done today')+'"><div class="dot">'+(v.done?'✓':'')+'</div><div class="lab">'+m.label+'</div><div class="dt">'+(v.date?dshort(v.date):'')+'</div></div>';}).join('')+'</div>';}
 function finHTML(o){if(!isLead)return '';const f=o.fin||{},p=profit(f),mg=margin(f);const c=(l,v,x)=>'<div class="fc '+(x||'')+'"><div class="l">'+l+'</div><div class="n">'+v+'</div></div>';
-  return '<div class="fin"><div class="fh">Financials — Lead only</div><div class="fb">'+c('Invoice',money(f.inv))+c('Materials',money(f.mat))+c('Labor (Clockify)',money(f.lab))+c('Profit',p===null?'—':money(p),'hl')+c('Margin',mg===null?'—':mg+'%','hl')+'</div></div>';}
+  return '<div class="fin"><div class="fh">Financials — Lead only</div><div class="fb">'+c('Invoice',money(f.inv))+c('Materials',money(f.mat))+c('Labor (Clockify)',money(f.lab))+c('Ship collected',money(f.shipCharged))+c('Ship cost',money(f.shipCost))+c('Profit',p===null?'—':money(p),'hl')+c('Margin',mg===null?'—':mg+'%','hl')+'</div></div>';}
 function field(k,v,cls){return v?'<div class="f"><div class="k">'+k+'</div><div class="v'+(cls?' '+cls:'')+'">'+esc(v)+'</div></div>':'';}
 function orderView(c,o,latestFlag){const s=derivedStatus(o);const del=o.ms.delivered&&o.ms.delivered.date?o.ms.delivered.date:'';const shipped=o.ms.shipped&&o.ms.shipped.done;
   const dlCls=v=>(v&&!shipped&&v<today())?'dl':'';
@@ -316,7 +326,7 @@ function fld(l,k,v,t){return '<div class="fld"><label>'+l+'</label><input data-k
 function finFld(l,k,v){return '<div class="fld"><label>'+l+'</label><input data-fk="'+k+'" type="number" step="0.01" value="'+(v==null?'':v)+'"></div>';}
 function orderEdit(c,o){const tchk=t=>'<label><input type="checkbox" data-t="'+t+'" '+(hasType(o,t)?'checked':'')+'> '+t+'</label>';
   const ms=MILE.filter(m=>mApplies(o,m)).map(m=>{const v=o.ms[m.key]||{};return '<div class="ms1"><input type="checkbox" data-mdone="'+m.key+'" '+(v.done?'checked':'')+'><span class="mname">'+m.label+'</span><input type="date" data-mdate="'+m.key+'" value="'+(v.date||'')+'"></div>';}).join('');
-  const f=o.fin||{};const finS=isLead?'<div class="secthead">Financials (Lead only)</div><div class="erow">'+finFld('Invoice','inv',f.inv)+finFld('Materials','mat',f.mat)+finFld('Labor','lab',f.lab)+'</div>':'';
+  const f=o.fin||{};const finS=isLead?'<div class="secthead">Financials (Lead only)</div><div class="erow">'+finFld('Invoice','inv',f.inv)+finFld('Materials','mat',f.mat)+finFld('Labor','lab',f.lab)+finFld('Ship collected','shipCharged',f.shipCharged)+finFld('Ship cost','shipCost',f.shipCost)+'</div>':'';
   return '<div class="order"><div class="ohead"><span class="onum">Editing '+(o.iname?esc(o.iname):'#'+esc(o.id||''))+'</span></div><div class="edit" data-form="'+o.dbid+'"><div class="fld full"><label>Internal team name (used in Clockify)</label><input data-k="iname" value="'+esc(o.iname)+'"></div><div class="erow" style="margin-top:10px">'+fld('Order #','id',o.id)+fld('Order date','date',o.date,'date')+fld('Customer deadline','deadline',o.deadline,'date')+fld('Goal completion','ideadline',o.ideadline,'date')+fld('Est. ship','est',o.est,'date')+'</div><div class="fld full"><label>Type</label><div class="types">'+tchk('Embroidery')+tchk('Custom Print')+tchk('Patch')+'</div></div><div class="erow" style="margin-top:10px">'+fld('Styles / qty','styles',o.styles)+fld('Scrub hat color','scrub',o.scrub)+fld('Logo','logo',o.logo)+fld('Ribbon / ties','ribbon',o.ribbon)+fld('Sewing thread','sewing',o.sewing)+fld('Embroidery thread','emb',o.emb)+'</div><div class="fld full"><label>Placement</label><input data-k="placement" value="'+esc(o.placement)+'"></div><div class="fld full" style="margin-top:10px"><label>Notes</label><textarea data-k="notes" rows="2">'+esc(o.notes)+'</textarea></div><div class="secthead">Production timeline</div><div class="msgrid">'+ms+'</div>'+finS+'<div class="editbar"><button class="btn" data-save="'+o.dbid+'">Save</button><button class="link" data-cancel="1">Cancel</button><span class="right"><button class="btn danger tiny" data-del="'+o.dbid+'">Delete order</button></span></div></div></div>';}
 function renderPending(){const rows=pendingOrders();
   const dl=o=>{const x=effDeadline(o)||o.ship;if(!x)return '<span class="dl-chip dl-none">no date</span>';const days=Math.round((new Date(x+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);const lbl=d(x)+(days<0?' · '+(-days)+'d late':(days===0?' · today':' · '+days+'d'));return '<span class="dl-chip '+(days<0?'dl-over':(days<=7?'dl-soon':'dl-ok'))+'">'+lbl+'</span>';};
@@ -357,7 +367,7 @@ async function saveOrder(dbid){
     sewing_thread:g('sewing'),embroidery_thread:g('emb'),placement:g('placement'),notes:g('notes'),milestones:ms,updated_at:new Date().toISOString()};
   const {error}=await sb.from('orders').update(upd).eq('id',dbid);
   if(error){toast('Save failed: '+error.message,true);return;}
-  if(isLead){const fin={order_id:dbid,invoice_total:num(form.querySelector('[data-fk=inv]').value),materials_cost:num(form.querySelector('[data-fk=mat]').value),labor_cost:num(form.querySelector('[data-fk=lab]').value),updated_at:new Date().toISOString()};
+  if(isLead){const gf=k=>{const el=form.querySelector('[data-fk='+k+']');return el?num(el.value):null;};const fin={order_id:dbid,invoice_total:gf('inv'),materials_cost:gf('mat'),labor_cost:gf('lab'),shipping_charged:gf('shipCharged'),shipping_cost:gf('shipCost'),updated_at:new Date().toISOString()};
     await sb.from('order_financials').upsert(fin);}
   editing=null;await loadData();render();toast('Saved ✓');
 }

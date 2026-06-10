@@ -290,7 +290,7 @@ document.getElementById('liPass').addEventListener('keydown',e=>{if(e.key==='Ent
 document.getElementById('logoutBtn').onclick=async()=>{await sb.auth.signOut();};
 
 /* ---------- data ---------- */
-function mapOrder(o,fin){return {dbid:o.id,id:o.order_number,hats:o.total_hats,iname:o.internal_name||'',date:o.order_date,ship:o.ship_date||o.est_ship,est:o.est_ship,deadline:o.deadline,ideadline:o.internal_deadline,delivered:o.delivered_date,
+function mapOrder(o,fin){return {dbid:o.id,id:o.order_number,hats:o.total_hats,iname:o.internal_name||'',clockifyId:o.clockify_project_id,date:o.order_date,ship:o.ship_date||o.est_ship,est:o.est_ship,deadline:o.deadline,ideadline:o.internal_deadline,delivered:o.delivered_date,
   type:o.order_type||[],status:o.status,digitizing:o.has_digitizing,styles:o.styles,scrub:o.scrub_color,logo:o.logo,ribbon:o.ribbon,sewing:o.sewing_thread,emb:o.embroidery_thread,
   placement:o.placement,notes:o.notes,mockup:o.mockup_url,ms:o.milestones||{},fin:fin?{inv:fin.invoice_total,lab:fin.labor_cost,mat:fin.materials_cost,shipCharged:fin.shipping_charged,shipCost:fin.shipping_cost}:{}};}
 async function loadData(){
@@ -403,6 +403,7 @@ async function saveOrder(dbid){
   if(error){toast('Save failed: '+error.message,true);return;}
   if(isLead){const gf=k=>{const el=form.querySelector('[data-fk='+k+']');return el?num(el.value):null;};const fin={order_id:dbid,invoice_total:gf('inv'),materials_cost:gf('mat'),labor_cost:gf('lab'),shipping_charged:gf('shipCharged'),shipping_cost:gf('shipCost'),updated_at:new Date().toISOString()};
     await sb.from('order_financials').upsert(fin);}
+  if(isLead && (g('iname')||'').trim() && !o.clockifyId){ toast('Creating Clockify project…'); try{ const {data:cp}=await sb.functions.invoke('sync-orders',{body:{mode:'createproject',order_number:g('id')}}); if(cp&&cp.ok&&!cp.already)toast('Clockify project created ✓'); }catch(e){} }
   editing=null;await loadData();render();toast('Saved ✓');
 }
 async function addOrder(custId){const {data,error}=await sb.from('orders').insert({customer_id:custId,order_number:'NEW',order_date:today(),status:'Ordered',milestones:{placed:{done:true,date:today()}}}).select().single();

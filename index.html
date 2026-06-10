@@ -133,6 +133,10 @@ button{font-family:var(--sans);cursor:pointer}
 .fin .fc .l{font-size:11px;color:var(--muted)}
 .fin .fc .n{font-size:15px;font-weight:600;margin-top:2px}
 .fin .fc.hl{background:#f2fbf9}.fin .fc.hl .n{color:var(--dark);font-family:var(--serif);font-size:17px}
+.fin .fc.est .n{color:#b06a00}.fin .fc.est .l::after{content:' ~';color:#b06a00}
+.finnote{font-size:11px;color:#b06a00;padding:6px 14px;background:#fff8ef;border-top:1px solid var(--line)}
+.drange input[type=date]{border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:12px;color:var(--muted)}
+.drange .dsep{align-self:center;color:var(--muted)}
 .edit{padding:16px 18px;background:#fbfefe}
 .erow{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px;margin-bottom:10px}
 @media(max-width:560px){.erow{grid-template-columns:1fr}}
@@ -235,7 +239,9 @@ function today(){return new Date().toISOString().slice(0,10);}
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function num(v){const n=parseFloat(v);return isNaN(n)?null:n;}
 function money(v){const n=num(v);return n===null?'—':'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function profit(f){const i=num(f.inv);if(i===null)return null;return i-(num(f.lab)||0)-(num(f.mat)||0)-(num(f.shipCost)||0);}
+function laborOf(f){const l=num(f.lab);if(l&&l>0)return l;return (f&&f.labEst)||0;}
+function laborIsEst(f){const l=num(f.lab);return !(l&&l>0)&&f&&f.labEst!=null;}
+function profit(f){const i=num(f.inv);if(i===null)return null;return i-laborOf(f)-(num(f.mat)||0)-(num(f.shipCost)||0);}
 function margin(f){const p=profit(f),i=num(f.inv);if(p===null||!i)return null;return Math.round(p/i*100);}
 function latest(c){return c.orders.map(o=>o.date).filter(Boolean).sort().slice(-1)[0]||'';}
 function typeTags(t){return (t||[]).map(x=>'<span class="badge type">'+x+'</span>').join('');}
@@ -271,7 +277,7 @@ document.getElementById('liPass').addEventListener('keydown',e=>{if(e.key==='Ent
 document.getElementById('logoutBtn').onclick=async()=>{await sb.auth.signOut();};
 
 /* ---------- data ---------- */
-function mapOrder(o,fin){return {dbid:o.id,id:o.order_number,iname:o.internal_name||'',date:o.order_date,ship:o.ship_date||o.est_ship,est:o.est_ship,deadline:o.deadline,ideadline:o.internal_deadline,delivered:o.delivered_date,
+function mapOrder(o,fin){return {dbid:o.id,id:o.order_number,hats:o.total_hats,iname:o.internal_name||'',date:o.order_date,ship:o.ship_date||o.est_ship,est:o.est_ship,deadline:o.deadline,ideadline:o.internal_deadline,delivered:o.delivered_date,
   type:o.order_type||[],status:o.status,digitizing:o.has_digitizing,styles:o.styles,scrub:o.scrub_color,logo:o.logo,ribbon:o.ribbon,sewing:o.sewing_thread,emb:o.embroidery_thread,
   placement:o.placement,notes:o.notes,mockup:o.mockup_url,ms:o.milestones||{},fin:fin?{inv:fin.invoice_total,lab:fin.labor_cost,mat:fin.materials_cost,shipCharged:fin.shipping_charged,shipCost:fin.shipping_cost}:{}};}
 async function loadData(){
@@ -281,24 +287,37 @@ async function loadData(){
   let fins={};
   if(isLead){const {data:f}=await sb.from('order_financials').select('*');(f||[]).forEach(x=>fins[x.order_id]=x);}
   state=(custs||[]).map(c=>({id:c.id,name:c.name,contact:c.contact,orders:(ords||[]).filter(o=>o.customer_id===c.id).map(o=>mapOrder(o,fins[o.id]))}));
+  if(isLead) computeLaborEst();
+}
+/* avg labor-per-hat within each category (from orders with real Clockify labor), used to estimate orders that have none */
+function orderCat(o){const t=o.type||[];if(t.indexOf('Embroidery')>=0)return 'emb';if(t.indexOf('Custom Print')>=0)return 'print';return null;}
+function computeLaborEst(){
+  const agg={emb:{lab:0,h:0},print:{lab:0,h:0}};
+  state.forEach(c=>c.orders.forEach(o=>{const cat=orderCat(o);if(!cat)return;const lab=num(o.fin.lab),h=num(o.hats);if(lab&&lab>0&&h&&h>0){agg[cat].lab+=lab;agg[cat].h+=h;}}));
+  const per={emb:agg.emb.h?agg.emb.lab/agg.emb.h:null,print:agg.print.h?agg.print.lab/agg.print.h:null};
+  state.forEach(c=>c.orders.forEach(o=>{o.fin=o.fin||{};const lab=num(o.fin.lab);if(!(lab&&lab>0)){const cat=orderCat(o),p=cat?per[cat]:null,h=num(o.hats);if(p&&h)o.fin.labEst=Math.round(p*h*100)/100;}}));
+  window.__laborPer=per;
 }
 
 /* ---------- stats / list / pending / detail (render) ---------- */
 function pendingOrders(){const out=[];state.forEach(c=>c.orders.forEach(o=>{const s=derivedStatus(o);if(s!=='Shipped'&&s!=='Delivered')out.push({c,o,s});}));const k=x=>effDeadline(x.o)||x.o.ship||'9999-99-99';out.sort((a,b)=>k(a).localeCompare(k(b)));return out;}
-let statRange='all';
+let statRange='all',cFrom='',cTo='';
 function rangeStart(r){const n=new Date();if(r==='30')return new Date(n-30*864e5);if(r==='90')return new Date(n-90*864e5);if(r==='365')return new Date(n-365*864e5);if(r==='ytd')return new Date(n.getFullYear(),0,1);return null;}
-function inStatRange(ds){if(statRange==='all')return true;const s=rangeStart(statRange);if(!s)return true;return !!ds&&new Date(ds+'T00:00:00')>=s;}
+function inStatRange(ds){if(statRange==='custom'){if(!ds)return false;if(cFrom&&ds<cFrom)return false;if(cTo&&ds>cTo)return false;return true;}if(statRange==='all')return true;const s=rangeStart(statRange);if(!s)return true;return !!ds&&new Date(ds+'T00:00:00')>=s;}
 function renderStats(){
-  const chips=[['30','30 days'],['90','90 days'],['ytd','YTD'],['365','1 year'],['all','All time']];
+  const chips=[['30','30 days'],['90','90 days'],['ytd','YTD'],['365','1 year'],['all','All time'],['custom','Custom']];
   const ord=[];state.forEach(c=>c.orders.forEach(o=>{if(inStatRange(o.date))ord.push({c,o});}));
   const custCount=new Set(ord.map(x=>x.c.id)).size, tot=ord.length, rep=state.filter(c=>c.orders.filter(o=>inStatRange(o.date)).length>1).length, act=pendingOrders().length;
-  let h='<div class="drange">'+chips.map(([k,l])=>'<button data-range="'+k+'" class="'+(statRange===k?'on':'')+'">'+l+'</button>').join('')+'</div>';
+  let h='<div class="drange">'+chips.map(([k,l])=>'<button data-range="'+k+'" class="'+(statRange===k?'on':'')+'">'+l+'</button>').join('')+(statRange==='custom'?'<input type="date" id="cfrom" value="'+cFrom+'" title="From"><span class="dsep">–</span><input type="date" id="cto" value="'+cTo+'" title="To">':'')+'</div>';
   h+='<div class="stat"><b>'+custCount+'</b><span>Customers</span></div><div class="stat"><b>'+tot+'</b><span>Orders</span></div><div class="stat"><b>'+rep+'</b><span>Repeat</span></div>'+
     '<div class="stat click'+(view==='pending'?' on':'')+'" id="pendStat"><b>'+act+'</b><span>In progress ▸</span></div>';
   if(isLead){const inv=ord.reduce((m,x)=>m+(num(x.o.fin.inv)||0),0);const prof=ord.reduce((m,x)=>m+(profit(x.o.fin)||0),0);h+='<div class="stat fin"><b>'+money(inv)+'</b><span>Invoiced</span></div><div class="stat fin"><b>'+money(prof)+'</b><span>Profit</span></div>';}
   document.getElementById('stats').innerHTML=h;
   const ps=document.getElementById('pendStat');if(ps)ps.onclick=()=>{view=view==='pending'?'detail':'pending';render();};
   document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{statRange=b.dataset.range;renderStats();});
+  const cf=document.getElementById('cfrom'),ct=document.getElementById('cto');
+  if(cf)cf.onchange=()=>{cFrom=cf.value;renderStats();};
+  if(ct)ct.onchange=()=>{cTo=ct.value;renderStats();};
 }
 function custTitle(c){const o=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return (o&&o.iname)||c.name;}
 function custInames(c){return c.orders.map(o=>o.iname||'').join(' ');}
@@ -313,8 +332,10 @@ function renderList(){
 function timelineHTML(o){const steps=MILE.filter(m=>mApplies(o,m));const dc=steps.filter(m=>o.ms[m.key]&&o.ms[m.key].done).length;const pct=Math.round(dc/steps.length*100);
   let fp=steps.findIndex(m=>!(o.ms[m.key]&&o.ms[m.key].done));
   return '<div class="progress"><i style="width:'+pct+'%"></i></div><div class="tl">'+steps.map((m,i)=>{const v=o.ms[m.key]||{};return '<div class="step'+(v.done?' done':'')+'" data-step="'+m.key+'" data-so="'+o.dbid+'" title="Click to mark '+esc(m.label)+(v.done?' not done':' done today')+'"><div class="dot">'+(v.done?'✓':'')+'</div><div class="lab">'+m.label+'</div><div class="dt">'+(v.date?dshort(v.date):'')+'</div></div>';}).join('')+'</div>';}
-function finHTML(o){if(!isLead)return '';const f=o.fin||{},p=profit(f),mg=margin(f);const c=(l,v,x)=>'<div class="fc '+(x||'')+'"><div class="l">'+l+'</div><div class="n">'+v+'</div></div>';
-  return '<div class="fin"><div class="fh">Financials — Lead only</div><div class="fb">'+c('Invoice',money(f.inv))+c('Materials',money(f.mat))+c('Labor (Clockify)',money(f.lab))+c('Ship collected',money(f.shipCharged))+c('Ship cost',money(f.shipCost))+c('Profit',p===null?'—':money(p),'hl')+c('Margin',mg===null?'—':mg+'%','hl')+'</div></div>';}
+function finHTML(o){if(!isLead)return '';const f=o.fin||{},p=profit(f),mg=margin(f),est=laborIsEst(f);const c=(l,v,x)=>'<div class="fc '+(x||'')+'"><div class="l">'+l+'</div><div class="n">'+v+'</div></div>';
+  const labLine=est?c('Labor (est.)',money(f.labEst),'est'):c('Labor (Clockify)',money(f.lab));
+  const note=est?'<div class="finnote">Labor estimated from average labor-per-hat in this category — replace with Clockify once linked.</div>':'';
+  return '<div class="fin"><div class="fh">Financials — Lead only</div><div class="fb">'+c('Invoice',money(f.inv))+c('Materials',money(f.mat))+labLine+c('Ship collected',money(f.shipCharged))+c('Ship cost',money(f.shipCost))+c('Profit',p===null?'—':money(p)+(est?' *':''),'hl')+c('Margin',mg===null?'—':mg+'%','hl')+'</div>'+note+'</div>';}
 function field(k,v,cls){return v?'<div class="f"><div class="k">'+k+'</div><div class="v'+(cls?' '+cls:'')+'">'+esc(v)+'</div></div>':'';}
 function orderView(c,o,latestFlag){const s=derivedStatus(o);const del=o.ms.delivered&&o.ms.delivered.date?o.ms.delivered.date:'';const shipped=o.ms.shipped&&o.ms.shipped.done;
   const dlCls=v=>(v&&!shipped&&v<today())?'dl':'';

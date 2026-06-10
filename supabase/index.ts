@@ -112,6 +112,21 @@ async function shopifyToken(domain: string, clientId: string, clientSecret: stri
   if (!j.access_token) throw new Error("Shopify token: " + JSON.stringify(j).slice(0, 200));
   return j.access_token as string;
 }
+// Shipping label cost from the order's Shopify timeline events: purchases + price adjustments, net of voids.
+function parseShipCost(o: any): number | null {
+  const evs = ((o.events && o.events.edges) || []).map((e: any) => (e.node && e.node.message) || "");
+  let total = 0, found = false;
+  for (const m of evs) {
+    let mm = m.match(/purchased a \$([\d,]+\.\d+) shipping label/);
+    if (mm) { total += parseFloat(mm[1].replace(/,/g, "")); found = true; continue; }
+    mm = m.match(/voided a \$([\d,]+\.\d+) shipping label/);
+    if (mm) { total -= parseFloat(mm[1].replace(/,/g, "")); continue; }
+    mm = m.match(/charged \$([\d,]+\.\d+) for a shipping label price adjustment/);
+    if (mm) { total += parseFloat(mm[1].replace(/,/g, "")); found = true; continue; }
+  }
+  if (!found) return null;
+  return Math.round(total * 100) / 100;
+}
 async function shopifyOrders(domain: string, token: string, limit = 50, searchQuery = "tag:custom") {
   const q = `query($cursor:String){
     orders(first:50, after:$cursor, query:${JSON.stringify(searchQuery)}, sortKey:CREATED_AT, reverse:true){
@@ -119,8 +134,11 @@ async function shopifyOrders(domain: string, token: string, limit = 50, searchQu
       edges{ node{
         name createdAt note tags
         customer{ firstName lastName email }
+        totalPriceSet{ shopMoney{ amount } }
+        totalShippingPriceSet{ shopMoney{ amount } }
         lineItems(first:50){ edges{ node{ quantity sku title variantTitle } } }
         fulfillments{ createdAt deliveredAt status }
+        events(first:40){ edges{ node{ message } } }
       } }
     }
   }`;
@@ -379,6 +397,21 @@ Deno.serve(async (req) => {
       if (isNew && materials > 0) {
         const { data: ordM } = await sb.from("orders").select("id").eq("order_number", o.name).single();
         if (ordM) await sb.from("order_financials").upsert({ order_id: ordM.id, materials_cost: materials }, { onConflict: "order_id" });
+      }
+
+      // ---- shipping cost (every sync, from timeline) + invoice/shipping collected (new orders) ----
+      const shipCost = parseShipCost(o);
+      const invoice = (o.totalPriceSet?.shopMoney?.amount) ? parseFloat(o.totalPriceSet.shopMoney.amount) : null;
+      const shipColl = (o.totalShippingPriceSet?.shopMoney?.amount != null) ? parseFloat(o.totalShippingPriceSet.shopMoney.amount) : null;
+      const finPatch: Record<string, unknown> = {};
+      if (shipCost !== null) finPatch.shipping_cost = shipCost;
+      if (isNew) {
+        if (invoice !== null && invoice > 0) finPatch.invoice_total = invoice;
+        if (shipColl !== null) finPatch.shipping_charged = shipColl;
+      }
+      if (Object.keys(finPatch).length) {
+        const { data: ordF } = await sb.from("orders").select("id").eq("order_number", o.name).single();
+        if (ordF) await sb.from("order_financials").upsert({ order_id: ordF.id, ...finPatch }, { onConflict: "order_id" });
       }
 
       // ---- labor cost (best effort, time-bounded) ----

@@ -44,7 +44,7 @@ const normStyle = (c: string) => { c = c.toUpperCase(); return c === "CTE" ? "CT
 // Per-hat materials cost (from TMSH business brief).
 // MDG = full materials on a solid base ($2.95/yd cotton). Used for embroidery, solid & wholesale.
 const MDG: Record<string, number> = { CO: 1.39, CP: 1.28, CT: 1.46, CS: 0.66, LO: 1.90, LP: 2.41, LT: 1.51, LS: 0.87 };
-// Custom print = Little Cocalico fabric @ $25/yd (yards rounded to nearest whole, per order) + the
+// Custom print = Little Cocalico fabric @ $25/yd (yards rounded UP to whole yards, per order) + the
 // non-fabric materials (elastic/ribbon/toggle/satin/label/bag) below.
 const COTTON_IN: Record<string, number> = { CO: 14, CP: 11, CT: 13, CS: 5, LO: 8, LP: 11, LT: 7.5, LS: 3 }; // cotton inches per hat
 const OTHER: Record<string, number> = { CO: 0.24, CP: 0.38, CT: 0.39, CS: 0.25, LO: 1.24, LP: 1.51, LT: 0.90, LS: 0.62 }; // non-fabric materials per hat
@@ -340,7 +340,7 @@ Deno.serve(async (req) => {
         }
       }
       if (hats < 5) { skipped++; continue; }
-      if (printYards > 0) materials += Math.round(printYards) * COCALICO_YD + printOther;
+      if (printYards > 0) materials += Math.ceil(printYards) * COCALICO_YD + printOther;
       materials = Math.round(materials * 100) / 100;
       const styles = Object.entries(styleCount).map(([c, n]) => `${n} ${c}`).join(" + ");
 

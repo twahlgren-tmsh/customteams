@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Taylor Made — Custom Orders</title>
+<meta name="theme-color" content="#045863">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Custom Orders">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" type="image/png" href="/icon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
@@ -161,6 +169,39 @@ button{font-family:var(--sans);cursor:pointer}
 .hidden{display:none!important}
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(40px);background:var(--dark);color:#fff;padding:12px 20px;border-radius:12px;box-shadow:0 10px 30px rgba(4,88,99,.3);font-size:13.5px;font-weight:600;max-width:90%;opacity:0;transition:.25s;z-index:120;white-space:pre-line}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}#toast.err{background:#9c3b3b}
+
+/* ---------- mobile phone ---------- */
+@media(max-width:600px){
+  .app{padding:0 12px 24px}
+  .hero{padding:calc(14px + env(safe-area-inset-top)) 16px 18px;margin:0 -12px 14px;border-radius:0 0 18px 18px}
+  .herorow{gap:12px}
+  .mark{width:42px;height:42px}.mark span{font-size:20px}
+  .wordmark h1{font-size:22px}.wordmark p{font-size:9.5px;letter-spacing:.2em}
+  .heroactions{width:100%;margin:10px 0 0;gap:8px;flex-wrap:wrap}
+  .heroactions .btn.tiny{padding:9px 14px;font-size:13px;flex:1;min-width:72px;text-align:center}
+  .rolechip{order:-1}
+  .search{max-width:none;margin-top:12px}
+  .search input{padding:12px 14px 12px 38px;font-size:16px}
+  .stats{gap:8px}
+  .stat{padding:11px 13px;min-width:calc(50% - 4px);flex:1 1 calc(50% - 4px)}
+  .stat b{font-size:21px}
+  .drange button{padding:6px 13px}
+  .grid{gap:12px}
+  .list{max-height:none}
+  .cust{padding:14px 14px}
+  .dhead{padding:16px 16px 14px}.dhead h2{font-size:20px}
+  .dhead .acts{width:100%;margin-left:0}
+  .timeline-wrap{padding:14px 12px 20px}
+  .order{margin-bottom:14px}
+  .obody{grid-template-columns:1fr}
+  .fields{padding:12px 14px}.f{gap:8px}.f .k{width:104px;flex:none}
+  .fin{margin:0 12px 14px}
+  .step{flex:0 0 78px}
+  .edit{padding:14px}
+  .erow{grid-template-columns:1fr}
+  .fld input,.fld textarea{font-size:16px}
+  #login input{font-size:16px}
+}
 </style>
 </head>
 <body>
@@ -374,6 +415,7 @@ function renderDetail(){
   el.innerHTML='<div class="dhead"><div><h2>'+esc(c.name)+'</h2><div class="meta">Contact · '+esc(c.contact||'—')+' · '+c.orders.length+' order'+(c.orders.length>1?'s':'')+'</div></div><div class="acts">'+(c.orders.length>1?'<span class="badge rep">Repeat customer</span>':'')+'<button class="link" data-editcust="'+c.id+'">Edit customer</button><button class="btn tiny" data-addorder="'+c.id+'">+ Add order</button></div></div><div class="timeline-wrap"><div class="tl-label">Order history · newest first</div>'+orders.map((o,i)=>editing===o.dbid?orderEdit(c,o):orderView(c,o,i===0)).join('')+'</div>';
 }
 function render(){renderStats();renderList();renderDetail();}
+function mScroll(){if(window.innerWidth<=820){const d=document.getElementById('detail');if(d)setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'start'}),60);}}
 
 /* ---------- mutations ---------- */
 function findOrder(dbid){for(const c of state){const o=c.orders.find(x=>x.dbid===dbid);if(o)return {c,o};}return null;}
@@ -440,8 +482,8 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('[data-cust],[data-edit],[data-save],[data-cancel],[data-del],[data-addorder],[data-editcust],[data-mock],[data-rmmock],[data-go],[data-closepend],[data-step]');
   if(!t)return;
   if(t.dataset.step){clickStep(t.dataset.so,t.dataset.step);}
-  else if(t.dataset.cust){sel=t.dataset.cust;editing=null;view='detail';render();}
-  else if(t.dataset.go){sel=t.dataset.go;editing=null;view='detail';render();}
+  else if(t.dataset.cust){sel=t.dataset.cust;editing=null;view='detail';render();mScroll();}
+  else if(t.dataset.go){sel=t.dataset.go;editing=null;view='detail';render();mScroll();}
   else if(t.dataset.closepend){view='detail';render();}
   else if(t.dataset.edit){editing=t.dataset.edit;renderDetail();}
   else if(t.dataset.cancel){editing=null;renderDetail();}

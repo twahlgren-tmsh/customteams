@@ -1,0 +1,13 @@
+{
+  "name": "Taylor Made — Custom Orders",
+  "short_name": "Custom Orders",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#045863",
+  "theme_color": "#045863",
+  "icons": [
+    { "src": "/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

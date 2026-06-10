@@ -295,7 +295,7 @@ function computeLaborEst(){
   const agg={emb:{lab:0,h:0},print:{lab:0,h:0}};
   state.forEach(c=>c.orders.forEach(o=>{const cat=orderCat(o);if(!cat)return;const lab=num(o.fin.lab),h=num(o.hats);if(lab&&lab>0&&h&&h>0){agg[cat].lab+=lab;agg[cat].h+=h;}}));
   const per={emb:agg.emb.h?agg.emb.lab/agg.emb.h:null,print:agg.print.h?agg.print.lab/agg.print.h:null};
-  state.forEach(c=>c.orders.forEach(o=>{o.fin=o.fin||{};const lab=num(o.fin.lab);if(!(lab&&lab>0)){const cat=orderCat(o),p=cat?per[cat]:null,h=num(o.hats);if(p&&h)o.fin.labEst=Math.round(p*h*100)/100;}}));
+  state.forEach(c=>c.orders.forEach(o=>{o.fin=o.fin||{};const lab=num(o.fin.lab);const shipped=!!(o.delivered||(o.ms&&o.ms.shipped&&o.ms.shipped.done));if(shipped&&!(lab&&lab>0)){const cat=orderCat(o),p=cat?per[cat]:null,h=num(o.hats);if(p&&h)o.fin.labEst=Math.round(p*h*100)/100;}}));
   window.__laborPer=per;
 }
 

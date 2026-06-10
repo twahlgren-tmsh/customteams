@@ -236,8 +236,9 @@ function profit(f){const i=num(f.inv);if(i===null)return null;return i-(num(f.la
 function margin(f){const p=profit(f),i=num(f.inv);if(p===null||!i)return null;return Math.round(p/i*100);}
 function latest(c){return c.orders.map(o=>o.date).filter(Boolean).sort().slice(-1)[0]||'';}
 function typeTags(t){return (t||[]).map(x=>'<span class="badge type">'+x+'</span>').join('');}
-function derivedStatus(o){o.ms=o.ms||{};if(o.ms.delivered&&o.ms.delivered.done)return 'Delivered';if(o.ms.shipped&&o.ms.shipped.done)return 'Shipped';if(PRODKEYS.some(k=>o.ms[k]&&o.ms[k].done))return 'In production';return 'Ordered';}
-function statusPill(s){const c=s==='Ordered'?'order':(s==='Delivered'?'deliv':(s==='Shipped'?'':'prog'));return '<span class="badge st '+c+'">'+s+'</span>';}
+const STATUS_LABEL={placed:'Ordered',digitizing:'Digitizing done',materials:'Materials ordered',cut:'Fabric cut',embroidery:'Embroidery complete',sewing:'Sewing complete',packaged:'Inspection / folded',shipped:'Shipped',delivered:'Delivered'};
+function derivedStatus(o){o.ms=o.ms||{};const steps=MILE.filter(m=>mApplies(o,m));let last='placed';for(const m of steps){if(o.ms[m.key]&&o.ms[m.key].done)last=m.key;}return STATUS_LABEL[last]||'Ordered';}
+function statusPill(s){const c=s==='Delivered'?'deliv':(s==='Shipped'?'':(s==='Ordered'?'order':'prog'));return '<span class="badge st '+c+'">'+s+'</span>';}
 
 /* ---------- auth ---------- */
 async function initAuth(){
@@ -280,7 +281,7 @@ async function loadData(){
 }
 
 /* ---------- stats / list / pending / detail (render) ---------- */
-function pendingOrders(){const out=[];state.forEach(c=>c.orders.forEach(o=>{const s=derivedStatus(o);if(s==='Ordered'||s==='In production')out.push({c,o,s});}));const k=x=>effDeadline(x.o)||x.o.ship||'9999-99-99';out.sort((a,b)=>k(a).localeCompare(k(b)));return out;}
+function pendingOrders(){const out=[];state.forEach(c=>c.orders.forEach(o=>{const s=derivedStatus(o);if(s!=='Shipped'&&s!=='Delivered')out.push({c,o,s});}));const k=x=>effDeadline(x.o)||x.o.ship||'9999-99-99';out.sort((a,b)=>k(a).localeCompare(k(b)));return out;}
 function renderStats(){
   const tot=state.reduce((n,c)=>n+c.orders.length,0), rep=state.filter(c=>c.orders.length>1).length, act=pendingOrders().length;
   let h='<div class="stat"><b>'+state.length+'</b><span>Customers</span></div><div class="stat"><b>'+tot+'</b><span>Total orders</span></div><div class="stat"><b>'+rep+'</b><span>Repeat customers</span></div>'+

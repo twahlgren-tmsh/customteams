@@ -37,7 +37,14 @@ const json = (body: unknown, status = 200) =>
   });
 
 // ---------- helpers ----------
-const STYLE_RE = /^CSH-(CO|CS|CP|CT|LO|LS|LP|LT)(?:-|$)/i;
+// Style codes: CO Classic Original, CP Classic Ponytail, CT/CTE Classic Euro,
+// CS Classic Skull, LO LUXE Original, LP LUXE Ponytail, LT/LTE LUXE Euro, LS LUXE Skull.
+const STYLE_RE = /^CSH-(CO|CS|CP|CTE|CT|LO|LS|LP|LTE|LT)(?:-|$)/i;
+const normStyle = (c: string) => { c = c.toUpperCase(); return c === "CTE" ? "CT" : c === "LTE" ? "LT" : c; };
+// Per-hat materials cost (from TMSH business brief). Custom print = Little Cocalico; everything else = MDG solid.
+const COCALICO: Record<string, number> = { CO: 7.05, CP: 5.73, CT: 6.72, CS: 2.68, LO: 5.14, LP: 6.85, LT: 4.54, LS: 2.08 };
+const MDG: Record<string, number> = { CO: 1.39, CP: 1.28, CT: 1.46, CS: 0.66, LO: 1.90, LP: 2.41, LT: 1.51, LS: 0.87 };
+const DIGI: Record<string, number> = { SIM: 9, COM: 14 }; // digitizing fee added to materials
 
 function parseNote(note: string): Record<string, string> {
   const d: Record<string, string> = {};
@@ -105,9 +112,9 @@ async function shopifyToken(domain: string, clientId: string, clientSecret: stri
   if (!j.access_token) throw new Error("Shopify token: " + JSON.stringify(j).slice(0, 200));
   return j.access_token as string;
 }
-async function shopifyOrders(domain: string, token: string, limit = 50) {
+async function shopifyOrders(domain: string, token: string, limit = 50, searchQuery = "tag:custom") {
   const q = `query($cursor:String){
-    orders(first:50, after:$cursor, query:"tag:custom", sortKey:CREATED_AT, reverse:true){
+    orders(first:50, after:$cursor, query:${JSON.stringify(searchQuery)}, sortKey:CREATED_AT, reverse:true){
       pageInfo{ hasNextPage endCursor }
       edges{ node{
         name createdAt note tags
@@ -226,9 +233,12 @@ Deno.serve(async (req) => {
       return json({ ok: true, mode: "labor", linkedTotal: (linked || []).length, done, remaining });
     }
 
+    // backfill mode = historical pre-2025 custom orders (no Clockify); normal = newest 50
+    let shopQuery = "tag:custom", limit = 50;
+    if (mode === "backfill") { shopQuery = "tag:custom AND created_at:<2025-01-01T00:00:00Z"; limit = 300; }
     const shopToken = SHOP_STATIC ||
       await shopifyToken(SHOP_DOMAIN, SHOP_CLIENT_ID, SHOP_CLIENT_SECRET);
-    const orders = await shopifyOrders(SHOP_DOMAIN, shopToken, 50);
+    const orders = await shopifyOrders(SHOP_DOMAIN, shopToken, limit, shopQuery);
 
     const { data: existing } = await sb.from("orders")
       .select("id, order_number, clockify_project_id, status, internal_name, milestones");
@@ -244,25 +254,34 @@ Deno.serve(async (req) => {
     }
 
     const started = Date.now();
-    let created = 0, updated = 0, skipped = 0, clkLinked = 0, clkMade = 0;
+    let created = 0, updated = 0, skipped = 0, clkLinked = 0, clkMade = 0, stoppedEarly = false;
 
     for (const o of orders) {
+      if (mode === "backfill" && Date.now() - started > 120_000) { stoppedEarly = true; break; }
       // ---- line items → hats, styles, type, digitizing ----
       const styleCount: Record<string, number> = {};
-      let hats = 0, hasPrint = false, hasEmb = false, hasDigit = false, hasWhole = false;
+      let hats = 0, hasPrint = false, hasEmb = false, hasDigit = false, hasWhole = false, materials = 0;
       for (const e of o.lineItems.edges) {
         const li = e.node;
         const sku = (li.sku || "");
-        const m = sku.match(STYLE_RE);
-        if (m) { const c = m[1].toUpperCase(); styleCount[c] = (styleCount[c] || 0) + li.quantity; hats += li.quantity; }
         const tt = (li.title || "").trim().toUpperCase();
         if (tt === "CPSH") hasPrint = true;        // custom print
         else if (tt === "CESH") hasEmb = true;      // embroidery
         else if (tt === "CSH") hasWhole = true;     // wholesale customer
-        if (/CSH-EM/i.test(sku)) hasEmb = true;
-        if (/CSH-DF/i.test(sku)) hasDigit = true;
+        if (/CSH-EM/i.test(sku)) hasEmb = true;     // embroidery design line = labor only, no materials
+        const dfm = sku.match(/CSH-DF-(SIM|COM)/i);
+        if (/CSH-DF/i.test(sku)) { hasDigit = true; materials += DIGI[(dfm ? dfm[1].toUpperCase() : "SIM")] || 0; }
+        const m = sku.match(STYLE_RE);
+        if (m) {
+          const code = normStyle(m[1]);
+          styleCount[code] = (styleCount[code] || 0) + li.quantity;
+          hats += li.quantity;
+          const unit = (tt === "CPSH") ? (COCALICO[code] || 0) : (MDG[code] || 0);
+          materials += li.quantity * unit;
+        }
       }
       if (hats < 5) { skipped++; continue; }
+      materials = Math.round(materials * 100) / 100;
       const styles = Object.entries(styleCount).map(([c, n]) => `${n} ${c}`).join(" + ");
 
       // ---- note ----
@@ -356,6 +375,12 @@ Deno.serve(async (req) => {
       if (upErr) { skipped++; continue; }
       isNew ? created++ : updated++;
 
+      // ---- materials cost (new orders only; preserves edited/historical figures) ----
+      if (isNew && materials > 0) {
+        const { data: ordM } = await sb.from("orders").select("id").eq("order_number", o.name).single();
+        if (ordM) await sb.from("order_financials").upsert({ order_id: ordM.id, materials_cost: materials }, { onConflict: "order_id" });
+      }
+
       // ---- labor cost (best effort, time-bounded) ----
       if (clkOn && projId && Date.now() - started < 110_000) {
         try {
@@ -369,7 +394,7 @@ Deno.serve(async (req) => {
     }
 
     return json({
-      ok: true, scanned: orders.length, created, updated, skipped,
+      ok: true, mode: mode || "sync", scanned: orders.length, created, updated, skipped, stoppedEarly,
       clockify: { linked: clkLinked, created: clkMade, enabled: clkOn },
     });
   } catch (e) {

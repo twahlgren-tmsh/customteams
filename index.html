@@ -133,7 +133,15 @@ button{font-family:var(--sans);cursor:pointer}
 .mock{border-left:1px solid var(--line);padding:14px 18px;display:flex;flex-direction:column;gap:8px}
 .mockbox{flex:1;min-height:140px;border:1.5px dashed var(--aqua);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#7bb6b5;text-align:center;gap:6px;cursor:pointer;overflow:hidden}
 .mockbox img{max-width:100%;max-height:240px;border-radius:10px}
+.mockbox.haspic{border-style:solid;border-color:var(--line);cursor:zoom-in;position:relative}
+.mockbox.haspic:after{content:"⤢";position:absolute;top:6px;right:8px;background:rgba(4,88,99,.78);color:#fff;font-size:13px;line-height:1;padding:4px 6px;border-radius:6px;opacity:0;transition:opacity .15s}
+.mockbox.haspic:hover:after{opacity:1}
 .mockbox .mi{font-size:28px}
+.mockacts{display:flex;gap:14px;justify-content:center}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:94vw;max-height:94vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+.lightbox .lbx{position:absolute;top:16px;right:24px;color:#fff;font-size:40px;line-height:1;cursor:pointer;font-weight:300}
 .fin{margin:0 18px 16px;border:1px solid #dcebe9;border-radius:14px;overflow:hidden}
 .fin .fh{background:linear-gradient(90deg,#063f47,#0a6b74);color:#fff;padding:8px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 .fin .fb{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line)}
@@ -242,7 +250,7 @@ button{font-family:var(--sans);cursor:pointer}
     </div>
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="q" placeholder="Search customer or contact…" autocomplete="off">
+      <input id="q" placeholder="Search name, email, order #, internal name…" autocomplete="off">
     </div>
   </div>
   <div class="stats" id="stats"></div>
@@ -350,7 +358,7 @@ async function loadData(){
   if(e1||e2){toast('Load error: '+((e1||e2).message),true);return;}
   let fins={};
   if(isLead){const {data:f}=await sb.from('order_financials').select('*');(f||[]).forEach(x=>fins[x.order_id]=x);}
-  state=(custs||[]).map(c=>({id:c.id,name:c.name,contact:c.contact,orders:(ords||[]).filter(o=>o.customer_id===c.id).map(o=>mapOrder(o,fins[o.id]))}));
+  state=(custs||[]).map(c=>({id:c.id,name:c.name,contact:c.contact,email:c.email||c.contact_email||'',orders:(ords||[]).filter(o=>o.customer_id===c.id).map(o=>mapOrder(o,fins[o.id]))}));
   if(isLead) computeLaborEst();
 }
 /* avg labor-per-hat within each category (from orders with real Clockify labor), used to estimate orders that have none */
@@ -413,9 +421,11 @@ function renderAnalytics(){
 }
 function custTitle(c){const o=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return (o&&o.iname)||c.name;}
 function custInames(c){return c.orders.map(o=>o.iname||'').join(' ');}
+function custOrderNums(c){return c.orders.map(o=>String(o.id||'')).join(' ');}
+function custSearchBlob(c){return [c.name,c.contact,c.email,custInames(c),custOrderNums(c)].join(' ').toLowerCase();}
 function renderList(){
-  const f=(document.getElementById('q').value||'').toLowerCase();
-  const rows=[...state].sort((a,b)=>latest(b).localeCompare(latest(a))).filter(c=>!f||c.name.toLowerCase().includes(f)||(c.contact||'').toLowerCase().includes(f)||custInames(c).toLowerCase().includes(f));
+  const f=(document.getElementById('q').value||'').trim().toLowerCase();
+  const rows=[...state].sort((a,b)=>latest(b).localeCompare(latest(a))).filter(c=>!f||custSearchBlob(c).includes(f));
   document.getElementById('lcount').textContent=rows.length+' order'+(rows.length===1?'':'s');
   document.getElementById('custlist').innerHTML=rows.map(c=>{const types=[...new Set(c.orders.flatMap(o=>o.type||[]))];const title=custTitle(c);const sub=(title!==c.name?esc(c.name)+' · ':'')+esc(c.contact||'—');
     return '<div class="cust'+(sel===c.id?' active':'')+'" data-cust="'+c.id+'"><div><div class="nm">'+esc(title)+'</div><div class="sub">'+sub+'</div><div>'+typeTags(types)+'</div></div>'+
@@ -432,9 +442,11 @@ function field(k,v,cls){return v?'<div class="f"><div class="k">'+k+'</div><div 
 function orderView(c,o,latestFlag){const s=derivedStatus(o);const del=o.ms.delivered&&o.ms.delivered.date?o.ms.delivered.date:'';const shipped=o.ms.shipped&&o.ms.shipped.done;
   const dlCls=v=>(v&&!shipped&&v<today())?'dl':'';
   const fields=field('Order #',o.id)+field('Order date',d(o.date))+field('Customer deadline',o.deadline?d(o.deadline):'',dlCls(o.deadline))+field('Goal completion',o.ideadline?d(o.ideadline):'',dlCls(o.ideadline))+field('Est. ship',d(o.est))+field('Delivered',del?d(del):'')+field('Type',(o.type||[]).join(', '))+field('Styles / qty',o.styles)+field('Scrub hat',o.scrub)+field('Logo',o.logo)+field('Ribbon / ties',o.ribbon)+field('Sewing thread',o.sewing)+field('Embroidery thread',o.emb)+field('Placement',o.placement)+field('Notes',o.notes);
-  const mock=o.mockup?'<img src="'+o.mockup+'">':'<div class="mi">🧢</div><div>Mockup</div><small>click to upload</small>';
+  const mockInner=o.mockup?'<img src="'+o.mockup+'" alt="mockup">':'<div class="mi">🧢</div><div>Mockup</div><small>click to upload</small>';
+  const mockBox=o.mockup?'<div class="mockbox haspic" data-zoom="'+o.dbid+'" title="Click to enlarge">'+mockInner+'</div>':'<div class="mockbox" data-mock="'+o.dbid+'">'+mockInner+'</div>';
+  const mockActs=o.mockup?'<div class="mockacts"><button class="link" data-mock="'+o.dbid+'">Replace</button><button class="link" data-rmmock="'+o.dbid+'">Remove</button></div>':'';
   const title=o.iname?esc(o.iname):('#'+esc(o.id||''));const sub=(o.iname?'#'+esc(o.id||'')+' · ':'')+d(o.date);
-  return '<div class="order"><div class="ohead"><span class="onum">'+title+'</span><span class="odate">'+sub+'</span>'+statusPill(s)+'<span class="oacts"><button class="btn ghost tiny" data-edit="'+o.dbid+'">Edit</button></span></div>'+timelineHTML(o)+finHTML(o)+'<div class="obody"><div class="fields">'+fields+'</div><div class="mock"><div class="mockbox" data-mock="'+o.dbid+'">'+mock+'</div>'+(o.mockup?'<button class="link" data-rmmock="'+o.dbid+'">Remove mockup</button>':'')+'</div></div></div>';}
+  return '<div class="order"><div class="ohead"><span class="onum">'+title+'</span><span class="odate">'+sub+'</span>'+statusPill(s)+'<span class="oacts"><button class="btn ghost tiny" data-edit="'+o.dbid+'">Edit</button></span></div>'+timelineHTML(o)+finHTML(o)+'<div class="obody"><div class="fields">'+fields+'</div><div class="mock">'+mockBox+mockActs+'</div></div></div>';}
 function fld(l,k,v,t){return '<div class="fld"><label>'+l+'</label><input data-k="'+k+'" type="'+(t||'text')+'" value="'+esc(v)+'"></div>';}
 function finFld(l,k,v){return '<div class="fld"><label>'+l+'</label><input data-fk="'+k+'" type="number" step="0.01" value="'+(v==null?'':v)+'"></div>';}
 function orderEdit(c,o){const tchk=t=>'<label><input type="checkbox" data-t="'+t+'" '+(hasType(o,t)?'checked':'')+'> '+t+'</label>';
@@ -518,8 +530,9 @@ async function importJSON(data){
 
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-cust],[data-edit],[data-save],[data-cancel],[data-del],[data-addorder],[data-editcust],[data-mock],[data-rmmock],[data-go],[data-closepend],[data-closeana],[data-step]');
+  const t=e.target.closest('[data-cust],[data-edit],[data-save],[data-cancel],[data-del],[data-addorder],[data-editcust],[data-mock],[data-rmmock],[data-zoom],[data-go],[data-closepend],[data-closeana],[data-step]');
   if(!t)return;
+  if(t.dataset.zoom){const im=t.querySelector('img');if(im)openLightbox(im.src);return;}
   if(t.dataset.closeana){view='detail';render();return;}
   if(t.dataset.step){clickStep(t.dataset.so,t.dataset.step);}
   else if(t.dataset.cust){sel=t.dataset.cust;editing=null;view='detail';render();mScroll();}
@@ -552,6 +565,13 @@ document.getElementById('ncSave').onclick=()=>{const n=document.getElementById('
 document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
 document.getElementById('importFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{importJSON(JSON.parse(r.result));}catch(err){toast('Bad file',true);}};r.readAsText(f);};
 
+function openLightbox(src){
+  let lb=document.getElementById('lightbox');
+  if(!lb){lb=document.createElement('div');lb.id='lightbox';lb.className='lightbox';lb.innerHTML='<span class="lbx">×</span><img>';document.body.appendChild(lb);
+    lb.addEventListener('click',()=>lb.classList.remove('open'));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('open');});}
+  lb.querySelector('img').src=src;lb.classList.add('open');
+}
 initAuth();
 </script>
 </body>

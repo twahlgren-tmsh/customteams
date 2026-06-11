@@ -424,7 +424,7 @@ function custTitle(c){const o=[...c.orders].sort((a,b)=>(b.date||'').localeCompa
 function custInames(c){return c.orders.map(o=>o.iname||'').join(' ');}
 function custOrderNums(c){return c.orders.map(o=>String(o.id||'')).join(' ');}
 function emailOf(c){const m=((c.email||'')+' '+(c.contact||'')).match(/[^\s·,;|<>]+@[^\s·,;|<>]+\.[^\s·,;|<>]+/);return m?m[0]:'';}
-function contactName(c){let s=(c.contact||'');const e=emailOf(c);if(e)s=s.replace(e,'');return s.replace(/[·,;|]+/g,' ').replace(/\s+/g,' ').trim();}
+function contactName(c){let s=(c.contact||'');s=s.replace(/[^\s·,;|<>]+@[^\s·,;|<>]+\.[^\s·,;|<>]+/gi,'');return s.replace(/[·,;|]+/g,' ').replace(/\s+/g,' ').trim();}
 function custSearchBlob(c){return [c.name,c.contact,c.email,custInames(c),custOrderNums(c)].join(' ').toLowerCase();}
 function renderList(){
   const f=(document.getElementById('q').value||'').trim().toLowerCase();

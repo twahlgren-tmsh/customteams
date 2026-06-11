@@ -377,16 +377,35 @@ Deno.serve(async (req) => {
       const ms = buildMs(ex ? ex.milestones : null, { placedDate, shipDate, delivered, emb: hasEmb, digit: hasDigit });
 
       // ---- customer (only for new orders) ----
+      // Match priority: email column → email inside legacy contact text → exact name.
+      // Prevents re-creating merged duplicate profiles (same person, different display name).
       let customerId: string | null = null;
       if (isNew) {
         const c = o.customer || {};
         const name = `${c.firstName || ""} ${c.lastName || ""}`.trim() || "Unknown";
-        const email = c.email || null;
-        const { data: foundC } = await sb.from("customers").select("id")
-          .or(email ? `contact.eq.${email},name.eq.${name}` : `name.eq.${name}`).limit(1).maybeSingle();
-        if (foundC) customerId = foundC.id;
-        else {
-          const { data: newC } = await sb.from("customers").insert({ name, contact: email }).select("id").single();
+        const email = (c.email || "").trim().toLowerCase() || null;
+        const emailPat = email ? email.replace(/([_%])/g, "\\$1") : null; // escape ilike wildcards
+        let foundC: { id: string; email: string | null } | null = null;
+        if (emailPat) {
+          ({ data: foundC } = await sb.from("customers").select("id, email")
+            .ilike("email", emailPat).limit(1).maybeSingle());
+          if (!foundC) {
+            ({ data: foundC } = await sb.from("customers").select("id, email")
+              .ilike("contact", `%${emailPat}%`).limit(1).maybeSingle());
+          }
+        }
+        if (!foundC && name !== "Unknown") {
+          ({ data: foundC } = await sb.from("customers").select("id, email")
+            .eq("name", name).limit(1).maybeSingle());
+        }
+        if (foundC) {
+          customerId = foundC.id;
+          if (email && !foundC.email) {
+            await sb.from("customers").update({ email }).eq("id", foundC.id);
+          }
+        } else {
+          const { data: newC } = await sb.from("customers")
+            .insert({ name, contact: email, email }).select("id").single();
           customerId = newC?.id ?? null;
         }
       }

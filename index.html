@@ -465,7 +465,7 @@ function renderDetail(){
   const orders=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   el.innerHTML='<div class="dhead"><div><h2>'+esc(c.name)+'</h2><div class="meta">Contact · '+esc(c.contact||'—')+' · '+c.orders.length+' order'+(c.orders.length>1?'s':'')+'</div></div><div class="acts">'+(c.orders.length>1?'<span class="badge rep">Repeat customer</span>':'')+'<button class="link" data-editcust="'+c.id+'">Edit customer</button><button class="btn tiny" data-addorder="'+c.id+'">+ Add order</button></div></div><div class="timeline-wrap"><div class="tl-label">Order history · newest first</div>'+orders.map((o,i)=>editing===o.dbid?orderEdit(c,o):orderView(c,o,i===0)).join('')+'</div>';
 }
-function render(){renderStats();renderList();renderDetail();const g=document.querySelector('.grid');if(g)g.classList.toggle('topview',view==='pending'||view==='analytics');}
+function render(){renderStats();renderList();renderDetail();const g=document.querySelector('.grid');if(g)g.classList.toggle('topview',view==='pending'||view==='analytics'||(view==='detail'&&!!sel));}
 function mScroll(){if(window.innerWidth<=820){const d=document.getElementById('detail');if(d)setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'start'}),60);}}
 
 /* ---------- mutations ---------- */

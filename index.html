@@ -380,7 +380,7 @@ function renderStats(){
   const act=pendingOrders().length;
   const totAll=state.reduce((m,c)=>m+c.orders.length,0);
   const h='<div class="stat click'+(view==='pending'?' on':'')+'" id="pendStat"><b>'+act+'</b><span>In progress ▸</span></div>'+
-    '<div class="stat click'+(view==='analytics'?' on':'')+'" id="anaStat"><b>'+totAll+'</b><span>Analytics ▸</span></div>';
+    (isLead?'<div class="stat click'+(view==='analytics'?' on':'')+'" id="anaStat"><b>'+totAll+'</b><span>Analytics ▸</span></div>':'<div class="stat"><b>'+totAll+'</b><span>Total orders</span></div>');
   document.getElementById('stats').innerHTML=h;
   const ps=document.getElementById('pendStat');if(ps)ps.onclick=()=>{view=view==='pending'?'detail':'pending';render();if(view==='pending')mScroll();};
   const as=document.getElementById('anaStat');if(as)as.onclick=()=>{view=view==='analytics'?'detail':'analytics';render();if(view==='analytics')mScroll();};
@@ -461,7 +461,7 @@ function renderPending(){const rows=pendingOrders();
   document.getElementById('detail').innerHTML='<div class="dhead"><div><h2>In progress</h2><div class="meta">'+rows.length+' open · by deadline</div></div><div class="acts"><button class="link" data-closepend="1">Close</button></div></div><div class="pending">'+(rows.length?'<table class="ptab"><thead><tr><th>Customer</th><th>Order</th><th>Status</th><th>Type</th><th>Deadline</th></tr></thead><tbody>'+body+'</tbody></table>':'<div class="empty">All caught up! 🎉</div>')+'</div>';}
 function renderDetail(){
   if(view==='pending'){renderPending();return;}
-  if(view==='analytics'){renderAnalytics();return;}
+  if(view==='analytics'){if(!isLead){view='detail';}else{renderAnalytics();return;}}
   const c=state.find(x=>x.id===sel),el=document.getElementById('detail');
   if(!c){el.innerHTML='<div class="empty">Select a customer.</div>';return;}
   const orders=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''));

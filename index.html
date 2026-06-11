@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Custom Orders">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="apple-touch-icon" href="/icon.png">
 <link rel="icon" type="image/png" href="/icon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -53,6 +53,9 @@ button{font-family:var(--sans);cursor:pointer}
 .mark span{font-family:var(--serif);font-size:24px;color:var(--dark);font-style:italic}
 .wordmark h1{font-family:var(--serif);font-weight:500;font-size:30px;margin:0;letter-spacing:.5px;line-height:1}
 .wordmark p{margin:4px 0 0;font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.82)}
+.herologo{height:48px;width:auto;max-width:64vw;display:block;flex:none}
+.loginlogo{background:linear-gradient(135deg,var(--dark),var(--teal));border-radius:16px;padding:20px 18px;margin:0 0 16px}
+.loginlogo img{width:100%;height:auto;display:block}
 .heroactions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .heroactions .btn{border-color:rgba(255,255,255,.6)}
 .heroactions .btn.ghost{background:rgba(255,255,255,.95)}
@@ -226,8 +229,8 @@ button{font-family:var(--sans);cursor:pointer}
 
 <div id="login">
   <div class="card">
-    <div class="mk"><span>tm</span></div>
-    <h1>Taylor Made</h1><p>Custom Orders</p>
+    <div class="loginlogo"><img src="/White%20Logo.png" alt="Taylor Made Scrub Hats"></div>
+    <p>Custom Orders</p>
     <input id="liEmail" type="email" placeholder="Email" autocomplete="username">
     <input id="liPass" type="password" placeholder="Password" autocomplete="current-password">
     <button class="btn" id="liBtn">Sign in</button>
@@ -238,8 +241,8 @@ button{font-family:var(--sans);cursor:pointer}
 <div class="app hidden" id="appWrap">
   <div class="hero">
     <div class="herorow">
-      <div class="mark"><span>tm</span></div>
-      <div class="wordmark"><h1>Taylor Made</h1><p>Scrub Hats · Custom Orders</p></div>
+      <img class="herologo" src="/White%20Logo.png" alt="Taylor Made Scrub Hats">
+      <div class="wordmark" style="flex:1"></div>
       <div class="heroactions">
         <button class="btn ghost tiny" id="refreshBtn">↻ Refresh</button>
         <span class="rolechip" id="roleChip">Team</span>
@@ -317,7 +320,7 @@ async function initAuth(){
 function showRecovery(){
   document.getElementById('appWrap').classList.add('hidden');
   const lg=document.getElementById('login');lg.classList.remove('hidden');
-  lg.querySelector('.card').innerHTML='<div class="mk"><span>tm</span></div><h1>Set a new password</h1><p>Account recovery</p><input id="npPass" type="password" placeholder="New password (min 6 characters)" autocomplete="new-password"><button class="btn" id="npBtn">Update password</button><div class="err" id="npErr"></div>';
+  lg.querySelector('.card').innerHTML='<div class="loginlogo"><img src="/White%20Logo.png" alt="Taylor Made Scrub Hats"></div><h1>Set a new password</h1><p>Account recovery</p><input id="npPass" type="password" placeholder="New password (min 6 characters)" autocomplete="new-password"><button class="btn" id="npBtn">Update password</button><div class="err" id="npErr"></div>';
   const go=async()=>{const pw=document.getElementById('npPass').value;const er=document.getElementById('npErr');
     if(!pw||pw.length<6){er.textContent='Password must be at least 6 characters.';return;}
     const {error}=await sb.auth.updateUser({password:pw});

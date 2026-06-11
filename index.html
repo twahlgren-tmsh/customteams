@@ -135,6 +135,7 @@ button{font-family:var(--sans);cursor:pointer}
 .f .v.dl{font-weight:700;color:#b14b4b}
 .mock{border-left:1px solid var(--line);padding:14px 18px;display:flex;flex-direction:column;gap:8px}
 .mockbox{flex:1;min-height:140px;border:1.5px dashed var(--aqua);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#7bb6b5;text-align:center;gap:6px;cursor:pointer;overflow:hidden}
+.mockbox.dragging{border-color:var(--teal);border-style:solid;background:#e8f4f3}
 .mockbox img{max-width:100%;max-height:240px;border-radius:10px}
 .mockbox.haspic{border-style:solid;border-color:var(--line);cursor:zoom-in;position:relative}
 .mockbox.haspic:after{content:"⤢";position:absolute;top:6px;right:8px;background:rgba(4,88,99,.78);color:#fff;font-size:13px;line-height:1;padding:4px 6px;border-radius:6px;opacity:0;transition:opacity .15s}
@@ -445,7 +446,7 @@ function field(k,v,cls){return v?'<div class="f"><div class="k">'+k+'</div><div 
 function orderView(c,o,latestFlag){const s=derivedStatus(o);const del=o.ms.delivered&&o.ms.delivered.date?o.ms.delivered.date:'';const shipped=o.ms.shipped&&o.ms.shipped.done;
   const dlCls=v=>(v&&!shipped&&v<today())?'dl':'';
   const fields=field('Order #',o.id)+field('Order date',d(o.date))+field('Customer deadline',o.deadline?d(o.deadline):'',dlCls(o.deadline))+field('Goal completion',o.ideadline?d(o.ideadline):'',dlCls(o.ideadline))+field('Est. ship',d(o.est))+field('Delivered',del?d(del):'')+field('Type',(o.type||[]).join(', '))+field('Styles / qty',o.styles)+field('Scrub hat',o.scrub)+field('Logo',o.logo)+field('Ribbon / ties',o.ribbon)+field('Sewing thread',o.sewing)+field('Embroidery thread',o.emb)+field('Placement',o.placement)+field('Notes',o.notes);
-  const mockInner=o.mockup?'<img src="'+o.mockup+'" alt="mockup">':'<div class="mi">🧢</div><div>Mockup</div><small>click to upload</small>';
+  const mockInner=o.mockup?'<img src="'+o.mockup+'" alt="mockup">':'<div class="mi">🧢</div><div>Mockup</div><small>click · paste · or drop image</small>';
   const mockBox=o.mockup?'<div class="mockbox haspic" data-zoom="'+o.dbid+'" title="Click to enlarge">'+mockInner+'</div>':'<div class="mockbox" data-mock="'+o.dbid+'">'+mockInner+'</div>';
   const mockActs=o.mockup?'<div class="mockacts"><button class="link" data-mock="'+o.dbid+'">Replace</button><button class="link" data-rmmock="'+o.dbid+'">Remove</button></div>':'';
   const title=o.iname?esc(o.iname):('#'+esc(o.id||''));const sub=(o.iname?'#'+esc(o.id||'')+' · ':'')+d(o.date);
@@ -507,7 +508,14 @@ async function addOrder(custId){const {data,error}=await sb.from('orders').inser
 async function delOrder(dbid){if(!confirm('Delete this order?'))return;await sb.from('orders').delete().eq('id',dbid);editing=null;await loadData();render();}
 async function addCustomer(name,contact){const {data,error}=await sb.from('customers').insert({name,contact}).select().single();if(error){toast(error.message,true);return;}sel=data.id;view='detail';await loadData();render();}
 async function editCustomer(id){const c=state.find(x=>x.id===id);const nn=prompt('Customer name:',c.name);if(nn===null)return;const nc=prompt('Contact:',c.contact||'');await sb.from('customers').update({name:nn,contact:nc===null?c.contact:nc}).eq('id',id);await loadData();render();}
-async function uploadMock(dbid){const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.onchange=async()=>{const file=inp.files[0];if(!file)return;toast('Uploading mockup…');const path=dbid+'-'+Date.now()+'-'+file.name.replace(/[^a-zA-Z0-9.]/g,'_');const {error}=await sb.storage.from('mockups').upload(path,file,{upsert:true});if(error){toast('Upload failed: '+error.message,true);return;}const {data}=sb.storage.from('mockups').getPublicUrl(path);await sb.from('orders').update({mockup_url:data.publicUrl}).eq('id',dbid);await loadData();render();toast('Mockup added ✓');};inp.click();}
+async function saveMockFile(dbid,file){if(!file)return;if(!file.type||!file.type.startsWith('image/')){toast('That isn’t an image',true);return;}
+  toast('Uploading mockup…');const path=dbid+'-'+Date.now()+'-'+(file.name||'pasted.png').replace(/[^a-zA-Z0-9.]/g,'_');
+  const {error}=await sb.storage.from('mockups').upload(path,file,{upsert:true});if(error){toast('Upload failed: '+error.message,true);return;}
+  const {data}=sb.storage.from('mockups').getPublicUrl(path);await sb.from('orders').update({mockup_url:data.publicUrl}).eq('id',dbid);await loadData();render();toast('Mockup added ✓');}
+async function uploadMock(dbid){const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.onchange=()=>saveMockFile(dbid,inp.files[0]);inp.click();}
+function pasteTargetOrder(){if(view!=='detail'||!sel)return null;const c=state.find(x=>x.id===sel);if(!c||!c.orders.length)return null;
+  if(editing){const o=c.orders.find(o=>o.dbid===editing);if(o)return o;}
+  return [...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];}
 
 /* ---------- import (Lead) ---------- */
 async function importJSON(data){
@@ -549,6 +557,24 @@ document.addEventListener('click',e=>{
   else if(t.dataset.editcust){editCustomer(t.dataset.editcust);}
   else if(t.dataset.mock){uploadMock(t.dataset.mock);}
   else if(t.dataset.rmmock){sb.from('orders').update({mockup_url:null}).eq('id',t.dataset.rmmock).then(()=>loadData().then(render));}
+});
+/* paste an image anywhere while an order is open → becomes that order's mockup */
+document.addEventListener('paste',e=>{
+  const items=[...((e.clipboardData||{}).items||[])];const it=items.find(i=>i.type&&i.type.startsWith('image/'));
+  if(!it)return;const o=pasteTargetOrder();if(!o)return;
+  e.preventDefault();const f=it.getAsFile();if(!f)return;
+  if(o.mockup&&!confirm('Replace the mockup on order #'+(o.id||'')+'?'))return;
+  toast('Pasting mockup onto #'+(o.id||'')+'…');saveMockFile(o.dbid,f);
+});
+/* drag & drop an image file onto a mockup box */
+document.addEventListener('dragover',e=>{const mb=e.target.closest&&e.target.closest('.mockbox');if(mb){e.preventDefault();mb.classList.add('dragging');}});
+document.addEventListener('dragleave',e=>{const mb=e.target.closest&&e.target.closest('.mockbox');if(mb)mb.classList.remove('dragging');});
+document.addEventListener('drop',e=>{
+  const mb=e.target.closest&&e.target.closest('.mockbox');if(!mb)return;
+  e.preventDefault();mb.classList.remove('dragging');
+  const dbid=mb.dataset.mock||mb.dataset.zoom;if(!dbid)return;
+  const f=[...(e.dataTransfer.files||[])].find(f=>f.type.startsWith('image/'));
+  if(f)saveMockFile(dbid,f);
 });
 document.getElementById('q').addEventListener('input',renderList);
 document.getElementById('refreshBtn').onclick=async()=>{

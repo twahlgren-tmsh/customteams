@@ -422,12 +422,14 @@ function renderAnalytics(){
 function custTitle(c){const o=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return (o&&o.iname)||c.name;}
 function custInames(c){return c.orders.map(o=>o.iname||'').join(' ');}
 function custOrderNums(c){return c.orders.map(o=>String(o.id||'')).join(' ');}
+function emailOf(c){const m=((c.email||'')+' '+(c.contact||'')).match(/[^\s·,;|<>]+@[^\s·,;|<>]+\.[^\s·,;|<>]+/);return m?m[0]:'';}
+function contactName(c){let s=(c.contact||'');const e=emailOf(c);if(e)s=s.replace(e,'');return s.replace(/[·,;|]+/g,' ').replace(/\s+/g,' ').trim();}
 function custSearchBlob(c){return [c.name,c.contact,c.email,custInames(c),custOrderNums(c)].join(' ').toLowerCase();}
 function renderList(){
   const f=(document.getElementById('q').value||'').trim().toLowerCase();
   const rows=[...state].sort((a,b)=>latest(b).localeCompare(latest(a))).filter(c=>!f||custSearchBlob(c).includes(f));
   document.getElementById('lcount').textContent=rows.length+' order'+(rows.length===1?'':'s');
-  document.getElementById('custlist').innerHTML=rows.map(c=>{const types=[...new Set(c.orders.flatMap(o=>o.type||[]))];const title=custTitle(c);const sub=(title!==c.name?esc(c.name)+' · ':'')+esc(c.contact||'—');
+  document.getElementById('custlist').innerHTML=rows.map(c=>{const types=[...new Set(c.orders.flatMap(o=>o.type||[]))];const title=custTitle(c);const ce=emailOf(c),cp=contactName(c);const sub=(title!==c.name?esc(c.name)+' · ':'')+esc(cp||'—')+(ce?' · '+esc(ce):'');
     return '<div class="cust'+(sel===c.id?' active':'')+'" data-cust="'+c.id+'"><div><div class="nm">'+esc(title)+'</div><div class="sub">'+sub+'</div><div>'+typeTags(types)+'</div></div>'+
       '<div class="right"><div class="cnt">'+d(latest(c))+'</div>'+(c.orders.length>1?'<div class="badge rep">Repeat ×'+c.orders.length+'</div>':'<div class="cnt">'+c.orders.length+' order</div>')+'</div></div>';}).join('');
 }
@@ -463,7 +465,7 @@ function renderDetail(){
   const c=state.find(x=>x.id===sel),el=document.getElementById('detail');
   if(!c){el.innerHTML='<div class="empty">Select a customer.</div>';return;}
   const orders=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  el.innerHTML='<div class="dhead"><div><h2>'+esc(c.name)+'</h2><div class="meta">Contact · '+esc(c.contact||'—')+' · '+c.orders.length+' order'+(c.orders.length>1?'s':'')+'</div></div><div class="acts">'+(c.orders.length>1?'<span class="badge rep">Repeat customer</span>':'')+'<button class="link" data-editcust="'+c.id+'">Edit customer</button><button class="btn tiny" data-addorder="'+c.id+'">+ Add order</button></div></div><div class="timeline-wrap"><div class="tl-label">Order history · newest first</div>'+orders.map((o,i)=>editing===o.dbid?orderEdit(c,o):orderView(c,o,i===0)).join('')+'</div>';
+  el.innerHTML='<div class="dhead"><div><h2>'+esc(c.name)+'</h2><div class="meta">Contact · '+esc(contactName(c)||c.contact||'—')+(emailOf(c)?' · ✉ <a href="mailto:'+esc(emailOf(c))+'">'+esc(emailOf(c))+'</a>':'')+' · '+c.orders.length+' order'+(c.orders.length>1?'s':'')+'</div></div><div class="acts">'+(c.orders.length>1?'<span class="badge rep">Repeat customer</span>':'')+'<button class="link" data-editcust="'+c.id+'">Edit customer</button><button class="btn tiny" data-addorder="'+c.id+'">+ Add order</button></div></div><div class="timeline-wrap"><div class="tl-label">Order history · newest first</div>'+orders.map((o,i)=>editing===o.dbid?orderEdit(c,o):orderView(c,o,i===0)).join('')+'</div>';
 }
 function render(){renderStats();renderList();renderDetail();const g=document.querySelector('.grid');if(g)g.classList.toggle('topview',view==='pending'||view==='analytics'||(view==='detail'&&!!sel));}
 function mScroll(){if(window.innerWidth<=820){const d=document.getElementById('detail');if(d)setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'start'}),60);}}

@@ -213,6 +213,7 @@ section { display:none; } section.on { display:block; }
     <div class="today" id="subdate"></div>
   </div>
   <div class="pills" id="runpills"></div>
+  <button class="btn" id="editBtn" style="border-radius:999px">✎ Edit schedule</button>
   <button class="vox" id="voxbtn">🎙 Tell the schedule</button>
   <button class="btn" id="soBtn" style="border-radius:999px">Sign out</button>
 </div>
@@ -221,6 +222,7 @@ section { display:none; } section.on { display:block; }
   <button class="btn go" id="typego">Apply</button>
 </div>
 <div id="opslog"></div>
+<div id="updpill" style="display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:500;background:#23211C;color:#fff;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.3)">↻ Update available — tap to refresh</div>
 <nav>
   <button class="on" data-v="board">Board</button>
   <button data-v="runs">Runs</button>
@@ -254,6 +256,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const BUILD="2026-06-12-A";
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
  CP:[["Serge tops",.231,1],["Case top",.257,4],["Logo",.921,4],["Ribbons",1.219,12],["Serge top/bot",1.142,6],["Serge scrunchies",.871,5],["Case scrunchie",1.098,11],["Attachment",2.23,11]],
@@ -508,6 +511,19 @@ function schedule(items){
    cur[p] = s0;
    cend[p] = Math.min(d*1440 + t.en*60, s0 + capH*60);
   }
+  for(const uk in OVR.pins){
+   const pin = OVR.pins[uk];
+   if(!pin || !pin.hard || pin.startDay!==d) continue;
+   const u = units.find(x=>x.key===uk);
+   if(!u || u.left<=1) continue;
+   const p = pin.person || (u.custom ? u.who : owner(u.step,u.seg));
+   if(!(p in cur)){ const t=TEAM[p]; if(!t) continue; cur[p]=d*1440+(t.st||8)*60; cend[p]=cur[p]; }
+   const start = cur[p], alloc = u.left;
+   blocks.push({person:p, day:d, run:u.run, step:u.step, seg:u.seg, hrs:alloc/60, key:u.key, base:u.base, sub:u.sub, part:u.part, custom:u.custom, label:u.label, t0:start, t1:start+alloc});
+   u.left = 0;
+   if(u.base){ const b=bases[u.base]; if(b.startT===null) b.startT=start; b.left-=alloc; if(b.left<=1) b.finT=start+alloc; }
+   cur[p] = start+alloc;
+  }
   let guard = 0;
   while(guard++ < 400){
    const cands = [];
@@ -517,6 +533,7 @@ function schedule(items){
      const pin = OVR.pins[u.key];
      const ass = pin && pin.person ? pin.person : (u.custom ? u.who : owner(u.step,u.seg));
      if(u.left<=1 || ass!==p) continue;
+     if(pin && pin.hard) continue;
      if(pin && d<pin.startDay) continue;
      let rt = cur[p], ok = true;
      for(const g of u.base ? gatesOf(items[u.base],items) : []){
@@ -540,7 +557,8 @@ function schedule(items){
    }
    if(!cands.length) break;
    const pr = u => u.custom ? 9 : prio[u.run];
-   cands.sort((a,b)=> a.start-b.start || (OVR.pins[b.u.key]?1:0)-(OVR.pins[a.u.key]?1:0) || pr(a.u)-pr(b.u) || (a.u.step||99)-(b.u.step||99));
+   const lk = u => OVR.pins[u.key] ? 1 : 0;
+   cands.sort((a,b)=> lk(b.u)-lk(a.u) || a.start-b.start || (OVR.pins[b.u.key]?1:0)-(OVR.pins[a.u.key]?1:0) || pr(a.u)-pr(b.u) || (a.u.step||99)-(b.u.step||99));
    const {p,u,start} = cands[0];
    const alloc = Math.min(u.left, cend[p]-start);
    blocks.push({person:p, day:d, run:u.run, step:u.step, seg:u.seg, hrs:alloc/60, key:u.key, base:u.base, sub:u.sub, part:u.part, custom:u.custom, label:u.label, t0:start, t1:start+alloc});
@@ -565,7 +583,9 @@ function schedule(items){
 }
 
 let selDay = 0;
+let editMode = false;
 let rdRun = null, rdTab = "sched", LAST = null;
+let isLead = false;
 const runBy = n => RUNS.find(r=>r.no===n);
 const fmtH = m => { const h=m/60; return (h>=10?h.toFixed(0):h.toFixed(1).replace(/\.0$/,""))+"h"; };
 const initials = n => n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
@@ -584,14 +604,24 @@ function render(){
  }).join("");
  LAST = {items, sched};
  renderOps(); renderDays(sched); renderBoard(items,sched); renderHome(sched); renderRuns(items,sched); renderTracker(items); renderCustom();
+ applyPerms();
  if(rdRun!==null) renderRD();
 }
 
+function applyPerms(){
+ if(isLead) return;
+ ["voxbtn","typebox","resetbtn","clearops","co-add","co-sync","editBtn"].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display="none"; });
+ const f = document.querySelector(".coform"); if(f) f.style.display="none";
+ document.querySelectorAll(".pcell").forEach(i=>i.disabled=true);
+ document.querySelectorAll("[data-cosched],[data-coedit],[data-coemb]").forEach(e=>e.style.display="none");
+ document.querySelectorAll("[data-cpct]").forEach(e=>{ e.style.cursor="default"; e.onclick=null; });
+ document.querySelectorAll(".tblk").forEach(e=>{ e.style.cursor="default"; });
+}
 function renderOps(){
  const el = document.getElementById("opslog");
  el.innerHTML = OVR.log.length ? `<div class="opsbar"><b>Adjustments:</b> ${OVR.log.join(" · ")} <button class="btn" id="clearops">Clear all</button></div>` : "";
  const b = document.getElementById("clearops");
- if(b) b.onclick = ()=>{ OVR = {avail:{},pins:{},log:[]}; save(); render(); };
+ if(b) b.onclick = ()=>{ OVR = {avail:{},pins:{},log:[],trips:(OVR.trips||{}),detach:{},splits:{},arrive:{},gates:[]}; save(); render(); };
 }
 
 function renderDays(sched){
@@ -623,6 +653,7 @@ function renderBoard(items, sched){
   const bl = sched.blocks.filter(b=>b.person===p && b.day===selDay);
   if(av<=0 && !bl.length){ off.push(p + (OVR.avail[p+"|"+selDay]===0 ? " (out)" : "")); continue; }
   const used = bl.reduce((s,b)=>s+b.hrs,0);
+  const over = used > av + 0.05;
   const pctL = Math.min(100, Math.round(100*used/Math.max(av,.1)));
   const blocks = bl.map(b=>{
    if(b.custom){
@@ -631,7 +662,7 @@ function renderBoard(items, sched){
     return `<div class="tblk" data-key="${b.key}" data-base="${b.key}" data-label="${b.label}" data-hex="#9D4E8F" title="${fmtT(b.t0)}–${fmtT(b.t1)}" style="height:${h}px;background:#9D4E8F1C;border-left:5px solid #9D4E8F;color:#2B2A25">
       <span class="hbadge">${fmtT(b.t0)} · ${b.hrs.toFixed(1)}h</span>
       <div class="nm">${b.label}</div>
-      <div class="mt"><span style="color:#9D4E8F;font-weight:700">Custom order</span>${pin?`<span class="tag pinned" style="color:#9D4E8F">MOVED</span>`:""}</div>
+      <div class="mt"><span style="color:#9D4E8F;font-weight:700">Custom order</span></div>
     </div>`;
    }
    const r = runBy(b.run);
@@ -654,13 +685,13 @@ function renderBoard(items, sched){
    return `<div class="tblk" data-key="${b.key}" data-base="${b.base}" data-label="${nm}" data-hex="${r.hex}" ${expandable?'data-expandable="1"':''} title="${fmtT(b.t0)}–${fmtT(b.t1)}" style="height:${h}px;background:${tint(r.hex,"1C")};border-left:5px solid ${r.hex};color:#2B2A25">
      <span class="hbadge">${fmtT(b.t0)} · ${b.hrs.toFixed(1)}h</span>
      <div class="nm">${nm}</div>
-     <div class="mt"><span style="color:${r.hex};font-weight:700">${r.name}</span>${both?`<span class="tag" style="color:${r.hex}">${b.seg==="L"?"LUXE":"classic"}</span>`:""}${extra}${pin?`<span class="tag pinned" style="color:${r.hex}">MOVED</span>`:""}</div>
+     <div class="mt"><span style="color:${r.hex};font-weight:700">${r.name}</span>${both?`<span class="tag" style="color:${r.hex}">${b.seg==="L"?"LUXE":"classic"}</span>`:""}${extra}</div>
    </div>`;
   }).join("");
   html += `<div class="person" data-person="${p}">
    <div class="phead"><div class="av">${initials(p)}</div><div><b>${p}</b><span>${t.sub}</span></div>
-   <div class="hrs"><b>${used.toFixed(1)}h</b> of ${av}h</div></div>
-   <div class="pload"><i style="width:${pctL}%;background:${pctL>92?"#D88A2B":"#23211C"}"></i></div>
+   <div class="hrs"><b style="${over?"color:#C2452D":""}">${used.toFixed(1)}h</b> of ${av}h${over?`<br><span style="background:#C2452D;color:#fff;border-radius:99px;padding:1px 8px;font-size:9.5px;font-weight:800;letter-spacing:.4px">OVERBOOKED</span>`:""}</div></div>
+   <div class="pload"><i style="width:${pctL}%;background:${over?"#C2452D":(pctL>92?"#D88A2B":"#23211C")}"></i></div>
    <div class="stack">${blocks || `<div class="empty">Nothing scheduled — open for custom orders &amp; catch-up.</div>`}</div>
   </div>`;
  }
@@ -988,20 +1019,23 @@ function renderTracker(items){
 const EXPANDED = new Set();
 let drag = null, pressTimer = null;
 function labelOfBase(base){
+ if(base && base.indexOf("co|")===0){ const o = CUSTOM.find(x=>"co|"+x.id===base.split("|").slice(0,2).join("|")) || CUSTOM.find(x=>base.indexOf(x.id)>=0); return o ? "custom: "+o.name : "custom order"; }
  const [run,step,sg] = base.split("|");
  return nameOf(+step,sg) + " (" + runBy(+run).name + ")";
 }
 function closeCtx(){ const m=document.getElementById("ctxmenu"); if(m) m.remove(); }
-function showCtx(x,y,base){
+function showCtx(x,y,base,key,person){
  closeCtx();
  const m = document.createElement("div");
  m.className = "ctx"; m.id = "ctxmenu";
  m.style.left = Math.max(8, Math.min(x, (window.innerWidth||600)-200)) + "px";
  m.style.top = y + "px";
  const cur = OVR.splits[base]||1;
- m.innerHTML = `<button data-act="split">Split into ${cur+1} parts</button>`
+ const isCust = base && base.indexOf("co|")===0;
+ const kpin = key ? OVR.pins[key] : null;
+ m.innerHTML = (isCust ? `` : `<button data-act="split">Split into ${cur+1} parts</button>`
   + `<button data-act="expand">Show sub-steps</button>`
-  + ((cur>1 || (OVR.detach[base]||[]).length) ? `<button data-act="regroup">Regroup &amp; unpin</button>` : ``)
+  + ((cur>1 || (OVR.detach[base]||[]).length) ? `<button data-act="regroup">Regroup &amp; unpin</button>` : ``))
   + `<button data-act="x">Cancel</button>`;
  document.body.appendChild(m);
  m.querySelectorAll("button").forEach(b=>b.onclick=(ev)=>{
@@ -1021,13 +1055,15 @@ function showCtx(x,y,base){
  });
 }
 function wireDrag(){
+ if(!isLead || !editMode) return;
  document.querySelectorAll(".tblk[data-key],.tblk[data-minibase]").forEach(el=>{
   el.onpointerdown = ev => {
    ev.preventDefault(); closeCtx();
    drag = {key:el.dataset.key, mini:el.dataset.minibase, sub:el.dataset.sub, base:el.dataset.base||el.dataset.minibase,
+           pers:(el.closest("[data-person]")||{dataset:{}}).dataset.person,
            label:el.dataset.label, hex:el.dataset.hex, el, moved:false, x:ev.clientX, y:ev.clientY};
    clearTimeout(pressTimer);
-   pressTimer = setTimeout(()=>{ if(drag && !drag.moved){ const d=drag; drag=null; showCtx(d.x, d.y, d.base); } }, 550);
+   pressTimer = setTimeout(()=>{ if(drag && !drag.moved){ const d=drag; drag=null; showCtx(d.x, d.y, d.base, d.key||d.mini, d.pers); } }, 550);
   };
   el.ondblclick = ev => {
    ev.preventDefault();
@@ -1039,7 +1075,7 @@ function wireDrag(){
   el.querySelectorAll(".exhead").forEach(h=>h.ondblclick = ()=>{ EXPANDED.delete(el.dataset.collapse); render(); });
  });
  document.querySelectorAll(".tblk[data-base]").forEach(el=>{
-  el.oncontextmenu = ev => { ev.preventDefault(); showCtx(ev.clientX, ev.clientY, el.dataset.base); };
+  el.oncontextmenu = ev => { ev.preventDefault(); showCtx(ev.clientX, ev.clientY, el.dataset.base, el.dataset.key||el.dataset.base, (el.closest("[data-person]")||{dataset:{}}).dataset.person); };
  });
 }
 document.addEventListener("pointerdown", ev=>{ if(!ev.target.closest("#ctxmenu") && !ev.target.closest(".tblk")) closeCtx(); });
@@ -1062,10 +1098,20 @@ document.addEventListener("pointermove", ev=>{
  const t = document.elementFromPoint(ev.clientX, ev.clientY);
  const card = t && t.closest ? (t.closest(".person[data-person]") || t.closest(".day[data-d]")) : null;
  if(card) card.classList.add("hot");
+ const dayEl = t && t.closest ? t.closest(".day[data-d]") : null;
+ if(dayEl && +dayEl.dataset.d !== selDay){
+  const dd = +dayEl.dataset.d;
+  if(drag.hoverDay !== dd){
+   drag.hoverDay = dd;
+   clearTimeout(drag.hoverT);
+   drag.hoverT = setTimeout(()=>{ if(drag){ selDay = dd; render(); } }, 450);
+  }
+ } else { drag.hoverDay = null; clearTimeout(drag.hoverT); }
 });
 document.addEventListener("pointerup", ev=>{
  clearTimeout(pressTimer);
  if(!drag) return;
+ clearTimeout(drag.hoverT);
  const d = drag; drag = null;
  document.querySelectorAll(".person,.day").forEach(x=>x.classList.remove("hot"));
  if(d.ghost) d.ghost.remove();
@@ -1081,13 +1127,13 @@ document.addEventListener("pointerup", ev=>{
   const list = OVR.detach[d.mini] || [];
   if(!list.includes(d.sub)) list.push(d.sub);
   OVR.detach[d.mini] = list;
-  const pin = {startDay: day};
+  const pin = {startDay: day, hard:true};
   if(person) pin.person = person;
   OVR.pins[d.mini+"::"+d.sub] = pin;
   OVR.log.push(`${tokName(d.sub)} (${SLABEL[tokStyle(d.sub)]||""}) pulled out of ${labelOfBase(d.mini)} → ${person||"same person"}, ${fmtDay(day)}`);
  } else {
   const cur = OVR.pins[d.key] || {};
-  const pin = {startDay: day};
+  const pin = {startDay: day, hard:true};
   if(person) pin.person = person; else if(cur.person) pin.person = cur.person;
   OVR.pins[d.key] = pin;
   OVR.log.push(`${d.label} → ${pin.person || "same person"}, ${fmtDay(day)}`);
@@ -1220,6 +1266,9 @@ document.querySelectorAll("nav button").forEach(t=>t.onclick=()=>{
  document.getElementById("view-"+t.dataset.v).classList.add("on");
 });
 document.getElementById("rdwrap").addEventListener("click", e=>{ if(e.target.id==="rdwrap") closeRun(); });
+const _eb = document.getElementById("editBtn");
+function setEdit(on){ editMode = on; _eb.textContent = on ? "✓ Done — hold in place" : "✎ Edit schedule"; _eb.style.background = on ? "#23211C" : ""; _eb.style.color = on ? "#fff" : ""; _eb.style.borderColor = on ? "#23211C" : ""; render(); }
+_eb.onclick = ()=>setEdit(!editMode);
 document.getElementById("dprev").onclick = ()=>document.getElementById("daystrip").scrollBy({left:-280,behavior:"smooth"});
 document.getElementById("dnext").onclick = ()=>document.getElementById("daystrip").scrollBy({left:280,behavior:"smooth"});
 document.getElementById("resetbtn").onclick=()=>{ DONE=seedDone(); save(); render(); };
@@ -1267,8 +1316,23 @@ async function startApp(){
  if(APP_STARTED) return;
  APP_STARTED = true;
  document.getElementById("login").style.display = "none";
+ try {
+  const {data:{user}} = await sb.auth.getUser();
+  const {data:prof} = await sb.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  isLead = !!(prof && prof.role === "lead");
+ } catch(e){ isLead = false; }
  await bootCloud();
  render();
+}
+if(location.protocol.indexOf("http")===0){
+ document.getElementById("updpill").onclick = ()=>location.reload();
+ setInterval(async ()=>{
+  try {
+   const t = await fetch(location.pathname+"?chk="+Date.now(), {cache:"no-store"}).then(r=>r.text());
+   const m = t.match(/BUILD="([^"]+)"/);
+   if(m && m[1] !== BUILD) document.getElementById("updpill").style.display = "block";
+  } catch(e){}
+ }, 240000);
 }
 sb.auth.onAuthStateChange((ev,s)=>{ if(s) startApp(); else if(APP_STARTED) location.reload(); });
 sb.auth.getSession().then(({data:{session}})=>{ if(session) startApp(); else document.getElementById("login").style.display="flex"; });

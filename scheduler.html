@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taylor Made — production</title>
+<style>
+:root { color-scheme: light;
+ --ink:#23211C; --soft:#7A766B; --faint:#A9A498; --line:#EBE8DF; --bg:#F7F6F1; --card:#FFFFFF;
+}
+* { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
+body { font-family:-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); padding:clamp(12px,2vw,28px); padding-bottom:60px; }
+.top { display:flex; justify-content:space-between; align-items:flex-end; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
+.brand { font-size:clamp(20px,2.6vw,30px); font-weight:700; letter-spacing:-.4px; }
+.brand em { font-style:normal; color:var(--faint); font-weight:500; }
+.today { color:var(--soft); font-size:clamp(13px,1.4vw,15px); margin-top:3px; }
+.pills { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.pill { display:flex; align-items:center; gap:9px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:8px 14px 8px 9px; }
+.ring { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; }
+.ring i { width:24px; height:24px; border-radius:50%; background:var(--card); display:grid; place-items:center; font-style:normal; font-size:9.5px; font-weight:700; }
+.pill b { font-size:13px; font-weight:600; display:block; line-height:1.15; }
+.pill span { font-size:11px; color:var(--soft); }
+.vox { border:1.5px solid var(--ink); background:var(--ink); color:#fff; border-radius:999px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; }
+.vox.listen { animation:pulse 1.1s infinite; }
+@keyframes pulse { 50% { opacity:.55; } }
+.typebox { display:none; width:100%; margin:10px 0 2px; gap:8px; }
+.typebox.open { display:flex; }
+.typebox input { flex:1; border:1.5px solid var(--line); border-radius:11px; padding:10px 13px; font-size:13.5px; background:var(--card); }
+.opsbar { background:#FFF8E8; border:1px solid #EDDFB7; border-radius:12px; padding:9px 13px; font-size:12.5px; color:#6B5A23; margin:10px 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.opsbar button { margin-left:auto; }
+nav { position:sticky; top:0; z-index:5; background:var(--bg); display:flex; gap:6px; padding:12px 0; margin-bottom:4px; }
+nav button { border:0; background:transparent; color:var(--soft); font-size:clamp(13px,1.5vw,15px); font-weight:600; padding:9px 16px; border-radius:999px; cursor:pointer; }
+nav button.on { background:var(--ink); color:#fff; }
+.dayswrap { display:flex; align-items:center; gap:6px; }
+.dnav { flex:none; width:34px; height:34px; border-radius:50%; border:1.5px solid var(--line); background:var(--card); font-size:17px; color:var(--soft); cursor:pointer; }
+.days { display:flex; gap:8px; overflow-x:auto; padding:6px 2px 14px; flex:1; scroll-behavior:smooth; }
+.day { flex:0 0 auto; min-width:78px; border:1px solid var(--line); background:var(--card); border-radius:14px; padding:9px 12px; cursor:pointer; text-align:left; }
+.day.sel { border-color:var(--ink); box-shadow:0 0 0 1px var(--ink); }
+.day.hot { border-color:#C99118; box-shadow:0 0 0 2px #C9911855; }
+.day .dw { font-size:11px; font-weight:700; letter-spacing:.4px; color:var(--soft); text-transform:uppercase; }
+.day .dn { font-size:17px; font-weight:700; margin:1px 0 5px; }
+.day .ld { height:4px; border-radius:99px; background:var(--line); overflow:hidden; }
+.day .ld i { display:block; height:100%; background:var(--faint); }
+.board { display:grid; grid-template-columns:repeat(auto-fill,minmax(235px,1fr)); gap:14px; align-items:start; }
+.person { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:14px; }
+.person.hot { border-color:#C99118; box-shadow:0 0 0 2px #C9911855; }
+.phead { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.av { width:38px; height:38px; border-radius:50%; background:var(--ink); color:#fff; display:grid; place-items:center; font-weight:700; font-size:13px; flex:none; }
+.phead b { font-size:15px; display:block; }
+.phead span { font-size:12px; color:var(--soft); }
+.hrs { margin-left:auto; text-align:right; font-size:12px; color:var(--soft); }
+.hrs b { font-size:16px; color:var(--ink); }
+.pload { height:5px; border-radius:99px; background:var(--line); overflow:hidden; margin:4px 0 12px; }
+.pload i { display:block; height:100%; border-radius:99px; }
+.stack { display:flex; flex-direction:column; gap:7px; }
+.tblk { border-radius:12px; padding:9px 12px; display:flex; flex-direction:column; justify-content:center; position:relative; overflow:hidden; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
+.tblk.dragging { opacity:.35; }
+.tblk .nm { font-weight:650; font-size:13.5px; line-height:1.25; }
+.tblk .mt { font-size:11.5px; opacity:.85; margin-top:2px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.tag { font-size:10px; font-weight:700; letter-spacing:.3px; padding:1px 7px; border-radius:99px; background:rgba(255,255,255,.55); }
+.pinned { font-size:9.5px; font-weight:800; letter-spacing:.4px; }
+.hbadge { position:absolute; top:8px; right:10px; font-size:11.5px; font-weight:700; opacity:.75; }
+.ghost { position:fixed; z-index:99; pointer-events:none; border-radius:12px; padding:8px 14px; font-size:13px; font-weight:650; color:#fff; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+.empty { color:var(--faint); font-size:12.5px; padding:8px 2px; }
+.offline { color:var(--faint); font-size:12.5px; margin-top:14px; }
+.homecard { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-top:16px; }
+.homecard h3 { font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.homecard h3 span { font-size:11px; font-weight:600; color:var(--faint); text-transform:uppercase; letter-spacing:.5px; }
+.evt { display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line); flex-wrap:wrap; }
+.evt:first-of-type { border-top:0; margin-top:6px; }
+.eicon { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-size:15px; flex:none; }
+.evt b { font-size:13.5px; display:block; }
+.evt .ed { font-size:12px; color:var(--soft); }
+.evt .when { margin-left:auto; font-size:12px; font-weight:700; color:var(--soft); text-align:right; }
+.now { background:#23211C; color:#fff; border-radius:99px; padding:3px 10px; font-size:10.5px; font-weight:700; letter-spacing:.3px; }
+.overdue { background:#C2452D; color:#fff; border-radius:99px; padding:3px 10px; font-size:10.5px; font-weight:700; letter-spacing:.3px; }
+.evt.done b, .evt.done .ed { text-decoration:line-through; opacity:.5; }
+.evt.done .eicon { opacity:.4; }
+.evchk input { width:22px; height:22px; accent-color:#23211C; }
+.ctx { position:fixed; z-index:120; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.18); overflow:hidden; min-width:190px; }
+.ctx button { display:block; width:100%; border:0; background:#fff; text-align:left; padding:12px 15px; font-size:13px; font-weight:600; cursor:pointer; }
+.ctx button:hover { background:#F5F3EC; }
+.exwrap { background:transparent; }
+.exhead { font-size:10.5px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; padding:2px 4px; }
+.rcards { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:14px; }
+.rc { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:18px; }
+.rc .rh { display:flex; gap:14px; align-items:center; }
+.donut { width:74px; height:74px; border-radius:50%; display:grid; place-items:center; flex:none; }
+.donut i { width:54px; height:54px; border-radius:50%; background:var(--card); display:grid; place-items:center; font-style:normal; font-weight:750; font-size:15px; }
+.rc h2 { font-size:18px; font-weight:700; letter-spacing:-.2px; }
+.rc .rm { font-size:12.5px; color:var(--soft); margin-top:3px; }
+.tiles { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:15px; }
+.tile { background:var(--bg); border-radius:12px; padding:9px 11px; }
+.tile b { display:block; font-size:15.5px; }
+.tile span { font-size:10.5px; color:var(--soft); text-transform:uppercase; letter-spacing:.4px; font-weight:600; }
+.nextlbl { font-size:11px; font-weight:700; color:var(--faint); letter-spacing:.5px; text-transform:uppercase; margin:14px 0 7px; }
+.nxt { display:flex; flex-wrap:wrap; gap:6px; }
+.nxt span { font-size:12px; font-weight:600; padding:5px 11px; border-radius:99px; }
+details.pats { margin-top:13px; font-size:12.5px; color:var(--soft); }
+details.pats summary { cursor:pointer; font-weight:600; }
+.pat { display:inline-block; background:var(--bg); border-radius:7px; padding:3px 9px; margin:4px 4px 0 0; font-size:11.5px; }
+details.tkcard { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:4px 18px; margin-bottom:14px; }
+details.tkcard summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:15px 0; }
+details.tkcard summary::-webkit-details-marker { display:none; }
+.tkhead h2 { font-size:17px; font-weight:700; }
+.tksum { font-size:12.5px; color:var(--soft); margin-left:auto; }
+.chev { transition:transform .15s; color:var(--faint); font-size:13px; }
+details[open] .chev { transform:rotate(90deg); }
+.dot { width:11px; height:11px; border-radius:50%; flex:none; }
+.trow { display:flex; align-items:center; gap:12px; padding:13px 0; border-top:1px solid var(--line); flex-wrap:wrap; }
+.tinfo { min-width:175px; flex:1; }
+.tinfo b { font-size:14.5px; font-weight:650; }
+.linpill { font-size:10px; font-weight:700; letter-spacing:.3px; padding:2px 8px; border-radius:99px; margin-left:7px; vertical-align:2px; }
+.tinfo span.sty { display:block; font-size:11.5px; color:var(--faint); margin-top:2px; }
+.tprog { flex:2; min-width:120px; height:9px; background:var(--bg); border-radius:99px; overflow:hidden; }
+.tprog i { display:block; height:100%; border-radius:99px; }
+.tleft { font-size:12.5px; color:var(--soft); width:70px; text-align:right; }
+.btn { border:1.5px solid var(--line); background:var(--card); border-radius:11px; padding:9px 14px; font-size:12.5px; font-weight:600; color:var(--ink); cursor:pointer; min-height:40px; }
+.btn.go { background:var(--ink); border-color:var(--ink); color:#fff; }
+.subs { width:100%; display:none; padding:2px 0 4px; }
+.subs.open { display:block; }
+.subrow { display:flex; align-items:center; gap:10px; font-size:13px; padding:8px 0 8px 6px; color:var(--ink); }
+.subrow input { width:18px; height:18px; accent-color:var(--ink); }
+.subrow .st { color:var(--faint); font-size:11px; }
+#rdwrap { position:fixed; inset:0; background:rgba(35,33,28,.45); z-index:200; overflow:auto; padding:3vh 3vw; display:none; }
+#rdwrap.open { display:block; }
+.rd { background:var(--bg); border-radius:22px; max-width:1020px; margin:0 auto; padding:20px 22px 30px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+.rdtop { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.rdclose { margin-left:auto; border:1.5px solid var(--line); background:var(--card); border-radius:99px; width:38px; height:38px; font-size:16px; cursor:pointer; }
+.rdtabs { display:flex; gap:6px; margin:16px 0 14px; background:#EFEDE5; border-radius:999px; padding:4px; width:max-content; }
+.rdtabs button { border:0; background:transparent; color:var(--soft); font-size:13.5px; font-weight:600; padding:8px 18px; border-radius:999px; cursor:pointer; }
+.rdtabs button.on { background:var(--ink); color:#fff; }
+.dayagenda { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:13px 16px; margin-bottom:10px; }
+.dayagenda h4 { font-size:13px; font-weight:700; margin-bottom:5px; }
+.agrow { display:flex; gap:10px; font-size:12.5px; padding:5px 0; border-top:1px solid #F4F2EB; align-items:baseline; flex-wrap:wrap; }
+.agrow:first-of-type { border-top:0; }
+.agrow .tm { color:var(--soft); width:110px; flex:none; font-variant-numeric:tabular-nums; }
+.agrow .wh { font-weight:650; width:92px; flex:none; }
+.agrow .hh { margin-left:auto; color:var(--soft); }
+.ptab { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:8px 4px; overflow-x:auto; }
+.ptab table { width:100%; border-collapse:collapse; font-size:13.5px; min-width:1080px; }
+.ptab th { text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--soft); padding:8px 8px 6px; border-bottom:1.5px solid var(--line); position:sticky; top:0; background:var(--card); }
+.ptab td { padding:8px 10px; border-bottom:1px solid #F4F2EB; }
+.ptab td.num { text-align:center; font-variant-numeric:tabular-nums; color:#44423C; font-size:14.5px; font-weight:600; }
+.ptab td.num.zero { color:#D8D5CB; }
+.ptab td.pname { font-weight:600; min-width:215px; font-size:14px; }
+.pcell { width:110px; border:1px solid transparent; background:transparent; font-size:12.5px; padding:5px 7px; border-radius:7px; font-family:inherit; color:var(--ink); }
+.pcell:hover { border-color:var(--line); }
+.pcell:focus { border-color:var(--ink); outline:none; background:#fff; }
+.pcell.edited { background:#FFF6DF; border-color:#EDDFB7; }
+.rdnote { font-size:11.5px; color:var(--faint); margin-top:9px; }
+.sw { position:relative; width:48px; height:48px; border-radius:10px; display:inline-grid; place-items:center; vertical-align:middle; margin-right:11px; overflow:hidden; flex:none; }
+.sw i { font-style:normal; font-size:13px; font-weight:800; color:rgba(0,0,0,.45); }
+.sw img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.ptab td.pname { display:flex; align-items:center; }
+.corow { display:flex; gap:12px; align-items:center; padding:14px 16px; margin:10px 0; background:#F6F4ED; border:1px solid var(--line); border-radius:16px; flex-wrap:wrap; }
+.corow.alt { background:var(--card); }
+.cobadge { width:44px; text-align:center; flex:none; }
+.cobadge b { display:block; font-size:17px; }
+.cobadge span { font-size:9.5px; color:var(--soft); text-transform:uppercase; letter-spacing:.4px; font-weight:700; }
+.coinfo { flex:1; min-width:170px; }
+.coinfo b { font-size:14.5px; }
+.coinfo .cd { font-size:12px; color:var(--soft); margin-top:2px; }
+.cotime { text-align:right; font-size:12px; color:var(--soft); }
+.cotime b { display:block; font-size:15px; color:var(--ink); }
+.coemb { width:74px; border:1px solid var(--line); border-radius:9px; padding:7px 8px; font-size:12.5px; text-align:center; }
+.duechip { font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:99px; }
+.coform { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+.coform input { border:1.5px solid var(--line); border-radius:10px; padding:9px 11px; font-size:13px; background:var(--card); }
+.cotl { display:flex; width:100%; padding:8px 0 2px; }
+.cstep { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; position:relative; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.cstep::before { content:""; position:absolute; top:11px; left:-50%; width:100%; height:2.5px; background:var(--line); }
+.cstep:first-child::before { display:none; }
+.cstep.on::before { background:#23211C; }
+.cring { width:23px; height:23px; border-radius:50%; border:2.5px solid var(--line); background:var(--card); display:grid; place-items:center; font-size:12px; color:#fff; position:relative; z-index:1; }
+.cstep.on .cring { background:#23211C; border-color:#23211C; }
+.cstep.next .cring { border-color:#C99118; }
+.cstep span { font-size:9.5px; font-weight:700; letter-spacing:.2px; color:var(--faint); text-transform:uppercase; text-align:center; line-height:1.2; }
+.cstep.on span { color:var(--ink); }
+.cosnap { display:grid; grid-template-columns:repeat(3,1fr); }
+.cs { text-align:center; padding:4px 6px; border-left:1px solid var(--line); }
+.cs:first-child { border-left:0; }
+.cs b { display:block; font-size:clamp(22px,3.4vw,30px); font-weight:750; letter-spacing:-.5px; }
+.cs:last-child b { color:#9D4E8F; }
+.cs span { font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--faint); text-transform:uppercase; }
+.cobars { width:100%; display:flex; gap:18px; flex-wrap:wrap; padding:2px 0 0; }
+.cb { display:flex; align-items:center; gap:8px; flex:1; min-width:220px; }
+.cb > span { font-size:10px; font-weight:700; letter-spacing:.4px; color:var(--faint); text-transform:uppercase; width:42px; }
+.cbar { flex:1; height:9px; background:var(--line); border-radius:99px; overflow:hidden; cursor:pointer; }
+.cbar i { display:block; height:100%; background:#9D4E8F; border-radius:99px; }
+.cb b { font-size:12px; width:38px; }
+.cb em { font-style:normal; font-size:11px; color:var(--soft); width:62px; }
+.foot { color:var(--faint); font-size:12px; margin-top:22px; }
+section { display:none; } section.on { display:block; }
+@media (min-width:700px){ .tiles{grid-template-columns:repeat(4,1fr);} }
+</style>
+</head>
+<body>
+<div id="login" style="position:fixed;inset:0;z-index:999;background:#045863;display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,'Segoe UI',Roboto,sans-serif">
+ <div style="background:#fff;border-radius:20px;padding:30px 26px;max-width:360px;width:100%;text-align:center">
+  <img src="/White%20Logo.png" alt="Taylor Made" style="height:52px;filter:brightness(.25);margin-bottom:6px" onerror="this.style.display='none'">
+  <h1 style="font-size:19px;font-weight:700;margin:4px 0 2px;color:#23211C">Production scheduler</h1>
+  <p style="color:#7A766B;font-size:13px;margin-bottom:16px">Sign in with your team account</p>
+  <input id="liEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:8px">
+  <input id="liPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:12px">
+  <button id="liBtn" style="width:100%;background:#045863;color:#fff;border:0;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer">Sign in</button>
+  <div id="liErr" style="color:#C2452D;font-size:12px;margin-top:8px;min-height:14px"></div>
+ </div>
+</div>
+<div class="top">
+  <div>
+    <div class="brand">Production <em>· Taylor Made</em></div>
+    <div class="today" id="subdate"></div>
+  </div>
+  <div class="pills" id="runpills"></div>
+  <button class="vox" id="voxbtn">🎙 Tell the schedule</button>
+  <button class="btn" id="soBtn" style="border-radius:999px">Sign out</button>
+</div>
+<div class="typebox" id="typebox">
+  <input id="typein" placeholder="Type here — or tap the mic key on your keyboard to dictate">
+  <button class="btn go" id="typego">Apply</button>
+</div>
+<div id="opslog"></div>
+<nav>
+  <button class="on" data-v="board">Board</button>
+  <button data-v="runs">Runs</button>
+  <button data-v="tracker">Tracker</button>
+  <button data-v="custom">Custom orders</button>
+</nav>
+
+<section id="view-board" class="on">
+  <div class="dayswrap"><button class="dnav" id="dprev">‹</button><div class="days" id="daystrip"></div><button class="dnav" id="dnext">›</button></div>
+  <div class="board" id="board"></div>
+  <div class="homecard" id="homecard"></div>
+  <div class="offline" id="offline"></div>
+</section>
+
+<section id="view-runs"><div class="rcards" id="runcards"></div></section>
+
+<section id="view-custom">
+  <div class="card" id="cosummary"></div>
+  <div class="card" id="colist"></div>
+</section>
+
+<section id="view-tracker">
+  <div id="trackwrap"></div>
+  <button class="btn" id="resetbtn">Reset to imported status (June 12)</button>
+</section>
+<div id="rdwrap"><div class="rd" id="rd"></div></div>
+<div class="foot">Drag any block onto a teammate or a day to move it — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const SUBS = {
+ LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
+ CP:[["Serge tops",.231,1],["Case top",.257,4],["Logo",.921,4],["Ribbons",1.219,12],["Serge top/bot",1.142,6],["Serge scrunchies",.871,5],["Case scrunchie",1.098,11],["Attachment",2.23,11]],
+ LTE:[["Serge bottoms",.71,1],["Serge tops",.421,17],["Trim bottoms",.6,2],["Understitch bottoms",.67,3],["Serge sides",.8118,15],["Buttonholes",.871,9],["Bartack elastic",1.063,8],["Logo",1.01,14],["Serge top/bot",1.98,7]],
+ CTE:[["Serge sides",.781,15],["Buttonholes",1.2,9],["Bartack elastic",1.029,8],["Logo",1.01,14],["Serge top/bot",2.189,7]],
+ LO:[["Serge bottoms",.917,1],["Serge tops",.32,1],["Trim tops",.11,2],["Trim bottoms",.67,2],["Understitch bottoms",1.088,3],["Understitch tops",.34,3],["Case top",.412,4],["Logo",.921,4],["Sew bottom piece",2.209,16],["Turn & press",1.21,16],["Serge top/bot",1.259,19],["Tack",1.815,10]],
+ CO:[["Serge tops",.246,1],["Case top",.412,4],["Logo",.921,4],["Sew bottom piece",2.209,16],["Turn & press",1.21,16],["Serge top/bot",1.259,19],["Tack",1.815,10]],
+ LS:[["Serge bottoms",.896,1],["Serge tops",.459,1],["Trim tops",.11,2],["Trim bottoms",.67,2],["Understitch bottoms",1.088,3],["Understitch tops",.34,3],["Case top",.412,4],["Logo",.921,4],["Ties in bottoms",1.219,13],["Serge top/bot",1.142,19],["Tack",1.41,10]],
+ CS:[["Serge tops",.246,1],["Case top",.412,4],["Logo",1.145,4],["Ties in bottoms",1.219,13],["Serge top/bot",1.142,19],["Tack",1.41,10]]
+};
+const PRE = {
+ LP:{1:[],2:[1],3:[2],4:[3],12:[3],5:[3],6:[4,12],11:[6,5]},
+ CP:{1:[],4:[1],12:[],5:[],6:[4,12],11:[6,5]},
+ LTE:{1:[],2:[1],3:[2],9:[3],8:[3],17:[3],15:[8,9],7:[15,17],14:[15]},
+ CTE:{9:[],8:[],15:[8,9],7:[15],14:[15]},
+ LO:{16:[],1:[],2:[1],3:[2],4:[3],19:[16,4],10:[19]},
+ CO:{16:[],1:[],4:[1],19:[16,4],10:[19]},
+ LS:{1:[],2:[1],3:[2],4:[3],13:[3],19:[4,13],10:[19]},
+ CS:{1:[],4:[1],13:[],19:[4,13],10:[19]}
+};
+const GN = {2:"Trimming",3:"Top stitching",4:"Casing & logos",5:"Serge scrunchies",6:"T/B ponytails",7:"T/B euros",19:"T/B skulls & originals",8:"Euro elastic",9:"Buttonholes",10:"Tacking",11:"Casing & attachment",12:"Ribbon",13:"Skull bottoms",14:"Euro logos",15:"Serge euro sides",16:"Original bottoms",17:"Euro tops"};
+const nameOf = (step,sg) => step===1 ? (sg==="L" ? "Satin to cotton" : "Serge classic tops") : GN[step];
+const TEAM = {
+ "Trinna":{days:[1,2,4,5],h:10,st:10,en:20,sub:"M T Th F · 10a–8p"},
+ "Caitlynn":{days:[1,4],h:8,st:15,en:23,sub:"Mon & Thu · 3p–11p"},
+ "Drea":{days:[5,6],h:8,st:7,en:15,sub:"Fri & Sat · 7a–3p"},
+ "Mauricio":{days:[5,6],h:8,st:7,en:15,sub:"Fri & Sat · 7a–3p"},
+ "Karla":{days:[5,6],h:8,st:7,en:15,sub:"Fri & Sat · 7a–3p"},
+ "Lora":{days:[1,2,3,4,5,6],h:5,st:8,en:20,sub:"works from home",home:true},
+ "Anna Cristina":{days:[1,2,3,4,5,6],h:5,st:8,en:20,sub:"works from home",home:true}
+};
+const PIPE = {"1|2":1,"2|3":1};
+const fmtT = m => { const mm=((Math.round(m)%1440)+1440)%1440; let h=Math.floor(mm/60), mi=mm%60; const ap=h>=12?"p":"a"; h=h%12||12; return h+(mi?":"+String(mi).padStart(2,"0"):"")+ap; };
+const EXC = {"2026-06-12":{"Trinna":{st:13,h:7,note:"in at 1p, 7 hrs (hours finished early this week)"}}};
+const isoOf = d => { const dt=dateOf(d); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); };
+function owner(step,sg){ if(step===8||step===15) return sg==="L"?"Trinna":"Drea"; return {1:"Mauricio",2:"Drea",3:"Karla",4:"Karla",5:"Mauricio",6:"Trinna",7:"Trinna",9:"Caitlynn",10:"Trinna",11:"Lora",12:"Karla",13:"Karla",14:"Drea",16:"Drea",17:"Mauricio",19:"Trinna"}[step]; }
+const RUNS = [
+ {no:20,name:"Summer Bash",hex:"#0E9888",mult:1,qty:{CP:90,LP:176,CTE:93,LTE:92,CO:21,CS:24,LS:24},
+  lines:[
+   {p:"Slice of Summer",q:[6,12,9,10,0,0,0],satin:"Coral"},
+   {p:"Seahorse Serenade",q:[6,12,8,7,2,2,2],satin:"Turquoise",ribbon:"Tornado Blue"},
+   {p:"Turtles",q:[7,12,5,7,1,2,2],satin:"Sky Blue",ribbon:"True Blue"},
+   {p:"Rainbow Tides",q:[8,12,6,7,2,2,2],satin:"Coral",ribbon:"Yellow"},
+   {p:"Paws and Posies",q:[8,16,8,8,4,0,4],satin:"Pink",ribbon:"Sherbert"},
+   {p:"Rio",q:[10,16,8,9,2,2,2],satin:"Pink",ribbon:"Royal Purple"},
+   {p:"Ocean Shells",q:[8,16,8,8,2,2,2],satin:"Sage Green",ribbon:"Dusty Blue"},
+   {p:"Pastel Palms",q:[8,16,8,8,2,2,2],satin:"Sky Blue",ribbon:"Seafoam"},
+   {p:"Fruit Ninja",q:[6,12,6,6,1,2,1],satin:"Martini Olive",ribbon:"Rosewood"},
+   {p:"Daisies on Blue",q:[5,12,5,4,1,4,2],satin:"Sky Blue",ribbon:"Baby Blue"},
+   {p:"Daisies on Pink",q:[2,12,5,6,1,2,2],satin:"Pink",ribbon:"Light Pink"},
+   {p:"Polka Flamingo",q:[6,12,5,4,2,2,2],satin:"Pink",ribbon:"Azalea"},
+   {p:"Core Solid: Ceil Blue",q:[6,8,6,4,0,0,0],satin:"White",ribbon:"White"},
+   {p:"Magenta Floral",q:[4,8,6,4,1,2,1],satin:"Dusty Rose",ribbon:"Cerise"}]},
+ {no:19,name:"Comfort+",hex:"#E2704A",mult:1.25,qty:{CP:172,CTE:168,CO:42,CS:40},
+  lines:[
+   {p:"Polka Dot Floral",q:[20,0,20,0,4,4,0]},
+   {p:"Flamingo",q:[20,0,20,0,6,4,0]},
+   {p:"Moons and Suns",q:[20,0,18,0,4,4,0]},
+   {p:"Black Comfort+",q:[16,0,14,0,6,8,0]},
+   {p:"Blush Floral",q:[12,0,16,0,4,4,0]},
+   {p:"Peach Roses",q:[20,0,18,0,4,4,0]},
+   {p:"Teal & Magenta Floral",q:[20,0,18,0,4,4,0]},
+   {p:"Coral Floral",q:[24,0,24,0,4,4,0]},
+   {p:"Lemons",q:[20,0,20,0,6,4,0]}]},
+ {no:21,name:"Golden Medicine",hex:"#C99118",mult:1,qty:{CP:112,LP:158,CTE:89,LTE:99,CO:23,CS:32,LS:30},
+  lines:[
+   {p:"Lemonade Whimsy",q:[8,12,6,7,2,2,2],satin:"Light pink/turquoise",logo:"White/Gold"},
+   {p:"Golden Ice",q:[8,12,8,6,1,2,1],satin:"Light yellow"},
+   {p:"Sunset Whimsy",q:[8,12,7,6,2,2,2]},
+   {p:"Flamingo Ice",q:[8,12,6,7,2,2,2]},
+   {p:"Sunflower Party",q:[6,12,7,6,2,2,3]},
+   {p:"Dinosaurs",q:[8,16,8,8,3,4,3]},
+   {p:"Wildflower Muse",q:[8,12,7,6,1,2,1]},
+   {p:"Dose of Doze",q:[4,12,4,10,2,4,2]},
+   {p:"Eternal Bloom",q:[6,14,6,12,1,2,5]},
+   {p:"Sedation Squad",q:[6,12,6,12,2,4,3]},
+   {p:"Hearts and Whiskers",q:[10,16,8,8,2,2,2]},
+   {p:"Sunset Skies",q:[0,0,0,3,1,0,1],satin:"Off White",ribbon:"Cream",logo:"White/Gold"},
+   {p:"Navy Camo",q:[2,0,2,3,2,4,3]},
+   {p:"Cobalt Ember",q:[2,0,0,1,0,0,0]},
+   {p:"Tangerine Flutterwave",q:[2,0,1,0,0,0,0]},
+   {p:"Ocean Mist",q:[2,0,1,0,0,0,0]},
+   {p:"Seafoam Riptide",q:[2,0,0,1,0,0,0]},
+   {p:"Floral Frequency",q:[2,0,0,0,0,0,0]},
+   {p:"Rosé Botanica",q:[2,0,0,0,0,0,0]},
+   {p:"Blush Meadow",q:[2,0,1,1,0,0,0]},
+   {p:"Fuchsia Petals",q:[2,0,0,0,0,0,0],satin:"Magenta → Pink",ribbon:"Sherbert",logo:"White/Silver"},
+   {p:"Pastel Ember",q:[2,0,0,1,0,0,0]},
+   {p:"Willow Mist",q:[2,0,1,0,0,0,0]},
+   {p:"Cotton Candy Haze",q:[2,0,1,0,0,0,0]},
+   {p:"Core Solid: Steel Grey",q:[2,0,0,0,0,0,0]},
+   {p:"Core Solid: Ceil Blue",q:[2,0,3,0,0,0,0]},
+   {p:"Flamingo Paradise",q:[0,4,0,0,0,0,0]},
+   {p:"Pastel Petals",q:[0,4,0,0,0,0,0]},
+   {p:"Pastel Potion",q:[4,4,0,1,0,0,0]},
+   {p:"Pastel Paws",q:[0,4,0,0,0,0,0]},
+   {p:"Peach Planters",q:[0,0,2,0,0,0,0]},
+   {p:"Blush Rush",q:[0,0,3,0,0,0,0]},
+   {p:"Shark Week",q:[0,0,1,0,0,0,0]}]}
+];
+RUNS.forEach(r=>{ r.patterns = r.lines.map(l=>l.p); });
+const QCOLS = ["CP","LP","CTE","LTE","CO","CS","LS"];
+const PKEY = "tmsh-pair-v1";
+let PAIR;
+try { PAIR = JSON.parse(localStorage.getItem(PKEY)) || {}; } catch(e){ PAIR = {}; }
+const pairVal = (run,pat,f,def) => { const o = PAIR[run+"|"+pat]; return (o && o[f]!==undefined) ? o[f] : (def||""); };
+const CDN = "https://cdn.shopify.com/s/files/1/0576/3307/9460/files/";
+const SWATCH = {
+ "Slice of Summer":"slice-of-summer-p_96x96.webp?v=1743176661","Seahorse Serenade":"seahorse-serenade-p_96x96.webp?v=1743177470",
+ "Paws and Posies":"paws-and-posies-p_44be88b1-0392-4042-8fb6-bf78958a900f_96x96.webp?v=1764216759",
+ "Ocean Shells":"coastalshells-p_96x96.webp?v=1775749299","Polka Flamingo":"polkaflamingos-p_96x96.webp?v=1773552565",
+ "Magenta Floral":"magenta-flora-p_96x96.webp?v=1751047011",
+ "Wildflower Muse":"wildflower-muse-p_96x96.webp?v=1754409121","Dose of Doze":"dose-of-doze-p_96x96.webp?v=1750422878",
+ "Eternal Bloom":"eternal-bloom-p_96x96.webp?v=1746543167","Sedation Squad":"sedation-squad-p_96x96.webp?v=1746543336",
+ "Hearts and Whiskers":"hearts-and-whiskers-p_96x96.webp?v=1725505706","Sunset Skies":"sunsetskies-p_96x96.webp?v=1770389495",
+ "Navy Camo":"navy-camo-p_96x96.webp?v=1767491826","Cobalt Ember":"cobaltember-p_96x96.webp?v=1776355648",
+ "Tangerine Flutterwave":"tangerineflutterwave-p_96x96.webp?v=1776355424","Ocean Mist":"ocean-mist-p_96x96.webp?v=1746883894",
+ "Seafoam Riptide":"seafoamriptide-p_96x96.webp?v=1768491708","Floral Frequency":"floral-frequency-p_96x96.webp?v=1764215262",
+ "Rosé Botanica":"rosebontanica-p_96x96.webp?v=1773552254","Blush Meadow":"blushmeadow-p_96x96.webp?v=1777548285",
+ "Fuchsia Petals":"fuchsiapetals-p_96x96.webp?v=1769173060","Pastel Ember":"pastelember-p_96x96.webp?v=1776355945",
+ "Willow Mist":"willow-mist-p_96x96.webp?v=1770390114","Cotton Candy Haze":"cottoncandyhaze-p_96x96.webp?v=1769358718",
+ "Flamingo Paradise":"flamingoparadise-p_96x96.webp?v=1770382666","Pastel Petals":"pastel-petals-p_96x96.webp?v=1757468291",
+ "Pastel Potion":"pastel-potion-p_96x96.webp?v=1762388734","Pastel Paws":"pastelpaws-p_96x96.webp?v=1770389730",
+ "Peach Planters":"peachplanters-p_96x96.webp?v=1773544536","Blush Rush":"blush-rush-p_96x96.webp?v=1762389386",
+ "Shark Week":"sharkweek-p_96x96.webp?v=1770936305"
+};
+const SOLIDHEX = {"Core Solid: Ceil Blue":"#9DBBD8","Core Solid: Steel Grey":"#9A9FA4","Black Comfort+":"#3A3A3C"};
+function tileColor(name){ if(SOLIDHEX[name]) return SOLIDHEX[name]; let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))%360; return `hsl(${h},45%,78%)`; }
+function swatchHtml(name){
+ const ini = name.replace("Core Solid: ","").split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+ const img = SWATCH[name] ? `<img src="${CDN+SWATCH[name]}" loading="lazy" onerror="this.remove()">` : "";
+ return `<span class="sw" style="background:${tileColor(name)}"><i>${ini}</i>${img}</span>`;
+}
+const MIN = {}; 
+Object.keys(SUBS).forEach(st=>{ MIN[st] = SUBS[st].reduce((s,x)=>s+x[1],0); });
+const seg = s => s[0]==="L" ? "L" : "C";
+const segKey = (step,style) => step===19 ? "A" : seg(style);
+const tint = (hex,a) => hex + a;
+function atomKey(run,style,i){ return run+"|"+style+"|"+i; }
+function allAtoms(){ const out=[]; for(const r of RUNS){ for(const st in r.qty){ SUBS[st].forEach((s,i)=>out.push({run:r.no,style:st,i,name:s[0],min:s[1],step:s[2],qty:r.qty[st],mult:r.mult})); } } return out; }
+const ATOMS = allAtoms();
+function seedDone(){
+ const d = {};
+ const mk=(run,step,sg,sub)=>{ ATOMS.forEach(a=>{ if(a.run===run&&a.step===step&&(!sg||segKey(a.step,a.style)===sg)&&(!sub||a.name===sub)) d[atomKey(a.run,a.style,a.i)]=true; }); };
+ [1,4,5,8,9,12,13,16].forEach(s=>mk(19,s)); mk(19,11,"C","Case scrunchie");
+ [1,2,3,4,5,9,12,13,16,17].forEach(s=>mk(20,s)); mk(20,6,"L"); mk(20,11,"L"); mk(20,11,"C","Case scrunchie");
+ return d;
+}
+const LSKEY="tmsh-sched-v1", OVRKEY="tmsh-ovr-v1";
+let DONE, OVR;
+try { DONE = JSON.parse(localStorage.getItem(LSKEY)) || seedDone(); } catch(e){ DONE = seedDone(); }
+try { OVR = JSON.parse(localStorage.getItem(OVRKEY)) || {avail:{},pins:{},log:[]}; } catch(e){ OVR = {avail:{},pins:{},log:[]}; }
+if(!OVR.trips) OVR.trips = {};
+if(!OVR.detach) OVR.detach = {};
+if(!OVR.splits) OVR.splits = {};
+if(!OVR.arrive) OVR.arrive = {};
+if(!OVR.gates) OVR.gates = [];
+Object.keys(OVR.detach).forEach(k=>{ OVR.detach[k]=(OVR.detach[k]||[]).filter(n=>n.includes("@@")); if(!OVR.detach[k].length) delete OVR.detach[k]; });
+function save(){ try{ localStorage.setItem(LSKEY, JSON.stringify(DONE)); localStorage.setItem(OVRKEY, JSON.stringify(OVR)); }catch(e){} cloudSave(LSKEY, DONE); cloudSave(OVRKEY, OVR); }
+
+function buildItems(){
+ const map = {};
+ ATOMS.forEach(a=>{
+  const k = a.run+"|"+a.step+"|"+segKey(a.step,a.style);
+  if(!map[k]) map[k] = {key:k,run:a.run,step:a.step,seg:segKey(a.step,a.style),total:0,rem:0,styles:new Set()};
+  const m = a.min*a.qty*a.mult;
+  map[k].total += m; map[k].styles.add(a.style);
+  if(!DONE[atomKey(a.run,a.style,a.i)]) map[k].rem += m;
+ });
+ return map;
+}
+function gatesOf(item, items){
+ const out = [];
+ item.styles.forEach(st=>{
+  (PRE[st][item.step]||[]).forEach(p=>{
+   const k = item.run+"|"+p+"|"+segKey(p,st);
+   if(items[k]) out.push(items[k]);
+  });
+ });
+ return out;
+}
+function availOf(person, d, dow){
+ const t = TEAM[person];
+ const ar = OVR.arrive[person+"|"+d];
+ if(ar) return ar.h!==undefined ? ar.h : Math.min(t.h, t.en-(ar.st??t.st));
+ const ov = OVR.avail[person+"|"+d];
+ if(ov!==undefined) return ov;
+ const ex = (EXC[isoOf(d)]||{})[person];
+ if(ex && ex.h!==undefined) return ex.h;
+ return t.days.includes(dow) ? t.h : 0;
+}
+function assignee(item){ const p = OVR.pins[item.key]; return p ? p.person : owner(item.step,item.seg); }
+const SLABEL = {LP:"LUXE Ponytail",CP:"Ponytail",LTE:"LUXE Euro",CTE:"Euro",LO:"LUXE Original",CO:"Original",LS:"LUXE Skull",CS:"Skull"};
+const tokName = t => t.split("@@")[0];
+const tokStyle = t => t.split("@@")[1];
+function subRem(it,tok){
+ const [n,st] = tok.split("@@");
+ let m=0;
+ ATOMS.forEach(a=>{ if(a.run===it.run&&a.step===it.step&&segKey(a.step,a.style)===it.seg&&a.name===n&&(!st||a.style===st)&&!DONE[atomKey(a.run,a.style,a.i)]) m+=a.min*a.qty*a.mult; });
+ return m;
+}
+function subUnitsOf(it){
+ const out = [];
+ ATOMS.forEach(a=>{ if(a.run===it.run&&a.step===it.step&&segKey(a.step,a.style)===it.seg&&!DONE[atomKey(a.run,a.style,a.i)]) out.push({tok:a.name+"@@"+a.style, name:a.name, style:a.style, min:a.min*a.qty*a.mult, qty:a.qty}); });
+ return out;
+}
+function buildUnits(items){
+ const units = [];
+ Object.values(items).forEach(it=>{
+  if(it.rem<=1) return;
+  const det = (OVR.detach[it.key]||[]).filter(n=>subRem(it,n)>1);
+  let parentRem = it.rem;
+  det.forEach(n=>{ const m=subRem(it,n); parentRem-=m; units.push({key:it.key+"::"+n,base:it.key,run:it.run,step:it.step,seg:it.seg,sub:n,rem:m}); });
+  if(parentRem>1){
+   const n = OVR.splits[it.key]||1;
+   if(n<=1) units.push({key:it.key,base:it.key,run:it.run,step:it.step,seg:it.seg,rem:parentRem});
+   else for(let k=0;k<n;k++) units.push({key:it.key+"@"+k,base:it.key,run:it.run,step:it.step,seg:it.seg,part:(k+1)+" of "+n,rem:parentRem/n});
+  }
+ });
+ try {
+  CUSTOM.forEach(o=>{
+   if(shipped(o)) return;
+   const t = coTime(o);
+   if(o.schedSew && t.sewRem>1) units.push({key:"co|"+o.id+"|sew", base:null, custom:1, label:"Sewing — "+o.name, who:"Trinna", rem:t.sewRem});
+   if(o.schedEmb && t.embRem>1) units.push({key:"co|"+o.id+"|emb", base:null, custom:1, label:"Embroidery — "+o.name, who:"Caitlynn", rem:t.embRem});
+  });
+ } catch(e){}
+ return units;
+}
+function schedule(items){
+ const units = buildUnits(items);
+ const bases = {};
+ Object.values(items).forEach(i=>{ bases[i.key]={left:0,run:i.run,step:i.step,startT:null,finT:i.rem<=1?-1e9:null}; });
+ units.forEach(u=>{ if(u.base) bases[u.base].left+=u.rem; u.left=u.rem; });
+ const prio = {20:0,19:1,21:2};
+ const blocks = [];
+ for(let d=0; d<28; d++){
+  const dow = dateOf(d).getDay();
+  const cur = {}, cend = {};
+  for(const p in TEAM){
+   const t = TEAM[p];
+   const ar0 = OVR.arrive[p+"|"+d];
+   const ov = ar0 ? (ar0.h!==undefined ? ar0.h : Math.min(t.h, t.en-(ar0.st??t.st))) : OVR.avail[p+"|"+d];
+   const ex = (EXC[isoOf(d)]||{})[p];
+   const on = ov!==undefined ? ov>0 : (ex ? (ex.h===undefined||ex.h>0) : t.days.includes(dow));
+   if(!on) continue;
+   const stH = ar0 && ar0.st!==undefined ? ar0.st : ((ov===undefined && ex && ex.st!==undefined) ? ex.st : t.st);
+   const shiftH = t.en-stH;
+   const capH = Math.min(ov!==undefined ? ov : (ex && ex.h!==undefined ? ex.h : t.h), shiftH);
+   const late = (ov!==undefined && !ar0) ? Math.max(0, Math.min(t.h,t.en-t.st)-capH) : 0;
+   const s0 = d*1440 + (stH+late)*60;
+   cur[p] = s0;
+   cend[p] = Math.min(d*1440 + t.en*60, s0 + capH*60);
+  }
+  let guard = 0;
+  while(guard++ < 400){
+   const cands = [];
+   for(const p in cur){
+    if(cur[p] >= cend[p]-5) continue;
+    for(const u of units){
+     const pin = OVR.pins[u.key];
+     const ass = pin && pin.person ? pin.person : (u.custom ? u.who : owner(u.step,u.seg));
+     if(u.left<=1 || ass!==p) continue;
+     if(pin && d<pin.startDay) continue;
+     let rt = cur[p], ok = true;
+     for(const g of u.base ? gatesOf(items[u.base],items) : []){
+      const b = bases[g.key];
+      if(b.left<=1){ if(b.finT!==null && b.finT>0) rt = Math.max(rt, b.finT); }
+      else if(PIPE[g.step+"|"+u.step] && b.startT!==null && b.startT < cend[p]) rt = Math.max(rt, b.startT+45);
+      else { ok = false; break; }
+     }
+     if(ok && !u.custom) for(const eg of OVR.gates){
+      if(eg.run===u.run && eg.b===u.step && eg.a!==u.step){
+       for(const sg2 of ["C","L","A"]){
+        const b2 = bases[u.run+"|"+eg.a+"|"+sg2];
+        if(b2){ if(b2.left<=1){ if(b2.finT!==null && b2.finT>0) rt = Math.max(rt, b2.finT); } else { ok = false; break; } }
+       }
+       if(!ok) break;
+      }
+     }
+     if(!ok || rt >= cend[p]-5) continue;
+     cands.push({p, u, start: Math.max(cur[p], rt)});
+    }
+   }
+   if(!cands.length) break;
+   const pr = u => u.custom ? 9 : prio[u.run];
+   cands.sort((a,b)=> a.start-b.start || (OVR.pins[b.u.key]?1:0)-(OVR.pins[a.u.key]?1:0) || pr(a.u)-pr(b.u) || (a.u.step||99)-(b.u.step||99));
+   const {p,u,start} = cands[0];
+   const alloc = Math.min(u.left, cend[p]-start);
+   blocks.push({person:p, day:d, run:u.run, step:u.step, seg:u.seg, hrs:alloc/60, key:u.key, base:u.base, sub:u.sub, part:u.part, custom:u.custom, label:u.label, t0:start, t1:start+alloc});
+   u.left -= alloc;
+   if(u.base){
+    const b = bases[u.base];
+    if(b.startT===null) b.startT = start;
+    b.left -= alloc;
+    if(b.left<=1) b.finT = start+alloc;
+   }
+   cur[p] = start+alloc;
+  }
+ }
+ const runDone = {}, sewDone = {};
+ RUNS.forEach(r=>{
+  const all = Object.entries(bases).filter(x=>x[1].run===r.no && items[x[0]].rem>1).map(x=>x[1]);
+  const sew = all.filter(b=>b.step!==11);
+  const fin = xs => !xs.length ? -1 : (xs.every(b=>b.left<=1) ? Math.max(...xs.map(b=>b.finT<=0?-1:Math.floor(b.finT/1440))) : null);
+  runDone[r.no]=fin(all); sewDone[r.no]=fin(sew);
+ });
+ return {blocks, runDone, sewDone, units};
+}
+
+let selDay = 0;
+let rdRun = null, rdTab = "sched", LAST = null;
+const runBy = n => RUNS.find(r=>r.no===n);
+const fmtH = m => { const h=m/60; return (h>=10?h.toFixed(0):h.toFixed(1).replace(/\.0$/,""))+"h"; };
+const initials = n => n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+function dateOf(d){ const dt=new Date(); dt.setDate(dt.getDate()+d); return dt; }
+const fmtDay = d => d<=0 ? "today" : dateOf(d).toLocaleDateString("en-US",{weekday:"short", month:"short", day:"numeric"});
+
+function render(){
+ const items = buildItems();
+ const sched = schedule(items);
+ document.getElementById("subdate").textContent = new Date().toLocaleDateString("en-US",{weekday:"long", month:"long", day:"numeric"}) + " · live schedule";
+ document.getElementById("runpills").innerHTML = RUNS.map(r=>{
+  const ri = Object.values(items).filter(i=>i.run===r.no);
+  const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
+  const pct = tot? Math.round(100*(tot-rem)/tot) : 0;
+  return `<div class="pill"><span class="ring" style="background:conic-gradient(${r.hex} ${pct}%, #EDEAE2 0)"><i>${pct}%</i></span><div><b>${r.name}</b><span>run ${r.no}</span></div></div>`;
+ }).join("");
+ LAST = {items, sched};
+ renderOps(); renderDays(sched); renderBoard(items,sched); renderHome(sched); renderRuns(items,sched); renderTracker(items); renderCustom();
+ if(rdRun!==null) renderRD();
+}
+
+function renderOps(){
+ const el = document.getElementById("opslog");
+ el.innerHTML = OVR.log.length ? `<div class="opsbar"><b>Adjustments:</b> ${OVR.log.join(" · ")} <button class="btn" id="clearops">Clear all</button></div>` : "";
+ const b = document.getElementById("clearops");
+ if(b) b.onclick = ()=>{ OVR = {avail:{},pins:{},log:[]}; save(); render(); };
+}
+
+function renderDays(sched){
+ const tot = {};
+ sched.blocks.filter(b=>!TEAM[b.person].home).forEach(b=>{ tot[b.day]=(tot[b.day]||0)+b.hrs; });
+ const max = Math.max(1,...Object.values(tot));
+ let html = "";
+ for(let d=0; d<14; d++){
+  const dt = dateOf(d);
+  html += `<button class="day${d===selDay?" sel":""}" data-d="${d}">
+   <div class="dw">${d===0?"Today":dt.toLocaleDateString("en-US",{weekday:"short"})}</div>
+   <div class="dn">${dt.toLocaleDateString("en-US",{month:"numeric",day:"numeric"})}</div>
+   <div class="ld"><i style="width:${Math.round(100*(tot[d]||0)/max)}%"></i></div>
+  </button>`;
+ }
+ const el = document.getElementById("daystrip");
+ el.innerHTML = html;
+ el.querySelectorAll(".day").forEach(b=>b.onclick=()=>{ selDay=+b.dataset.d; render(); });
+}
+
+function renderBoard(items, sched){
+ const dt = dateOf(selDay); const dow = dt.getDay();
+ const off = [];
+ let html = "";
+ for(const p in TEAM){
+  const t = TEAM[p];
+  if(t.home) continue;
+  const av = availOf(p, selDay, dow);
+  const bl = sched.blocks.filter(b=>b.person===p && b.day===selDay);
+  if(av<=0 && !bl.length){ off.push(p + (OVR.avail[p+"|"+selDay]===0 ? " (out)" : "")); continue; }
+  const used = bl.reduce((s,b)=>s+b.hrs,0);
+  const pctL = Math.min(100, Math.round(100*used/Math.max(av,.1)));
+  const blocks = bl.map(b=>{
+   if(b.custom){
+    const h = Math.max(38, Math.round(b.hrs*30));
+    const pin = OVR.pins[b.key];
+    return `<div class="tblk" data-key="${b.key}" data-base="${b.key}" data-label="${b.label}" data-hex="#9D4E8F" title="${fmtT(b.t0)}–${fmtT(b.t1)}" style="height:${h}px;background:#9D4E8F1C;border-left:5px solid #9D4E8F;color:#2B2A25">
+      <span class="hbadge">${fmtT(b.t0)} · ${b.hrs.toFixed(1)}h</span>
+      <div class="nm">${b.label}</div>
+      <div class="mt"><span style="color:#9D4E8F;font-weight:700">Custom order</span>${pin?`<span class="tag pinned" style="color:#9D4E8F">MOVED</span>`:""}</div>
+    </div>`;
+   }
+   const r = runBy(b.run);
+   const baseIt = items[b.base];
+   const detached = OVR.detach[b.base]||[];
+   const subUnits = subUnitsOf(baseIt).filter(u=>!detached.includes(u.tok) && u.min>1);
+   const expandable = !b.sub && !b.part && subUnits.length>1;
+   if(expandable && EXPANDED.has(b.key)){
+    const minis = subUnits.map(u=>{
+     const mh = Math.max(34, Math.round(u.min/60*30));
+     return `<div class="tblk mini" data-minibase="${b.base}" data-sub="${u.tok}" data-label="${u.name} · ${SLABEL[u.style]}" data-hex="${r.hex}" style="height:${mh}px;border:1.6px dashed ${r.hex};background:${tint(r.hex,"0E")};color:#2B2A25"><span class="hbadge">${(u.min/60).toFixed(1)}h</span><div class="nm">${u.name}</div><div class="mt"><span style="color:${r.hex};font-weight:700">${SLABEL[u.style]}</span><span class="tag" style="color:${r.hex}">${u.qty} hats</span></div></div>`;
+    }).join("");
+    return `<div class="exwrap" data-collapse="${b.key}" style="border:1.6px solid ${r.hex};border-radius:14px;padding:7px;display:flex;flex-direction:column;gap:6px"><div class="exhead" style="color:${r.hex}">${nameOf(b.step,b.seg)} · ${r.name} — drag a piece out · double-tap here to regroup</div>${minis}</div>`;
+   }
+   const h = Math.max(38, Math.round(b.hrs*30));
+   const both = b.step!==1 && b.step!==19 && Object.keys(r.qty).some(s=>seg(s)==="L") && Object.keys(r.qty).some(s=>seg(s)==="C");
+   const pin = OVR.pins[b.key];
+   const nm = b.sub ? tokName(b.sub) : nameOf(b.step,b.seg);
+   const extra = b.sub ? `<span class="tag" style="color:${r.hex}">${SLABEL[tokStyle(b.sub)]||""}</span>` : (b.part ? `<span class="tag" style="color:${r.hex}">part ${b.part}</span>` : "");
+   return `<div class="tblk" data-key="${b.key}" data-base="${b.base}" data-label="${nm}" data-hex="${r.hex}" ${expandable?'data-expandable="1"':''} title="${fmtT(b.t0)}–${fmtT(b.t1)}" style="height:${h}px;background:${tint(r.hex,"1C")};border-left:5px solid ${r.hex};color:#2B2A25">
+     <span class="hbadge">${fmtT(b.t0)} · ${b.hrs.toFixed(1)}h</span>
+     <div class="nm">${nm}</div>
+     <div class="mt"><span style="color:${r.hex};font-weight:700">${r.name}</span>${both?`<span class="tag" style="color:${r.hex}">${b.seg==="L"?"LUXE":"classic"}</span>`:""}${extra}${pin?`<span class="tag pinned" style="color:${r.hex}">MOVED</span>`:""}</div>
+   </div>`;
+  }).join("");
+  html += `<div class="person" data-person="${p}">
+   <div class="phead"><div class="av">${initials(p)}</div><div><b>${p}</b><span>${t.sub}</span></div>
+   <div class="hrs"><b>${used.toFixed(1)}h</b> of ${av}h</div></div>
+   <div class="pload"><i style="width:${pctL}%;background:${pctL>92?"#D88A2B":"#23211C"}"></i></div>
+   <div class="stack">${blocks || `<div class="empty">Nothing scheduled — open for custom orders &amp; catch-up.</div>`}</div>
+  </div>`;
+ }
+ document.getElementById("board").innerHTML = html;
+ document.getElementById("offline").textContent = off.length ? "Off this day: " + off.join(", ") : "";
+ wireDrag();
+}
+
+function renderHome(sched){
+ if(!OVR.trips) OVR.trips = {};
+ const segName = sgs => { const a=[...sgs]; return a.length>1 ? "classic & LUXE ponytails" : (a[0]==="C" ? "classic ponytails" : "LUXE ponytails"); };
+ const mkEvts = [];
+ RUNS.forEach(r=>{
+  const bl = sched.blocks.filter(b=>b.person==="Lora" && b.run===r.no);
+  if(!bl.length) return;
+  const start = Math.min(...bl.map(b=>b.day)), end = Math.max(...bl.map(b=>b.day));
+  const hrs = bl.reduce((s,b)=>s+b.hrs,0);
+  const styles = segName(new Set(bl.map(b=>b.seg)));
+  mkEvts.push({kind:"pick", day:start, who:"Lora", hex:r.hex, run:r.name, styles, det:`Casing &amp; attachment — ${styles} · about ${hrs.toFixed(0)} hrs`});
+  mkEvts.push({kind:"drop", day:end+1, who:"Lora", hex:r.hex, run:r.name, styles, det:`Finished ${styles} back for folding`});
+ });
+ mkEvts.sort((a,b)=>a.day-b.day);
+ const evts = [];
+ for(let i=0;i<mkEvts.length;i++){
+  const e = mkEvts[i], nx = mkEvts[i+1];
+  if(e.kind==="drop" && nx && nx.kind==="pick" && nx.who===e.who && nx.day-e.day>=-1 && nx.day-e.day<=4){
+   let day = Math.max(e.day,nx.day);
+   if(dateOf(day).getDay()===0) day++;
+   evts.push({id:`Lora|trip|${e.run}|${nx.run}`, day, who:e.who, hex:nx.hex, icon:"⇄", title:`One trip — drop off ${e.run} (${e.styles}) · pick up ${nx.run} (${nx.styles})`, det:nx.det});
+   i++;
+  } else {
+   let day = e.day;
+   if(dateOf(day).getDay()===0) day++;
+   evts.push({id:`Lora|${e.kind}|${e.run}`, day, who:e.who, hex:e.hex, icon:e.kind==="pick"?"↑":"↓", title:`${e.kind==="pick"?"Pickup":"Drop-off due"} — ${e.run} (${e.styles})`, det:e.det});
+  }
+ }
+ RUNS.forEach(r=>{
+  const dd = sched.runDone[r.no];
+  if(dd!==null && dd>=-1){
+   let day = (dd<0?0:dd)+1;
+   if(dateOf(day).getDay()===0) day++;
+   const hats = Object.values(r.qty).reduce((a,b)=>a+b,0);
+   evts.push({id:`Anna|fold|${r.no}`, day, who:"Anna Cristina", hex:r.hex, icon:"✓", title:`Pickup — fold &amp; inspect ${r.name}`, det:`All styles · ${hats} hats · go-live ${fmtDay((dd<0?0:dd)+3)}`});
+  }
+ });
+ evts.sort((a,b)=>a.day-b.day);
+ const vis = evts.filter(e=> (e.day>=selDay && e.day<=selDay+7) || (e.day<selDay && !OVR.trips[e.id]) );
+ const rows = vis.map(e=>{
+  const done = !!OVR.trips[e.id];
+  const late = e.day<selDay && !done;
+  return `
+  <div class="evt${done?" done":""}">
+   <div class="eicon" style="background:${tint(e.hex,"1C")};color:${e.hex}">${e.icon}</div>
+   <div><b>${e.title}</b><span class="ed">${e.who} · ${e.det}</span></div>
+   <div class="when">${late?`<span class="overdue">OVERDUE</span>`:(e.day===selDay?`<span class="now">${selDay===0?"TODAY":"THIS DAY"}</span>`:fmtDay(e.day))}</div>
+   <label class="evchk"><input type="checkbox" data-trip="${e.id}" ${done?"checked":""}></label>
+  </div>`;}).join("");
+ document.getElementById("homecard").innerHTML = `<h3>At home — pickups &amp; drop-offs <span>tap the box when the hand-off happens</span></h3>` + (rows || `<div class="empty" style="margin-top:8px">No pickups or drop-offs in the next week.</div>`);
+ document.querySelectorAll("[data-trip]").forEach(c=>c.onchange=()=>{ if(c.checked) OVR.trips[c.dataset.trip]=true; else delete OVR.trips[c.dataset.trip]; save(); render(); });
+}
+
+function renderRuns(items, sched){
+ document.getElementById("runcards").innerHTML = RUNS.map(r=>{
+  const ri = Object.values(items).filter(i=>i.run===r.no);
+  const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
+  const pct = tot? Math.round(100*(tot-rem)/tot):0;
+  const home = ri.filter(i=>i.step===11).reduce((s,i)=>s+i.rem,0);
+  const hats = Object.values(r.qty).reduce((a,b)=>a+b,0);
+  const sd = sched.sewDone[r.no], ad = sched.runDone[r.no];
+  const sewEta = sd===null ? "4+ weeks" : (sd<0 ? "Done" : fmtDay(sd));
+  const goLive = ad===null ? "4+ weeks" : fmtDay((ad<0?0:ad)+3);
+  const open = ri.filter(i=>i.rem>1).sort((a,b)=>b.rem-a.rem).slice(0,4)
+   .map(i=>`<span style="background:${tint(r.hex,"1C")};color:${r.hex}">${nameOf(i.step,i.seg)} · ${fmtH(i.rem)}</span>`).join("") || `<span style="background:${tint(r.hex,"1C")};color:${r.hex}">All sewing complete</span>`;
+  return `<div class="rc" data-open="${r.no}" style="cursor:pointer">
+   <div class="rh">
+    <span class="donut" style="background:conic-gradient(${r.hex} ${pct}%, #EDEAE2 0)"><i>${pct}%</i></span>
+    <div><h2>${r.name}</h2><div class="rm">Run ${r.no} · ${hats} hats · ${r.patterns.length} patterns${r.mult>1?" · new-material buffer":""}</div></div>
+   </div>
+   <div class="tiles">
+    <div class="tile"><b>${fmtH(rem-home)}</b><span>left in studio</span></div>
+    <div class="tile"><b>${fmtH(home)}</b><span>with Lora</span></div>
+    <div class="tile"><b>${sewEta}</b><span>studio finish</span></div>
+    <div class="tile"><b>${goLive}</b><span>go-live ready</span></div>
+   </div>
+   <div class="nextlbl">Biggest pieces left</div>
+   <div class="nxt">${open}</div>
+   <div class="rdnote">Tap for full schedule &amp; pattern detail</div>
+  </div>`;
+ }).join("");
+ document.querySelectorAll("[data-open]").forEach(c=>c.onclick=()=>openRun(+c.dataset.open));
+}
+
+
+function openRun(no){ rdRun = no; rdTab = "sched"; renderRD(); document.getElementById("rdwrap").classList.add("open"); }
+function closeRun(){ document.getElementById("rdwrap").classList.remove("open"); rdRun = null; }
+function renderRD(){
+ if(rdRun===null || !LAST) return;
+ const r = runBy(rdRun);
+ const {items, sched} = LAST;
+ const ri = Object.values(items).filter(i=>i.run===r.no);
+ const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
+ const pct = tot? Math.round(100*(tot-rem)/tot):0;
+ const hats = r.lines.reduce((s,l)=>s+l.q.reduce((a,b)=>a+b,0),0);
+ let body = "";
+ if(rdTab==="sched"){
+  const bl = sched.blocks.filter(b=>b.run===r.no).sort((a,b)=>a.t0-b.t0);
+  const byDay = {};
+  bl.forEach(b=>{ (byDay[b.day]=byDay[b.day]||[]).push(b); });
+  const days = Object.keys(byDay).map(Number).sort((a,b)=>a-b);
+  body = days.map(d=>{
+   const rows = byDay[d].map(b=>`<div class="agrow"><span class="tm">${fmtT(b.t0)}–${fmtT(b.t1)}</span><span class="wh">${b.person}</span><span>${b.sub?tokName(b.sub)+" · "+(SLABEL[tokStyle(b.sub)]||""):nameOf(b.step,b.seg)}${b.part?" (part "+b.part+")":""}${b.seg==="L"&&!b.sub&&b.step!==19&&b.step!==1?" · LUXE":(b.seg==="C"&&!b.sub&&b.step!==19&&b.step!==1?" · classic":"")}</span><span class="hh">${b.hrs.toFixed(1)}h</span></div>`).join("");
+   return `<div class="dayagenda"><h4>${d===0?"Today":dateOf(d).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}</h4>${rows}</div>`;
+  }).join("") || `<div class="empty">No work scheduled — this run's sewing is complete.</div>`;
+  body += `<div class="rdnote">Drag blocks on the Board to reshuffle — this view updates instantly.</div>`;
+ } else {
+  const head = `<tr><th>Pattern</th>${QCOLS.map(c=>`<th style="text-align:center">${c}</th>`).join("")}<th>Logo</th><th>Satin</th><th>Ribbon</th></tr>`;
+  const rows = r.lines.map(l=>{
+   const cells = l.q.map(v=>`<td class="num${v?"":" zero"}">${v||"·"}</td>`).join("");
+   const pc = f => { const v = pairVal(r.no,l.p,f,l[f]); const ed = PAIR[r.no+"|"+l.p] && PAIR[r.no+"|"+l.p][f]!==undefined; return `<td><input class="pcell${ed?" edited":""}" data-run="${r.no}" data-pat="${l.p.replace(/"/g,"&quot;")}" data-f="${f}" value="${(v||"").replace(/"/g,"&quot;")}" placeholder="—"></td>`; };
+   return `<tr><td class="pname">${swatchHtml(l.p)}${l.p}</td>${cells}${pc("logo")}${pc("satin")}${pc("ribbon")}</tr>`;
+  }).join("");
+  const totals = QCOLS.map((c,i)=>r.lines.reduce((s,l)=>s+l.q[i],0));
+  body = `<div class="ptab"><table>${head}${rows}<tr><td class="pname" style="color:var(--soft)">Total · ${hats} hats</td>${totals.map(v=>`<td class="num"><b>${v||"·"}</b></td>`).join("")}<td></td><td></td><td></td></tr></table></div>
+  <div class="rdnote">Swipe the table left for logo / satin / ribbon pairings. Edits save and highlight yellow — tell Claude "sync pairings" to write them back to the workbook &amp; Google Sheet.</div>`;
+ }
+ document.getElementById("rd").innerHTML = `
+  <div class="rdtop">
+   <span class="donut" style="background:conic-gradient(${r.hex} ${pct}%, #EDEAE2 0)"><i>${pct}%</i></span>
+   <div><h2 style="font-size:20px;font-weight:700">${r.name}</h2><div class="rm" style="color:var(--soft);font-size:12.5px">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns</div></div>
+   <button class="rdclose" id="rdx">✕</button>
+  </div>
+  <div class="rdtabs"><button class="${rdTab==="sched"?"on":""}" data-rdt="sched">Schedule</button><button class="${rdTab==="pat"?"on":""}" data-rdt="pat">Patterns &amp; pairings</button></div>
+  ${body}`;
+ document.getElementById("rdx").onclick = closeRun;
+ document.querySelectorAll("[data-rdt]").forEach(b=>b.onclick=()=>{ rdTab=b.dataset.rdt; renderRD(); });
+ document.querySelectorAll(".pcell").forEach(inp=>inp.onchange=()=>{
+  const k = inp.dataset.run+"|"+inp.dataset.pat;
+  PAIR[k] = PAIR[k]||{};
+  PAIR[k][inp.dataset.f] = inp.value;
+  try{ localStorage.setItem(PKEY, JSON.stringify(PAIR)); }catch(e){}
+  cloudSave(PKEY, PAIR);
+  inp.classList.add("edited");
+ });
+}
+
+const COKEY = "tmsh-custom-v4";
+const TOOLDONE = {"75606":["Cut"],"75637":["Cut"],"75287":["Cut","Embroidery","Sewing"]};
+let CUSTOM;
+try { CUSTOM = JSON.parse(localStorage.getItem(COKEY)) || JSON.parse(localStorage.getItem("tmsh-custom-v3")); } catch(e){ CUSTOM = null; }
+if(CUSTOM) CUSTOM.forEach(o=>{ o.ms = o.ms||{}; delete o.ms["Materials"]; (TOOLDONE[o.num]||[]).forEach(s=>{ if(!o.ms[s]) o.ms[s]=true; }); });
+if(!CUSTOM) CUSTOM = [
+ {id:"75805", name:"Floral Faces Print", num:"75805", due:"2026-06-22", styles:"3 CS + 2 CO", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · ship est 6/19"},
+ {id:"75847", name:"TriCares Print", num:"75847", due:"2026-06-18", styles:"15 CS + 10 CO", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · materials ordered · ship est 6/18"},
+ {id:"75637", name:"Columbia Patch", num:"75637", due:"2026-06-19", styles:"11 CS + 3 CO + 4 CP + 1 LS + 1 LP", emb:12, e:1, p:1, ms:{Cut:true}, note:"Navy · digitized · ship est 6/19"},
+ {id:"75606", name:"Anesthesia Patch Black (2)", num:"75606", due:"2026-06-19", styles:"25 CS + 25 CO", emb:0, e:0, p:1, ms:{Cut:true}, note:"Black · ship est 6/19"},
+ {id:"75853", name:"ER Survivor Print", num:"75853", due:"", styles:"10 CS", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · no date set"},
+ {id:"75665", name:"Mobile Infirmary", num:"75665", due:"", styles:"40 CP + 27 CS + 43 CO + 40 CT", emb:0, e:0, p:0, ms:{}, note:"Wholesale · no date set"},
+ {id:"75287", name:"WOGO 3", num:"75287", due:"2026-07-06", styles:"75 CS + 50 CP", emb:12, e:1, p:0, ms:{Cut:true,Embroidery:true,Sewing:true}, note:"Black · embroidery done · silver step ×2"}
+];
+CUSTOM.forEach(o=>{ if(o.sewPct===undefined) o.sewPct = o.ms&&o.ms.Sewing?100:0; if(o.embPct===undefined) o.embPct = o.ms&&o.ms.Embroidery?100:0; });
+const PCTFILL = {"75637":{sew:3},"75606":{sew:34}};
+CUSTOM.forEach(o=>{ const f = PCTFILL[o.num]; if(f){ if(f.sew && !(o.sewPct>0)) o.sewPct = f.sew; if(f.emb && !(o.embPct>0)) o.embPct = f.emb; } });
+function saveCO(){ try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){} cloudSave(COKEY, CUSTOM); }
+function parseStyles(s){
+ const out = {}; if(!s) return out;
+ const re = /(\d+)\s*(LTE|LT|LP|LS|LO|CTE|CT|CP|CO|CS)\b/gi; let m;
+ while((m = re.exec(s))){ let st = m[2].toUpperCase(); if(st==="CT") st="CTE"; if(st==="LT") st="LTE"; out[st] = (out[st]||0) + (+m[1]); }
+ return out;
+}
+function coTime(o){
+ const q = parseStyles(o.styles);
+ let hats = 0, sew = 0;
+ for(const st in q){ hats += q[st]; sew += q[st]*(MIN[st]||8); }
+ const emb = hats * (o.emb||0);
+ const sewRem = sew * (1 - Math.min(100,o.sewPct||0)/100);
+ const embRem = emb * (1 - Math.min(100,o.embPct||0)/100);
+ return {hats, sew, emb, total: sew+emb, sewRem, embRem, rem: sewRem+embRem};
+}
+function stepsFor(o){
+ const st = ["Cut"];
+ if(o.e) st.push("Embroidery");
+ if(o.p) st.push("Patch sewn");
+ st.push("Sewing","Fold & inspect","Shipped");
+ return st;
+}
+const shipped = o => !!(o.ms && o.ms["Shipped"]);
+function renderCustom(){
+ const open = CUSTOM.filter(o=>!shipped(o));
+ const sewL = open.reduce((s,o)=>s+coTime(o).sewRem,0);
+ const embL = open.reduce((s,o)=>s+coTime(o).embRem,0);
+ document.getElementById("cosummary").innerHTML = `<div class="cosnap">
+  <div class="cs"><b>${open.length}</b><span>pending orders</span></div>
+  <div class="cs"><b>${fmtH(sewL)}</b><span>sewing left</span></div>
+  <div class="cs"><b>${fmtH(embL)}</b><span>embroidery left</span></div>
+ </div>`;
+ const today = new Date(); today.setHours(0,0,0,0);
+ const rows = CUSTOM.slice().sort((a,b)=>(shipped(a)?1:0)-(shipped(b)?1:0) || (a.due||"9999").localeCompare(b.due||"9999")).map((o,ri)=>{
+  const t = coTime(o);
+  const steps = stepsFor(o);
+  o.ms = o.ms || {};
+  const due = o.due ? new Date(o.due+"T12:00:00") : null;
+  const dleft = due ? Math.round((due-today)/86400000) : null;
+  const chip = shipped(o) ? `<span class="duechip" style="background:#E8F4E0;color:#3B6D11">SHIPPED</span>`
+   : dleft===null ? `<span class="duechip" style="background:#F0EEE6;color:#7A766B">NO DATE</span>`
+   : dleft<0 ? `<span class="duechip" style="background:#C2452D;color:#fff">${-dleft}d OVERDUE</span>`
+   : dleft<=3 ? `<span class="duechip" style="background:#FAEEDA;color:#854F0B">DUE ${dleft}d</span>`
+   : `<span class="duechip" style="background:#F0EEE6;color:#55534C">${dleft}d left</span>`;
+  let nextIdx = steps.findIndex(s=>!o.ms[s]);
+  const tl = steps.map((s,i)=>`<div class="cstep${o.ms[s]?" on":""}${i===nextIdx&&!shipped(o)?" next":""}" data-cms="${o.id}" data-step="${s}"><div class="cring">${o.ms[s]?"✓":""}</div><span>${s}</span></div>`).join("");
+  return `<div class="corow${ri%2?" alt":""}" style="${shipped(o)?"opacity:.45":""}">
+   <div class="cobadge"><b>${t.hats||"?"}</b><span>hats</span></div>
+   <div class="coinfo"><b>${o.name}</b>
+    <div class="cd">${o.styles||"styles not set — tap edit"}</div></div>
+   ${chip}
+   <div class="cotime"><b>${fmtH(t.rem)} left</b>of ${fmtH(t.total)}</div>
+   ${o.e?`<input class="coemb" type="number" min="0" step="1" value="${o.emb||0}" data-coemb="${o.id}" title="embroidery min/hat">`:""}
+   <button class="btn" data-coedit="${o.id}">Edit</button>
+   <div class="cobars">
+    <div class="cb"><span>Sewing</span><div class="cbar" data-cpct="${o.id}|sew" title="tap to set %"><i style="width:${o.sewPct||0}%"></i></div><b>${o.sewPct||0}%</b><em>${fmtH(t.sewRem)} left</em>
+     ${t.sewRem>1?`<button class="btn ${o.schedSew?"":"go"}" data-cosched="${o.id}|sew">${o.schedSew?"Unschedule":"Schedule sewing"}</button>`:`<em style="width:auto">✓ done</em>`}</div>
+    ${(o.e||o.emb)?`<div class="cb"><span>Embr.</span><div class="cbar" data-cpct="${o.id}|emb" title="tap to set %"><i style="width:${o.embPct||0}%"></i></div><b>${o.embPct||0}%</b><em>${fmtH(t.embRem)} left</em>
+     ${t.embRem>1?`<button class="btn ${o.schedEmb?"":"go"}" data-cosched="${o.id}|emb">${o.schedEmb?"Unschedule":"Schedule embroidery"}</button>`:`<em style="width:auto">✓ done</em>`}</div>`:""}
+   </div>
+   <div class="cotl">${tl}</div>
+  </div>`;
+ }).join("");
+ document.getElementById("colist").innerHTML = (rows || `<div class="empty">No custom orders yet — add one below.</div>`) + `
+  <div class="coform">
+   <input id="co-name" placeholder="Order name" style="flex:2;min-width:140px">
+   <input id="co-num" placeholder="Order #" style="width:90px">
+   <input id="co-due" type="date" style="width:150px">
+   <input id="co-styles" placeholder="e.g. 4 CS - 5 CTE - 5 CP" style="flex:2;min-width:160px">
+   <button class="btn go" id="co-add">Add order</button>
+   <button class="btn" id="co-sync">Copy sync code</button>
+  </div>`;
+ document.getElementById("co-sync").onclick = ()=>{
+  const code = JSON.stringify(CUSTOM.map(o=>({num:o.num, name:o.name, done:Object.keys(o.ms||{}).filter(k=>o.ms[k])})));
+  try { navigator.clipboard.writeText("Sync custom orders: " + code); document.getElementById("co-sync").textContent = "Copied — paste to Claude"; setTimeout(()=>{document.getElementById("co-sync").textContent="Copy sync code";}, 2500); } catch(e){ prompt("Copy this and paste it to Claude:", code); }
+ };
+ document.getElementById("co-add").onclick = ()=>{
+  const nm = document.getElementById("co-name").value.trim();
+  if(!nm) return;
+  const hasE = confirm("Does this order have embroidery? OK = yes");
+  const hasP = confirm("Does this order have a patch? OK = yes");
+  CUSTOM.push({id:String(Date.now()), name:nm, num:document.getElementById("co-num").value.trim(), due:document.getElementById("co-due").value, styles:document.getElementById("co-styles").value.trim(), emb:hasE?12:0, e:hasE?1:0, p:hasP?1:0, ms:{}});
+  saveCO(); renderCustom();
+ };
+ document.querySelectorAll("[data-cms]").forEach(el=>el.onclick=()=>{
+  const o = CUSTOM.find(x=>x.id===el.dataset.cms);
+  o.ms = o.ms || {};
+  o.ms[el.dataset.step] = !o.ms[el.dataset.step];
+  if(el.dataset.step==="Sewing" && o.ms.Sewing && (o.sewPct||0)<100) o.sewPct = 100;
+  if(el.dataset.step==="Embroidery" && o.ms.Embroidery && (o.embPct||0)<100) o.embPct = 100;
+  saveCO(); render();
+ });
+ document.querySelectorAll("[data-coemb]").forEach(i=>i.onchange=()=>{ const o=CUSTOM.find(x=>x.id===i.dataset.coemb); o.emb=+i.value||0; saveCO(); render(); });
+ document.querySelectorAll("[data-cosched]").forEach(b=>b.onclick=()=>{
+  const [id,kind] = b.dataset.cosched.split("|");
+  const o = CUSTOM.find(x=>x.id===id);
+  if(kind==="sew") o.schedSew = !o.schedSew; else o.schedEmb = !o.schedEmb;
+  saveCO(); render();
+ });
+ document.querySelectorAll("[data-cpct]").forEach(el=>el.onclick=()=>{
+  const [id,kind] = el.dataset.cpct.split("|");
+  const o = CUSTOM.find(x=>x.id===id);
+  const cur = kind==="sew" ? (o.sewPct||0) : (o.embPct||0);
+  const v = prompt((kind==="sew"?"Sewing":"Embroidery")+" % complete for "+o.name+":", cur);
+  if(v===null) return;
+  const n = Math.max(0, Math.min(100, +v||0));
+  if(kind==="sew"){ o.sewPct = n; if(n>=100) o.ms.Sewing = true; } else { o.embPct = n; if(n>=100) o.ms.Embroidery = true; }
+  saveCO(); render();
+ });
+ document.querySelectorAll("[data-coedit]").forEach(b=>b.onclick=()=>{
+  const o = CUSTOM.find(x=>x.id===b.dataset.coedit);
+  const s = prompt("Styles (e.g. 4 CS - 5 CTE - 5 CP):", o.styles||"");
+  if(s!==null){ o.styles = s; }
+  const d = prompt("Deadline (YYYY-MM-DD):", o.due||"");
+  if(d!==null) o.due = d;
+  saveCO(); renderCustom();
+ });
+}
+function renderTracker(items){
+ const el = document.getElementById("trackwrap");
+ el.innerHTML = RUNS.map((r,idx)=>{
+  const ri = Object.values(items).filter(i=>i.run===r.no);
+  const order = [16,1,2,3,17,9,8,4,12,5,13,15,6,7,19,14,10,11];
+  ri.sort((a,b)=> order.indexOf(a.step)-order.indexOf(b.step) || (a.seg<b.seg?1:-1));
+  const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
+  const pct = tot? Math.round(100*(tot-rem)/tot):0;
+  const rows = ri.map(i=>{
+   const p = i.total? Math.round(100*(i.total-i.rem)/i.total):0;
+   const both = ri.some(x=>x.step===i.step&&x.seg!==i.seg);
+   const subNames = [...new Set(ATOMS.filter(a=>a.run===i.run&&a.step===i.step&&segKey(a.step,a.style)===i.seg).map(a=>a.name))];
+   const subRows = subNames.map(n=>{
+    const atoms = ATOMS.filter(a=>a.run===i.run&&a.step===i.step&&segKey(a.step,a.style)===i.seg&&a.name===n);
+    const checked = atoms.every(a=>DONE[atomKey(a.run,a.style,a.i)]);
+    return `<label class="subrow"><input type="checkbox" data-run="${i.run}" data-step="${i.step}" data-seg="${i.seg}" data-sub="${n}" ${checked?"checked":""}> ${n} <span class="st">${atoms.map(a=>a.style).join(" · ")}</span></label>`;
+   }).join("");
+   const id = `s${i.run}-${i.step}-${i.seg}`;
+   return `<div class="trow">
+    <div class="tinfo"><b>${nameOf(i.step,i.seg)}</b>${both&&i.step!==1?`<span class="linpill" style="background:${tint(r.hex,"22")};color:${r.hex}">${i.seg==="L"?"LUXE":"CLASSIC"}</span>`:""}
+     <span class="sty">${[...i.styles].join(" · ")}</span></div>
+    <div class="tprog"><i style="width:${p}%;background:${r.hex}"></i></div>
+    <div class="tleft">${fmtH(i.rem)} left</div>
+    <button class="btn" data-toggle="${id}">Details</button>
+    <button class="btn ${i.rem<=1?"":"go"}" data-markrun="${i.run}" data-markstep="${i.step}" data-markseg="${i.seg}" data-to="${i.rem<=1?0:1}">${i.rem<=1?"Undo":"Done"}</button>
+    <div class="subs" id="${id}">${subRows}</div>
+   </div>`;
+  }).join("");
+  return `<details class="tkcard"${idx===0?" open":""}><summary><span class="dot" style="background:${r.hex}"></span><span class="tkhead"><h2>${r.name}</h2></span><span class="tksum">${pct}% · ${fmtH(rem)} left</span><span class="chev">▶</span></summary>${rows}</details>`;
+ }).join("");
+ el.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.toggle).classList.toggle("open"));
+ el.querySelectorAll("[data-markrun]").forEach(b=>b.onclick=()=>{
+  const run=+b.dataset.markrun, step=+b.dataset.markstep, sg=b.dataset.markseg, to=b.dataset.to==="1";
+  ATOMS.forEach(a=>{ if(a.run===run&&a.step===step&&segKey(a.step,a.style)===sg){ if(to) DONE[atomKey(a.run,a.style,a.i)]=true; else delete DONE[atomKey(a.run,a.style,a.i)]; }});
+  save(); render();
+ });
+ el.querySelectorAll(".subrow input").forEach(c=>c.onchange=()=>{
+  const {run,step,seg:sg,sub}=c.dataset;
+  ATOMS.forEach(a=>{ if(a.run===+run&&a.step===+step&&segKey(a.step,a.style)===sg&&a.name===sub){ if(c.checked) DONE[atomKey(a.run,a.style,a.i)]=true; else delete DONE[atomKey(a.run,a.style,a.i)]; }});
+  save(); render();
+ });
+}
+
+const EXPANDED = new Set();
+let drag = null, pressTimer = null;
+function labelOfBase(base){
+ const [run,step,sg] = base.split("|");
+ return nameOf(+step,sg) + " (" + runBy(+run).name + ")";
+}
+function closeCtx(){ const m=document.getElementById("ctxmenu"); if(m) m.remove(); }
+function showCtx(x,y,base){
+ closeCtx();
+ const m = document.createElement("div");
+ m.className = "ctx"; m.id = "ctxmenu";
+ m.style.left = Math.max(8, Math.min(x, (window.innerWidth||600)-200)) + "px";
+ m.style.top = y + "px";
+ const cur = OVR.splits[base]||1;
+ m.innerHTML = `<button data-act="split">Split into ${cur+1} parts</button>`
+  + `<button data-act="expand">Show sub-steps</button>`
+  + ((cur>1 || (OVR.detach[base]||[]).length) ? `<button data-act="regroup">Regroup &amp; unpin</button>` : ``)
+  + `<button data-act="x">Cancel</button>`;
+ document.body.appendChild(m);
+ m.querySelectorAll("button").forEach(b=>b.onclick=(ev)=>{
+  ev.stopPropagation();
+  const act = b.dataset.act;
+  if(act==="split"){ OVR.splits[base]=Math.min(4,(OVR.splits[base]||1)+1); OVR.log.push(`Split ${labelOfBase(base)} into ${OVR.splits[base]} parts`); }
+  if(act==="expand"){ EXPANDED.add(base); }
+  if(act==="regroup"){
+   delete OVR.splits[base];
+   (OVR.detach[base]||[]).forEach(n=>delete OVR.pins[base+"::"+n]);
+   delete OVR.detach[base];
+   Object.keys(OVR.pins).forEach(k=>{ if(k===base||k.startsWith(base+"@")) delete OVR.pins[k]; });
+   OVR.log.push(`Regrouped ${labelOfBase(base)}`);
+   EXPANDED.delete(base);
+  }
+  closeCtx(); if(act!=="x"){ save(); render(); }
+ });
+}
+function wireDrag(){
+ document.querySelectorAll(".tblk[data-key],.tblk[data-minibase]").forEach(el=>{
+  el.onpointerdown = ev => {
+   ev.preventDefault(); closeCtx();
+   drag = {key:el.dataset.key, mini:el.dataset.minibase, sub:el.dataset.sub, base:el.dataset.base||el.dataset.minibase,
+           label:el.dataset.label, hex:el.dataset.hex, el, moved:false, x:ev.clientX, y:ev.clientY};
+   clearTimeout(pressTimer);
+   pressTimer = setTimeout(()=>{ if(drag && !drag.moved){ const d=drag; drag=null; showCtx(d.x, d.y, d.base); } }, 550);
+  };
+  el.ondblclick = ev => {
+   ev.preventDefault();
+   if(el.dataset.expandable){ EXPANDED.add(el.dataset.key); render(); }
+  };
+ });
+ document.querySelectorAll(".exwrap[data-collapse]").forEach(el=>{
+  el.ondblclick = ev => { if(ev.target.closest(".tblk")) return; EXPANDED.delete(el.dataset.collapse); render(); };
+  el.querySelectorAll(".exhead").forEach(h=>h.ondblclick = ()=>{ EXPANDED.delete(el.dataset.collapse); render(); });
+ });
+ document.querySelectorAll(".tblk[data-base]").forEach(el=>{
+  el.oncontextmenu = ev => { ev.preventDefault(); showCtx(ev.clientX, ev.clientY, el.dataset.base); };
+ });
+}
+document.addEventListener("pointerdown", ev=>{ if(!ev.target.closest("#ctxmenu") && !ev.target.closest(".tblk")) closeCtx(); });
+document.addEventListener("pointermove", ev=>{
+ if(!drag) return;
+ if(!drag.moved && Math.hypot(ev.clientX-drag.x, ev.clientY-drag.y) < 8) return;
+ clearTimeout(pressTimer);
+ if(!drag.moved){
+  drag.moved = true;
+  drag.el.classList.add("dragging");
+  drag.ghost = document.createElement("div");
+  drag.ghost.className = "ghost";
+  drag.ghost.style.background = drag.hex;
+  drag.ghost.textContent = drag.label;
+  document.body.appendChild(drag.ghost);
+ }
+ drag.ghost.style.left = (ev.clientX+12)+"px";
+ drag.ghost.style.top = (ev.clientY+10)+"px";
+ document.querySelectorAll(".person,.day").forEach(x=>x.classList.remove("hot"));
+ const t = document.elementFromPoint(ev.clientX, ev.clientY);
+ const card = t && t.closest ? (t.closest(".person[data-person]") || t.closest(".day[data-d]")) : null;
+ if(card) card.classList.add("hot");
+});
+document.addEventListener("pointerup", ev=>{
+ clearTimeout(pressTimer);
+ if(!drag) return;
+ const d = drag; drag = null;
+ document.querySelectorAll(".person,.day").forEach(x=>x.classList.remove("hot"));
+ if(d.ghost) d.ghost.remove();
+ if(d.el) d.el.classList.remove("dragging");
+ if(!d.moved) return;
+ const t = document.elementFromPoint(ev.clientX, ev.clientY);
+ const pCard = t && t.closest ? t.closest(".person[data-person]") : null;
+ const dCard = t && t.closest ? t.closest(".day[data-d]") : null;
+ if(!pCard && !dCard) return;
+ const person = pCard ? pCard.dataset.person : null;
+ const day = dCard ? +dCard.dataset.d : selDay;
+ if(d.mini){
+  const list = OVR.detach[d.mini] || [];
+  if(!list.includes(d.sub)) list.push(d.sub);
+  OVR.detach[d.mini] = list;
+  const pin = {startDay: day};
+  if(person) pin.person = person;
+  OVR.pins[d.mini+"::"+d.sub] = pin;
+  OVR.log.push(`${tokName(d.sub)} (${SLABEL[tokStyle(d.sub)]||""}) pulled out of ${labelOfBase(d.mini)} → ${person||"same person"}, ${fmtDay(day)}`);
+ } else {
+  const cur = OVR.pins[d.key] || {};
+  const pin = {startDay: day};
+  if(person) pin.person = person; else if(cur.person) pin.person = cur.person;
+  OVR.pins[d.key] = pin;
+  OVR.log.push(`${d.label} → ${pin.person || "same person"}, ${fmtDay(day)}`);
+ }
+ save(); render();
+});
+
+function findStep(s){
+ if(!s) return null;
+ s = s.toLowerCase();
+ if(s.includes("satin")) return 1;
+ if(s.includes("classic top")) return 1;
+ const hit = Object.entries(GN).find(([k,v])=>{ const lv=v.toLowerCase(); return lv.includes(s)||s.includes(lv); });
+ if(hit) return +hit[0];
+ const part = Object.entries(GN).find(([k,v])=>v.toLowerCase().split(/[^a-z]+/).some(w=>w.length>3&&s.includes(w)));
+ return part ? +part[0] : null;
+}
+function findRun(x){
+ if(typeof x==="number") return RUNS.some(r=>r.no===x) ? x : null;
+ if(!x) return null;
+ const s = String(x).toLowerCase();
+ const r = RUNS.find(r=>String(r.no)===s || r.name.toLowerCase().includes(s));
+ return r ? r.no : null;
+}
+async function interpret(text){
+ const daysL = Array.from({length:14},(_,d)=>d+"="+dateOf(d).toDateString()).join("; ");
+ const stepNames = "Satin to cotton (LUXE serging); Serge classic tops; " + Object.entries(GN).map(([k,v])=>v).join("; ");
+ const openWork = RUNS.map(r=>{
+  const ri = Object.values(buildItems()).filter(i=>i.run===r.no && i.rem>1);
+  return r.name+" (run "+r.no+"): "+ri.map(i=>nameOf(i.step,i.seg)+(i.seg==="L"?" [LUXE]":i.seg==="C"?" [classic]":"")).join(", ");
+ }).join(" | ");
+ const prompt = `You translate a scrub-hat studio owner's instruction into JSON scheduling ops.
+Context — today is day 0 (${new Date().toDateString()}). Day numbers: ${daysL}.
+People & shifts: Trinna 10:00-20:00 Mon/Tue/Thu/Fri; Caitlynn 15:00-23:00 Mon/Thu; Drea, Mauricio, Karla 7:00-15:00 Fri/Sat; Lora & Anna Cristina work from home.
+Runs: ${RUNS.map(r=>r.no+"="+r.name).join(", ")}. Step names: ${stepNames}.
+Open work: ${openWork}.
+Custom orders (id=name, sew%, emb%, hats): ${CUSTOM.filter(o=>!shipped(o)).map(o=>o.num+"="+o.name+" (sew "+(o.sewPct||0)+"%, emb "+(o.embPct||0)+"%, "+coTime(o).hats+" hats)").join("; ")}.
+Reply with ONLY JSON {"ops":[...]}. Op shapes:
+{"op":"out","person":P,"day":D} — absent that whole day
+{"op":"arrive","person":P,"day":D,"startHour":13.5,"hours":7} — arrives at a specific time (24h decimal), optional total hours
+{"op":"late","person":P,"day":D,"hoursLost":2} — loses hours, arrival pushed back
+{"op":"move","run":RunNoOrName,"stepName":S,"person":P,"day":D} — reassign and/or reschedule a step (person and day each optional)
+{"op":"before","run":RunNoOrName,"first":StepNameA,"then":StepNameB} — make B wait until A is finished
+{"op":"customProgress","order":NameOrNumber,"sewPct":40,"embPct":38,"hatsEmbDone":12,"hatsSewDone":30} — update a custom order's progress; include only the fields stated (convert hats counts to nothing, pass them raw)
+{"op":"unknown","note":"why"} — only if truly unclear.
+Multiple ops allowed. If the user names a person for a step, include person in the move op. Day defaults: "today"=0, "tomorrow"=1, weekday names = next occurrence.
+Instruction: "${text}"`;
+ const r = await window.cowork.askClaude(prompt, []);
+ const t = typeof r==="string" ? r : (r && r.content && r.content[0] && r.content[0].text) || (r && r.text) || JSON.stringify(r);
+ const m = t.match(/\{[\s\S]*\}/);
+ return m ? JSON.parse(m[0]) : null;
+}
+async function handleInstruction(text){
+ const btn = document.getElementById("voxbtn");
+ btn.textContent = "Thinking…";
+ try {
+  const res = await interpret(text);
+  if(!res || !res.ops || !res.ops.length) throw new Error("no ops");
+  res.ops.forEach(o=>{
+   if(o.op==="out"){ OVR.avail[o.person+"|"+o.day]=0; OVR.log.push(`${o.person} out ${fmtDay(o.day)}`); }
+   else if(o.op==="arrive"){
+    OVR.arrive[o.person+"|"+o.day] = {st:o.startHour, h:o.hours};
+    OVR.log.push(`${o.person} in at ${fmtT((o.startHour||0)*60)}${o.hours?` for ${o.hours}h`:""} ${fmtDay(o.day)}`);
+   }
+   else if(o.op==="late"){ const base=TEAM[o.person]?TEAM[o.person].h:8; OVR.avail[o.person+"|"+o.day]=Math.max(0, base-(o.hoursLost||2)); OVR.log.push(`${o.person} −${o.hoursLost||2}h ${fmtDay(o.day)}`); }
+   else if(o.op==="move"){
+    const rn = findRun(o.run);
+    const st = findStep(o.stepName);
+    const items = buildItems();
+    const hits = Object.values(items).filter(i=>(rn===null||i.run===rn) && st!==null && i.step===st && i.rem>1);
+    if(hits.length){
+     hits.forEach(hit=>{ const pin={startDay:o.day??0}; if(o.person) pin.person=o.person; OVR.pins[hit.key]=pin; });
+     OVR.log.push(`${nameOf(hits[0].step,hits[0].seg)}${rn?` (${runBy(rn).name})`:""} → ${o.person||"same"}, ${fmtDay(o.day??0)}`);
+    } else OVR.log.push(`Couldn't match step "${o.stepName}"${o.run?` on ${o.run}`:""}`);
+   }
+   else if(o.op==="before"){
+    const rn = findRun(o.run);
+    const a1 = findStep(o.first), b1 = findStep(o.then);
+    if(a1!==null && b1!==null){
+     (rn ? [rn] : RUNS.map(r=>r.no)).forEach(R=>OVR.gates.push({run:R, a:a1, b:b1}));
+     OVR.log.push(`${GN[b1]||"step"} waits for ${GN[a1]||"step"}${rn?` on ${runBy(rn).name}`:""}`);
+    } else OVR.log.push(`Couldn't match steps "${o.first}" / "${o.then}"`);
+   }
+   else if(o.op==="customProgress"){
+    const s = String(o.order||"").toLowerCase();
+    const ord = CUSTOM.find(x=>x.num===String(o.order) || x.name.toLowerCase().includes(s));
+    if(ord){
+     const hats = coTime(ord).hats || 1;
+     if(o.hatsSewDone!==undefined) ord.sewPct = Math.min(100, Math.round(100*o.hatsSewDone/hats));
+     if(o.hatsEmbDone!==undefined) ord.embPct = Math.min(100, Math.round(100*o.hatsEmbDone/hats));
+     if(o.sewPct!==undefined) ord.sewPct = Math.max(0, Math.min(100, o.sewPct));
+     if(o.embPct!==undefined) ord.embPct = Math.max(0, Math.min(100, o.embPct));
+     if((ord.sewPct||0)>=100) ord.ms.Sewing = true;
+     if((ord.embPct||0)>=100) ord.ms.Embroidery = true;
+     saveCO();
+     OVR.log.push(`${ord.name}: sew ${ord.sewPct||0}% · emb ${ord.embPct||0}%`);
+    } else OVR.log.push(`Couldn't find custom order "${o.order}"`);
+   }
+   else if(o.note){ OVR.log.push(`Not sure: ${o.note}`); }
+  });
+  save(); render();
+ } catch(e) {
+  OVR.log.push("Couldn't interpret — try rephrasing or use the text box");
+  save(); render();
+ }
+ btn.textContent = "🎙 Tell the schedule";
+}
+document.getElementById("voxbtn").onclick = ()=>{
+ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+ const box = document.getElementById("typebox");
+ if(!SR){ box.classList.toggle("open"); document.getElementById("typein").focus(); return; }
+ const btn = document.getElementById("voxbtn");
+ const rec = new SR();
+ rec.lang = "en-US"; rec.interimResults = false;
+ btn.classList.add("listen"); btn.textContent = "Listening…";
+ rec.onresult = e => { btn.classList.remove("listen"); handleInstruction(e.results[0][0].transcript); };
+ rec.onerror = () => { btn.classList.remove("listen"); btn.textContent = "🎙 Tell the schedule"; box.classList.add("open"); document.getElementById("typein").focus(); };
+ rec.onend = () => { btn.classList.remove("listen"); };
+ try { rec.start(); } catch(e){ btn.classList.remove("listen"); box.classList.add("open"); }
+};
+document.getElementById("typego").onclick = ()=>{
+ const v = document.getElementById("typein").value.trim();
+ if(v){ document.getElementById("typein").value=""; handleInstruction(v); }
+};
+document.getElementById("typein").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("typego").click(); });
+
+document.querySelectorAll("nav button").forEach(t=>t.onclick=()=>{
+ document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===t));
+ document.querySelectorAll("section").forEach(s=>s.classList.remove("on"));
+ document.getElementById("view-"+t.dataset.v).classList.add("on");
+});
+document.getElementById("rdwrap").addEventListener("click", e=>{ if(e.target.id==="rdwrap") closeRun(); });
+document.getElementById("dprev").onclick = ()=>document.getElementById("daystrip").scrollBy({left:-280,behavior:"smooth"});
+document.getElementById("dnext").onclick = ()=>document.getElementById("daystrip").scrollBy({left:280,behavior:"smooth"});
+document.getElementById("resetbtn").onclick=()=>{ DONE=seedDone(); save(); render(); };
+
+/* ---------- shared state (Supabase) ---------- */
+const CLOUD_KEYS = {};
+let CLOUD_READY = false, APP_STARTED = false;
+const saveTimers = {};
+function cloudSave(key, value){
+ if(!CLOUD_READY) return;
+ CLOUD_KEYS[key] = JSON.stringify(value);
+ clearTimeout(saveTimers[key]);
+ saveTimers[key] = setTimeout(async ()=>{
+  try { await sb.from("sched_state").upsert({key, value, updated_at: new Date().toISOString()}); } catch(e){}
+ }, 600);
+}
+function applyRemote(key, val, skipRender){
+ if(key===LSKEY) DONE = val||{};
+ else if(key===OVRKEY){ OVR = val||{avail:{},pins:{},log:[]}; if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; }
+ else if(key===PKEY) PAIR = val||{};
+ else if(key===COKEY && Array.isArray(val) && val.length) CUSTOM = val;
+ else return;
+ if(!skipRender) render();
+}
+async function bootCloud(){
+ try {
+  const {data} = await sb.from("sched_state").select("key,value");
+  const have = {};
+  (data||[]).forEach(r=>{ have[r.key]=true; CLOUD_KEYS[r.key]=JSON.stringify(r.value); applyRemote(r.key, r.value, true); });
+  CLOUD_READY = true;
+  if(!have[LSKEY]) cloudSave(LSKEY, DONE);
+  if(!have[OVRKEY]) cloudSave(OVRKEY, OVR);
+  if(!have[PKEY]) cloudSave(PKEY, PAIR);
+  if(!have[COKEY]) cloudSave(COKEY, CUSTOM);
+  sb.channel("sched").on("postgres_changes",{event:"*",schema:"public",table:"sched_state"},p=>{
+   const r = p.new; if(!r || !r.key) return;
+   const j = JSON.stringify(r.value);
+   if(CLOUD_KEYS[r.key]===j) return;
+   CLOUD_KEYS[r.key] = j;
+   applyRemote(r.key, r.value);
+  }).subscribe();
+ } catch(e){ CLOUD_READY = true; }
+}
+async function startApp(){
+ if(APP_STARTED) return;
+ APP_STARTED = true;
+ document.getElementById("login").style.display = "none";
+ await bootCloud();
+ render();
+}
+sb.auth.onAuthStateChange((ev,s)=>{ if(s) startApp(); else if(APP_STARTED) location.reload(); });
+sb.auth.getSession().then(({data:{session}})=>{ if(session) startApp(); else document.getElementById("login").style.display="flex"; });
+document.getElementById("liBtn").onclick = async ()=>{
+ document.getElementById("liErr").textContent = "";
+ const {error} = await sb.auth.signInWithPassword({email:document.getElementById("liEmail").value.trim(), password:document.getElementById("liPass").value});
+ if(error) document.getElementById("liErr").textContent = error.message;
+};
+document.getElementById("liPass").addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("liBtn").click(); });
+document.getElementById("soBtn").onclick = async ()=>{ try{ await sb.auth.signOut(); }catch(e){} location.reload(); };
+if(!(window.cowork && window.cowork.askClaude)){ const v=document.getElementById("voxbtn"); if(v) v.style.display="none"; }
+</script>
+</body>
+</html>

@@ -237,7 +237,7 @@ section { display:none; } section.on { display:block; }
   <div class="offline" id="offline"></div>
 </section>
 
-<section id="view-runs"><div class="rcards" id="runcards"></div></section>
+<section id="view-runs"><div style="margin-bottom:12px"><button class="btn go" id="newrun">+ Plan a new run</button></div><div class="rcards" id="runcards"></div></section>
 
 <section id="view-custom">
   <div class="card" id="cosummary"></div>
@@ -249,6 +249,7 @@ section { display:none; } section.on { display:block; }
   <button class="btn" id="resetbtn">Reset to imported status (June 12)</button>
 </section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
+<div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
 <div class="foot">Drag any block onto a teammate or a day to move it — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -256,7 +257,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-12-A";
+const BUILD="2026-06-12-B";
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
  CP:[["Serge tops",.231,1],["Case top",.257,4],["Logo",.921,4],["Ribbons",1.219,12],["Serge top/bot",1.142,6],["Serge scrunchies",.871,5],["Case scrunchie",1.098,11],["Attachment",2.23,11]],
@@ -293,7 +294,7 @@ const fmtT = m => { const mm=((Math.round(m)%1440)+1440)%1440; let h=Math.floor(
 const EXC = {"2026-06-12":{"Trinna":{st:13,h:7,note:"in at 1p, 7 hrs (hours finished early this week)"}}};
 const isoOf = d => { const dt=dateOf(d); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); };
 function owner(step,sg){ if(step===8||step===15) return sg==="L"?"Trinna":"Drea"; return {1:"Mauricio",2:"Drea",3:"Karla",4:"Karla",5:"Mauricio",6:"Trinna",7:"Trinna",9:"Caitlynn",10:"Trinna",11:"Lora",12:"Karla",13:"Karla",14:"Drea",16:"Drea",17:"Mauricio",19:"Trinna"}[step]; }
-const RUNS = [
+const BASE_RUNS = [
  {no:20,name:"Summer Bash",hex:"#0E9888",mult:1,qty:{CP:90,LP:176,CTE:93,LTE:92,CO:21,CS:24,LS:24},
   lines:[
    {p:"Slice of Summer",q:[6,12,9,10,0,0,0],satin:"Coral"},
@@ -357,7 +358,23 @@ const RUNS = [
    {p:"Blush Rush",q:[0,0,3,0,0,0,0]},
    {p:"Shark Week",q:[0,0,1,0,0,0,0]}]}
 ];
-RUNS.forEach(r=>{ r.patterns = r.lines.map(l=>l.p); });
+const RKEY = "tmsh-runs-v1";
+let XRUNS = [];
+try { XRUNS = JSON.parse(localStorage.getItem(RKEY)) || []; } catch(e){ XRUNS = []; }
+let RUNS = [];
+function prepRun(r){
+ r.patterns = r.lines.map(l=>l.p);
+ if(!r.qty){ r.qty = {}; }
+ const q = {};
+ QCOLS.forEach((c,i)=>{ const s = r.lines.reduce((x,l)=>x+(l.q[i]||0),0); if(s>0) q[c]=s; });
+ r.qty = q;
+}
+const RPAL = ["#2F6DB3","#8F7A2E","#C2452D","#3D8F5F","#7A4FD0","#B3573F"];
+function rebuildRuns(){
+ RUNS = BASE_RUNS.concat(XRUNS.map(x=>Object.assign({hex:RPAL[x.no%RPAL.length], mult:x.mult||1}, x)));
+ RUNS.forEach(prepRun);
+ ATOMS = allAtoms();
+}
 const QCOLS = ["CP","LP","CTE","LTE","CO","CS","LS"];
 const PKEY = "tmsh-pair-v1";
 let PAIR;
@@ -397,7 +414,8 @@ const segKey = (step,style) => step===19 ? "A" : seg(style);
 const tint = (hex,a) => hex + a;
 function atomKey(run,style,i){ return run+"|"+style+"|"+i; }
 function allAtoms(){ const out=[]; for(const r of RUNS){ for(const st in r.qty){ SUBS[st].forEach((s,i)=>out.push({run:r.no,style:st,i,name:s[0],min:s[1],step:s[2],qty:r.qty[st],mult:r.mult})); } } return out; }
-const ATOMS = allAtoms();
+let ATOMS = [];
+rebuildRuns();
 function seedDone(){
  const d = {};
  const mk=(run,step,sg,sub)=>{ ATOMS.forEach(a=>{ if(a.run===run&&a.step===step&&(!sg||segKey(a.step,a.style)===sg)&&(!sub||a.name===sub)) d[atomKey(a.run,a.style,a.i)]=true; }); };
@@ -556,7 +574,7 @@ function schedule(items){
     }
    }
    if(!cands.length) break;
-   const pr = u => u.custom ? 9 : prio[u.run];
+   const pr = u => u.custom ? 9 : (prio[u.run] !== undefined ? prio[u.run] : Math.max(3, u.run - 18));
    const lk = u => OVR.pins[u.key] ? 1 : 0;
    cands.sort((a,b)=> lk(b.u)-lk(a.u) || a.start-b.start || (OVR.pins[b.u.key]?1:0)-(OVR.pins[a.u.key]?1:0) || pr(a.u)-pr(b.u) || (a.u.step||99)-(b.u.step||99));
    const {p,u,start} = cands[0];
@@ -610,7 +628,7 @@ function render(){
 
 function applyPerms(){
  if(isLead) return;
- ["voxbtn","typebox","resetbtn","clearops","co-add","co-sync","editBtn"].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display="none"; });
+ ["voxbtn","typebox","resetbtn","clearops","co-add","co-sync","editBtn","newrun"].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display="none"; });
  const f = document.querySelector(".coform"); if(f) f.style.display="none";
  document.querySelectorAll(".pcell").forEach(i=>i.disabled=true);
  document.querySelectorAll("[data-cosched],[data-coedit],[data-coemb]").forEach(e=>e.style.display="none");
@@ -973,6 +991,60 @@ function renderCustom(){
   saveCO(); renderCustom();
  });
 }
+function saveRuns(){ try{ localStorage.setItem(RKEY, JSON.stringify(XRUNS)); }catch(e){} if(typeof cloudSave==="function") cloudSave(RKEY, XRUNS); }
+function openBuilder(){
+ const nextNo = Math.max(...RUNS.map(r=>r.no)) + 1;
+ const w = document.getElementById("nrwrap");
+ const rowHtml = (l)=>`<tr><td><input class="nr-p pcell" style="width:160px;border-color:var(--line)" value="${(l&&l.p||"").replace(/"/g,"&quot;")}" placeholder="Pattern name"></td>${QCOLS.map((c,i)=>`<td class="num"><input class="nr-q" type="number" min="0" style="width:48px;border:1px solid var(--line);border-radius:7px;padding:5px;text-align:center" value="${l&&l.q[i]||""}" placeholder="0"></td>`).join("")}</tr>`;
+ document.getElementById("nr").innerHTML = `
+  <div class="rdtop"><div><h2 style="font-size:20px;font-weight:700">Plan a new run</h2><div style="color:var(--soft);font-size:12.5px">This becomes the live plan — no Google Sheet needed</div></div><button class="rdclose" id="nrx">✕</button></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0">
+   <input id="nr-no" type="number" value="${nextNo}" style="width:80px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14px" title="Run number">
+   <input id="nr-name" placeholder="Run name (e.g. Autumn Glow)" style="flex:2;min-width:180px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14px">
+   <input id="nr-golive" type="date" style="width:160px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14px" title="Go-live date">
+   <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--soft)"><input id="nr-mult" type="checkbox" style="width:17px;height:17px"> new-material buffer (×1.25)</label>
+  </div>
+  <div class="ptab"><table id="nr-table"><tr><th>Pattern</th>${QCOLS.map(c=>`<th style="text-align:center">${c}</th>`).join("")}</tr>${rowHtml()}${rowHtml()}${rowHtml()}</table></div>
+  <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+   <button class="btn" id="nr-add">+ Add pattern row</button>
+   <span id="nr-tot" style="font-size:13px;color:var(--soft)"></span>
+   <button class="btn go" id="nr-save" style="margin-left:auto">Create run</button>
+  </div>
+  <div class="rdnote">Quantities by style. Fabric squares appear automatically for patterns already on Shopify; new prints show a tile until you ask Claude to sync swatches. If you enter an existing run number, it replaces that run.</div>`;
+ w.style.display = "block";
+ const recalc = ()=>{
+  const rows = [...document.querySelectorAll("#nr-table tr")].slice(1);
+  let hats=0, mins=0;
+  rows.forEach(tr=>{
+   const qs = [...tr.querySelectorAll(".nr-q")].map(i=>+i.value||0);
+   qs.forEach((q,i)=>{ hats+=q; mins+=q*(MIN[QCOLS[i]]||0); });
+  });
+  const m = document.getElementById("nr-mult").checked?1.25:1;
+  document.getElementById("nr-tot").textContent = hats+" hats · ~"+fmtH(mins*m)+" sewing";
+ };
+ w.oninput = recalc; recalc();
+ document.getElementById("nrx").onclick = ()=>{ w.style.display="none"; };
+ document.getElementById("nr-add").onclick = ()=>{ document.getElementById("nr-table").insertAdjacentHTML("beforeend", rowHtml()); };
+ document.getElementById("nr-save").onclick = ()=>{
+  const no = +document.getElementById("nr-no").value;
+  const name = document.getElementById("nr-name").value.trim();
+  if(!no || !name){ alert("Give the run a number and a name."); return; }
+  const lines = [];
+  [...document.querySelectorAll("#nr-table tr")].slice(1).forEach(tr=>{
+   const p = tr.querySelector(".nr-p").value.trim();
+   const q = [...tr.querySelectorAll(".nr-q")].map(i=>+i.value||0);
+   if(p && q.some(x=>x>0)) lines.push({p, q});
+  });
+  if(!lines.length){ alert("Add at least one pattern with quantities."); return; }
+  const run = {no, name, mult: document.getElementById("nr-mult").checked?1.25:1, lines};
+  const gl = document.getElementById("nr-golive").value; if(gl) run.goLive = gl;
+  if(BASE_RUNS.some(r=>r.no===no)){ alert("Run "+no+" is a built-in run — pick a new number."); return; }
+  XRUNS = XRUNS.filter(x=>x.no!==no).concat([run]);
+  saveRuns(); rebuildRuns(); w.style.display="none"; render();
+ };
+}
+document.getElementById("newrun").onclick = openBuilder;
+document.getElementById("nrwrap").addEventListener("click", e=>{ if(e.target.id==="nrwrap") document.getElementById("nrwrap").style.display="none"; });
 function renderTracker(items){
  const el = document.getElementById("trackwrap");
  el.innerHTML = RUNS.map((r,idx)=>{
@@ -1290,6 +1362,7 @@ function applyRemote(key, val, skipRender){
  else if(key===OVRKEY){ OVR = val||{avail:{},pins:{},log:[]}; if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; }
  else if(key===PKEY) PAIR = val||{};
  else if(key===COKEY && Array.isArray(val) && val.length) CUSTOM = val;
+ else if(key===RKEY && Array.isArray(val)){ XRUNS = val; rebuildRuns(); }
  else return;
  if(!skipRender) render();
 }
@@ -1303,6 +1376,7 @@ async function bootCloud(){
   if(!have[OVRKEY]) cloudSave(OVRKEY, OVR);
   if(!have[PKEY]) cloudSave(PKEY, PAIR);
   if(!have[COKEY]) cloudSave(COKEY, CUSTOM);
+  if(!have[RKEY]) cloudSave(RKEY, XRUNS);
   sb.channel("sched").on("postgres_changes",{event:"*",schema:"public",table:"sched_state"},p=>{
    const r = p.new; if(!r || !r.key) return;
    const j = JSON.stringify(r.value);

@@ -136,6 +136,11 @@ button{font-family:var(--sans);cursor:pointer}
 .mock{border-left:1px solid var(--line);padding:14px 18px;display:flex;flex-direction:column;gap:8px}
 .mockbox{flex:1;min-height:140px;border:1.5px dashed var(--aqua);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#7bb6b5;text-align:center;gap:6px;cursor:pointer;overflow:hidden}
 .mockbox.dragging{border-color:var(--teal);border-style:solid;background:#e8f4f3}
+.noteszoom{position:fixed;inset:0;background:rgba(4,40,45,.55);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+.noteszoom.open{display:flex}
+.noteszoom .nzpanel{background:var(--panel);border-radius:14px;box-shadow:var(--shadow);width:min(860px,94vw);display:flex;flex-direction:column;gap:10px;padding:18px}
+.noteszoom textarea{width:100%;min-height:60vh;resize:vertical;font:inherit;padding:12px;border:1px solid var(--line);border-radius:10px}
+.noteszoom .nzbar{display:flex;justify-content:flex-end;gap:10px}
 .mockbox img{max-width:100%;max-height:240px;border-radius:10px}
 .mockbox.haspic{border-style:solid;border-color:var(--line);cursor:zoom-in;position:relative}
 .mockbox.haspic:after{content:"⤢";position:absolute;top:6px;right:8px;background:rgba(4,88,99,.78);color:#fff;font-size:13px;line-height:1;padding:4px 6px;border-radius:6px;opacity:0;transition:opacity .15s}
@@ -459,7 +464,7 @@ function orderEdit(c,o){const tchk=t=>'<label><input type="checkbox" data-t="'+t
   return '<div class="order"><div class="ohead"><span class="onum">Editing '+(o.iname?esc(o.iname):'#'+esc(o.id||''))+'</span></div><div class="edit" data-form="'+o.dbid+'"><div class="fld full"><label>Internal team name (used in Clockify)</label><input data-k="iname" value="'+esc(o.iname)+'"></div><div class="erow" style="margin-top:10px">'+fld('Order #','id',o.id)+fld('Order date','date',o.date,'date')+fld('Customer deadline','deadline',o.deadline,'date')+fld('Goal completion','ideadline',o.ideadline,'date')+fld('Est. ship','est',o.est,'date')+'</div><div class="fld full"><label>Type</label><div class="types">'+tchk('Embroidery')+tchk('Custom Print')+tchk('Patch')+'</div></div><div class="erow" style="margin-top:10px">'+fld('Styles / qty','styles',o.styles)+fld('Scrub hat color','scrub',o.scrub)+fld('Logo','logo',o.logo)+fld('Ribbon / ties','ribbon',o.ribbon)+fld('Sewing thread','sewing',o.sewing)+fld('Embroidery thread','emb',o.emb)+'</div><div class="fld full"><label>Placement</label><input data-k="placement" value="'+esc(o.placement)+'"></div><div class="fld full" style="margin-top:10px"><label>Notes</label><textarea data-k="notes" rows="2">'+esc(o.notes)+'</textarea></div><div class="secthead">Production timeline</div><div class="msgrid">'+ms+'</div>'+finS+'<div class="editbar"><button class="btn" data-save="'+o.dbid+'">Save</button><button class="link" data-cancel="1">Cancel</button><span class="right"><button class="btn danger tiny" data-del="'+o.dbid+'">Delete order</button></span></div></div></div>';}
 function renderPending(){const rows=pendingOrders();
   const dl=o=>{const x=effDeadline(o)||o.ship;if(!x)return '<span class="dl-chip dl-none">no date</span>';const days=Math.round((new Date(x+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);const lbl=d(x)+(days<0?' · '+(-days)+'d late':(days===0?' · today':' · '+days+'d'));return '<span class="dl-chip '+(days<0?'dl-over':(days<=7?'dl-soon':'dl-ok'))+'">'+lbl+'</span>';};
-  const body=rows.map(({c,o,s})=>'<tr data-go="'+c.id+'"><td><b>'+esc(c.name)+'</b><div style="color:var(--muted);font-size:12px">'+esc(c.contact||'')+'</div></td><td>#'+esc(o.id||'')+'</td><td>'+statusPill(s)+'</td><td>'+(o.type||[]).join(', ')+'</td><td>'+dl(o)+'</td></tr>').join('');
+  const body=rows.map(({c,o,s})=>'<tr data-go="'+c.id+'"><td><b>'+esc(o.iname||c.name)+'</b>'+(o.iname?'<div style="color:var(--muted);font-size:12px">'+esc(c.name)+'</div>':'')+'</td><td>#'+esc(o.id||'')+'</td><td>'+statusPill(s)+'</td><td>'+(o.type||[]).join(', ')+'</td><td>'+dl(o)+'</td></tr>').join('');
   document.getElementById('detail').innerHTML='<div class="dhead"><div><h2>In progress</h2><div class="meta">'+rows.length+' open · by deadline</div></div><div class="acts"><button class="link" data-closepend="1">Close</button></div></div><div class="pending">'+(rows.length?'<table class="ptab"><thead><tr><th>Customer</th><th>Order</th><th>Status</th><th>Type</th><th>Deadline</th></tr></thead><tbody>'+body+'</tbody></table>':'<div class="empty">All caught up! 🎉</div>')+'</div>';}
 function renderDetail(){
   if(view==='pending'){renderPending();return;}
@@ -558,6 +563,19 @@ document.addEventListener('click',e=>{
   else if(t.dataset.mock){uploadMock(t.dataset.mock);}
   else if(t.dataset.rmmock){sb.from('orders').update({mockup_url:null}).eq('id',t.dataset.rmmock).then(()=>loadData().then(render));}
 });
+/* click the Notes box while editing → big editor overlay */
+function openNotesZoom(src){
+  let nz=document.getElementById('noteszoom');
+  if(!nz){nz=document.createElement('div');nz.id='noteszoom';nz.className='noteszoom';
+    nz.innerHTML='<div class="nzpanel"><div class="secthead" style="margin:0">Notes</div><textarea></textarea><div class="nzbar"><button class="btn" data-nzdone="1">Done</button></div></div>';
+    document.body.appendChild(nz);
+    const close=()=>{if(nz._src)nz._src.value=nz.querySelector('textarea').value;nz.classList.remove('open');};
+    nz.addEventListener('click',e=>{if(e.target===nz||e.target.dataset.nzdone)close();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&nz.classList.contains('open'))close();});}
+  nz._src=src;nz.querySelector('textarea').value=src.value;nz.classList.add('open');
+  const ta=nz.querySelector('textarea');ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
+}
+document.addEventListener('click',e=>{const ta=e.target.closest&&e.target.closest('textarea[data-k="notes"]');if(ta)openNotesZoom(ta);});
 /* paste an image anywhere while an order is open → becomes that order's mockup */
 document.addEventListener('paste',e=>{
   const items=[...((e.clipboardData||{}).items||[])];const it=items.find(i=>i.type&&i.type.startsWith('image/'));

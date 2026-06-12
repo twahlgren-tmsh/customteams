@@ -257,7 +257,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-12-B";
+const BUILD="2026-06-12-C";
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
  CP:[["Serge tops",.231,1],["Case top",.257,4],["Logo",.921,4],["Ribbons",1.219,12],["Serge top/bot",1.142,6],["Serge scrunchies",.871,5],["Case scrunchie",1.098,11],["Attachment",2.23,11]],
@@ -356,8 +356,17 @@ const BASE_RUNS = [
    {p:"Pastel Paws",q:[0,4,0,0,0,0,0]},
    {p:"Peach Planters",q:[0,0,2,0,0,0,0]},
    {p:"Blush Rush",q:[0,0,3,0,0,0,0]},
-   {p:"Shark Week",q:[0,0,1,0,0,0,0]}]}
+   {p:"Shark Week",q:[0,0,1,0,0,0,0]}]},
+ {no:18, name:"Coffee & Maps", done:true, goLive:"2026-06-05", mult:1, lines:[
+  {p:"Core Solid: Hunter Green",q:[6,12,6,6,3,6,3]},{p:"Core Solid: Black",q:[4,16,4,4,2,4,2]},{p:"Vintage Map",q:[6,12,4,4,2,4,2]},{p:"Latte Love",q:[6,12,6,7,2,2,3]},{p:"Cupids Confetti",q:[6,12,6,6,2,2,3]},{p:"Blood Mist",q:[6,12,6,6,2,2,3]},{p:"Mint Chocolate Swirls",q:[8,12,7,6,2,2,3]},{p:"Camo",q:[8,12,4,10,3,4,4]}]},
+ {no:17, name:"Jewels", done:true, goLive:"2026-05-29", mult:1, lines:[
+  {p:"Core Solid: Navy",q:[6,12,6,6,2,4,4]},{p:"Ophelia's Garden",q:[8,16,8,8,2,2,3]},{p:"Neon Whimsy",q:[7,12,6,7,1,2,3]},{p:"Blueberry Riptide",q:[8,12,7,8,2,2,3]},{p:"Indigo Petals",q:[8,16,7,8,2,2,3]},{p:"Royal Swirls",q:[8,12,8,7,2,2,3]},{p:"Sapphire Mist",q:[8,12,9,6,2,2,3]},{p:"Jewel Swirls",q:[8,12,6,7,2,2,3]},{p:"Glow In The Deep",q:[8,16,8,8,4,2,4]},{p:"Boho Calico",q:[8,16,8,8,4,2,4]},{p:"Enchanted Flutter",q:[8,16,8,8,2,2,4]},{p:"Starry Night",q:[8,16,8,8,3,4,4]},{p:"Sunflower Meadow",q:[8,16,8,8,3,4,4]},{p:"Electric Palms",q:[6,12,6,8,2,2,3]}]},
+ {no:16, name:"Lilac Love", done:true, goLive:"2026-05-20", mult:1, lines:[
+  {p:"Ultraviolet Storm",q:[8,12,7,6,2,2,1]},{p:"Solar Flare",q:[8,12,7,6,2,2,1]},{p:"Lavender Meadow",q:[8,12,7,6,2,2,1]},{p:"Amethyst Meadow",q:[8,12,7,6,2,2,1]},{p:"Fuchsia Flow",q:[8,12,7,6,2,2,1]},{p:"Lavender Petals",q:[8,16,8,8,2,0,0]},{p:"Caribbean Petals",q:[10,16,9,7,2,0,1]},{p:"Core Solid: Flamingo",q:[6,12,6,6,2,4,2]},{p:"Core Solid: Dusty Pink",q:[6,12,6,6,2,4,2]},{p:"Core Solid: Red",q:[6,12,6,6,2,4,2]},{p:"Core Solid: Royal Blue",q:[6,12,6,6,2,4,2]}]},
+ {no:15, name:"Midnight Glow", done:true, mult:1, lines:[
+  {p:"Midnight Mirage",q:[8,12,6,6,2,2,3]},{p:"Magenta Mirage",q:[8,12,7,6,2,2,3]},{p:"Petal Eclipse",q:[8,12,7,6,2,2,3]},{p:"Teal Sketch Floral",q:[8,12,7,6,2,2,3]},{p:"Turquoise Flutterwave",q:[8,12,7,6,2,2,3]},{p:"Glow in the Dark Galaxy",q:[8,16,9,10,2,2,4]},{p:"Core Solid: Black",q:[6,8,6,6,2,4,2]},{p:"Glow in the Dark Anatomy",q:[8,16,9,10,2,2,4]}]}
 ];
+const HIST = [[14,"Boy or Girl Navy",339],[13,"Pastel White",413],[12,"Honey Bee",405],[11,"B&W Combo",383],[10,"Micro Summer",143],[9,"Black Small Restock",191],[8,"Mini Restock",202],[7,"Spring Ice",613],[6,"Navy Butterflies",233],[5,"Wanted Dogs",272],[4,"Pastel Party",280],[3,"Restock",446],[2,"Peacock",394],[1,"New Year",481]];
 const RKEY = "tmsh-runs-v1";
 let XRUNS = [];
 try { XRUNS = JSON.parse(localStorage.getItem(RKEY)) || []; } catch(e){ XRUNS = []; }
@@ -413,7 +422,7 @@ const seg = s => s[0]==="L" ? "L" : "C";
 const segKey = (step,style) => step===19 ? "A" : seg(style);
 const tint = (hex,a) => hex + a;
 function atomKey(run,style,i){ return run+"|"+style+"|"+i; }
-function allAtoms(){ const out=[]; for(const r of RUNS){ for(const st in r.qty){ SUBS[st].forEach((s,i)=>out.push({run:r.no,style:st,i,name:s[0],min:s[1],step:s[2],qty:r.qty[st],mult:r.mult})); } } return out; }
+function allAtoms(){ const out=[]; for(const r of RUNS){ if(r.done || r.sched===false) continue; for(const st in r.qty){ SUBS[st].forEach((s,i)=>out.push({run:r.no,style:st,i,name:s[0],min:s[1],step:s[2],qty:r.qty[st],mult:r.mult})); } } return out; }
 let ATOMS = [];
 rebuildRuns();
 function seedDone(){
@@ -614,7 +623,7 @@ function render(){
  const items = buildItems();
  const sched = schedule(items);
  document.getElementById("subdate").textContent = new Date().toLocaleDateString("en-US",{weekday:"long", month:"long", day:"numeric"}) + " · live schedule";
- document.getElementById("runpills").innerHTML = RUNS.map(r=>{
+ document.getElementById("runpills").innerHTML = RUNS.filter(r=>!r.done && r.sched!==false).map(r=>{
   const ri = Object.values(items).filter(i=>i.run===r.no);
   const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
   const pct = tot? Math.round(100*(tot-rem)/tot) : 0;
@@ -772,86 +781,49 @@ function renderHome(sched){
 }
 
 function renderRuns(items, sched){
- document.getElementById("runcards").innerHTML = RUNS.map(r=>{
+ const list = RUNS.slice().sort((a,b)=>b.no-a.no);
+ const dfmt = s => s ? new Date(s+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—";
+ document.getElementById("runcards").innerHTML = list.map(r=>{
+  const done = !!r.done, planned = r.sched===false;
   const ri = Object.values(items).filter(i=>i.run===r.no);
   const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
-  const pct = tot? Math.round(100*(tot-rem)/tot):0;
-  const home = ri.filter(i=>i.step===11).reduce((s,i)=>s+i.rem,0);
-  const hats = Object.values(r.qty).reduce((a,b)=>a+b,0);
-  const sd = sched.sewDone[r.no], ad = sched.runDone[r.no];
-  const sewEta = sd===null ? "4+ weeks" : (sd<0 ? "Done" : fmtDay(sd));
-  const goLive = ad===null ? "4+ weeks" : fmtDay((ad<0?0:ad)+3);
-  const open = ri.filter(i=>i.rem>1).sort((a,b)=>b.rem-a.rem).slice(0,4)
-   .map(i=>`<span style="background:${tint(r.hex,"1C")};color:${r.hex}">${nameOf(i.step,i.seg)} · ${fmtH(i.rem)}</span>`).join("") || `<span style="background:${tint(r.hex,"1C")};color:${r.hex}">All sewing complete</span>`;
-  return `<div class="rc" data-open="${r.no}" style="cursor:pointer">
+  const pct = done ? 100 : (tot? Math.round(100*(tot-rem)/tot) : 0);
+  const hats = r.lines.reduce((s,l)=>s+l.q.reduce((a,b)=>a+b,0),0);
+  const estMin = r.lines.reduce((s,l)=>s+l.q.reduce((a,q2,i)=>a+q2*(MIN[QCOLS[i]]||0),0),0)*(r.mult||1);
+  let chip = "", tiles = "", extra = "";
+  if(done){
+   chip = `<span class="duechip" style="background:#E8F4E0;color:#3B6D11;margin-left:auto">COMPLETED</span>`;
+   tiles = `<div class="tiles"><div class="tile"><b>${hats}</b><span>hats made</span></div><div class="tile"><b>${fmtH(estMin)}</b><span>standard hours</span></div><div class="tile"><b>${r.lines.length}</b><span>patterns</span></div><div class="tile"><b>${dfmt(r.goLive)}</b><span>went live</span></div></div>`;
+  } else if(planned){
+   chip = `<span class="duechip" style="background:#FAEEDA;color:#854F0B;margin-left:auto">PLANNED</span>`;
+   tiles = `<div class="tiles"><div class="tile"><b>${hats}</b><span>hats planned</span></div><div class="tile"><b>${fmtH(estMin)}</b><span>est. sewing</span></div><div class="tile"><b>${r.lines.length}</b><span>patterns</span></div><div class="tile"><b>${dfmt(r.goLive)}</b><span>target go-live</span></div></div>`;
+   extra = `<div style="margin-top:13px"><button class="btn go" data-schedrun="${r.no}">▶ Schedule this run</button></div>`;
+  } else {
+   const home = ri.filter(i=>i.step===11).reduce((s,i)=>s+i.rem,0);
+   const sd = sched.sewDone[r.no], ad = sched.runDone[r.no];
+   const sewEta = sd===null ? "4+ weeks" : (sd<0 ? "Done" : fmtDay(sd));
+   const goLive = ad===null ? "4+ weeks" : fmtDay((ad<0?0:ad)+3);
+   tiles = `<div class="tiles"><div class="tile"><b>${fmtH(rem-home)}</b><span>left in studio</span></div><div class="tile"><b>${fmtH(home)}</b><span>with Lora</span></div><div class="tile"><b>${sewEta}</b><span>studio finish</span></div><div class="tile"><b>${goLive}</b><span>go-live ready</span></div></div>`;
+   const open = ri.filter(i=>i.rem>1).sort((a,b)=>b.rem-a.rem).slice(0,4)
+    .map(i=>`<span style="background:${tint(r.hex,"1C")};color:${r.hex}">${nameOf(i.step,i.seg)} · ${fmtH(i.rem)}</span>`).join("") || `<span style="background:${tint(r.hex,"1C")};color:${r.hex}">All sewing complete</span>`;
+   extra = `<div class="nextlbl">Biggest pieces left</div><div class="nxt">${open}</div>`;
+  }
+  return `<div class="rc" data-open="${r.no}" style="cursor:pointer;${done?"opacity:.62":""}${planned?"border-style:dashed;border-width:2px":""}">
    <div class="rh">
-    <span class="donut" style="background:conic-gradient(${r.hex} ${pct}%, #EDEAE2 0)"><i>${pct}%</i></span>
-    <div><h2>${r.name}</h2><div class="rm">Run ${r.no} · ${hats} hats · ${r.patterns.length} patterns${r.mult>1?" · new-material buffer":""}</div></div>
+    <span class="donut" style="background:conic-gradient(${done?"#9BB59B":r.hex} ${pct}%, #EDEAE2 0)"><i>${done?"✓":pct+"%"}</i></span>
+    <div><h2>${r.name}</h2><div class="rm">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.mult>1?" · new-material buffer":""}</div></div>
+    ${chip}
    </div>
-   <div class="tiles">
-    <div class="tile"><b>${fmtH(rem-home)}</b><span>left in studio</span></div>
-    <div class="tile"><b>${fmtH(home)}</b><span>with Lora</span></div>
-    <div class="tile"><b>${sewEta}</b><span>studio finish</span></div>
-    <div class="tile"><b>${goLive}</b><span>go-live ready</span></div>
-   </div>
-   <div class="nextlbl">Biggest pieces left</div>
-   <div class="nxt">${open}</div>
-   <div class="rdnote">Tap for full schedule &amp; pattern detail</div>
+   ${tiles}
+   ${extra}
+   <div class="rdnote">Tap for ${done?"the inventory sheet":"full schedule & pattern detail"}</div>
   </div>`;
- }).join("");
+ }).join("") + `<div class="rc" style="opacity:.7"><div class="rh"><div><h2 style="font-size:15px">Earlier runs (1–14)</h2><div class="rm">totals only — detail lives in the old sheet</div></div></div><div style="margin-top:10px">${HIST.map(h=>`<span class="pat">#${h[0]} ${h[1]} · ${h[2]}</span>`).join("")}</div></div>`;
  document.querySelectorAll("[data-open]").forEach(c=>c.onclick=()=>openRun(+c.dataset.open));
-}
-
-
-function openRun(no){ rdRun = no; rdTab = "sched"; renderRD(); document.getElementById("rdwrap").classList.add("open"); }
-function closeRun(){ document.getElementById("rdwrap").classList.remove("open"); rdRun = null; }
-function renderRD(){
- if(rdRun===null || !LAST) return;
- const r = runBy(rdRun);
- const {items, sched} = LAST;
- const ri = Object.values(items).filter(i=>i.run===r.no);
- const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
- const pct = tot? Math.round(100*(tot-rem)/tot):0;
- const hats = r.lines.reduce((s,l)=>s+l.q.reduce((a,b)=>a+b,0),0);
- let body = "";
- if(rdTab==="sched"){
-  const bl = sched.blocks.filter(b=>b.run===r.no).sort((a,b)=>a.t0-b.t0);
-  const byDay = {};
-  bl.forEach(b=>{ (byDay[b.day]=byDay[b.day]||[]).push(b); });
-  const days = Object.keys(byDay).map(Number).sort((a,b)=>a-b);
-  body = days.map(d=>{
-   const rows = byDay[d].map(b=>`<div class="agrow"><span class="tm">${fmtT(b.t0)}–${fmtT(b.t1)}</span><span class="wh">${b.person}</span><span>${b.sub?tokName(b.sub)+" · "+(SLABEL[tokStyle(b.sub)]||""):nameOf(b.step,b.seg)}${b.part?" (part "+b.part+")":""}${b.seg==="L"&&!b.sub&&b.step!==19&&b.step!==1?" · LUXE":(b.seg==="C"&&!b.sub&&b.step!==19&&b.step!==1?" · classic":"")}</span><span class="hh">${b.hrs.toFixed(1)}h</span></div>`).join("");
-   return `<div class="dayagenda"><h4>${d===0?"Today":dateOf(d).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}</h4>${rows}</div>`;
-  }).join("") || `<div class="empty">No work scheduled — this run's sewing is complete.</div>`;
-  body += `<div class="rdnote">Drag blocks on the Board to reshuffle — this view updates instantly.</div>`;
- } else {
-  const head = `<tr><th>Pattern</th>${QCOLS.map(c=>`<th style="text-align:center">${c}</th>`).join("")}<th>Logo</th><th>Satin</th><th>Ribbon</th></tr>`;
-  const rows = r.lines.map(l=>{
-   const cells = l.q.map(v=>`<td class="num${v?"":" zero"}">${v||"·"}</td>`).join("");
-   const pc = f => { const v = pairVal(r.no,l.p,f,l[f]); const ed = PAIR[r.no+"|"+l.p] && PAIR[r.no+"|"+l.p][f]!==undefined; return `<td><input class="pcell${ed?" edited":""}" data-run="${r.no}" data-pat="${l.p.replace(/"/g,"&quot;")}" data-f="${f}" value="${(v||"").replace(/"/g,"&quot;")}" placeholder="—"></td>`; };
-   return `<tr><td class="pname">${swatchHtml(l.p)}${l.p}</td>${cells}${pc("logo")}${pc("satin")}${pc("ribbon")}</tr>`;
-  }).join("");
-  const totals = QCOLS.map((c,i)=>r.lines.reduce((s,l)=>s+l.q[i],0));
-  body = `<div class="ptab"><table>${head}${rows}<tr><td class="pname" style="color:var(--soft)">Total · ${hats} hats</td>${totals.map(v=>`<td class="num"><b>${v||"·"}</b></td>`).join("")}<td></td><td></td><td></td></tr></table></div>
-  <div class="rdnote">Swipe the table left for logo / satin / ribbon pairings. Edits save and highlight yellow — tell Claude "sync pairings" to write them back to the workbook &amp; Google Sheet.</div>`;
- }
- document.getElementById("rd").innerHTML = `
-  <div class="rdtop">
-   <span class="donut" style="background:conic-gradient(${r.hex} ${pct}%, #EDEAE2 0)"><i>${pct}%</i></span>
-   <div><h2 style="font-size:20px;font-weight:700">${r.name}</h2><div class="rm" style="color:var(--soft);font-size:12.5px">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns</div></div>
-   <button class="rdclose" id="rdx">✕</button>
-  </div>
-  <div class="rdtabs"><button class="${rdTab==="sched"?"on":""}" data-rdt="sched">Schedule</button><button class="${rdTab==="pat"?"on":""}" data-rdt="pat">Patterns &amp; pairings</button></div>
-  ${body}`;
- document.getElementById("rdx").onclick = closeRun;
- document.querySelectorAll("[data-rdt]").forEach(b=>b.onclick=()=>{ rdTab=b.dataset.rdt; renderRD(); });
- document.querySelectorAll(".pcell").forEach(inp=>inp.onchange=()=>{
-  const k = inp.dataset.run+"|"+inp.dataset.pat;
-  PAIR[k] = PAIR[k]||{};
-  PAIR[k][inp.dataset.f] = inp.value;
-  try{ localStorage.setItem(PKEY, JSON.stringify(PAIR)); }catch(e){}
-  cloudSave(PKEY, PAIR);
-  inp.classList.add("edited");
+ document.querySelectorAll("[data-schedrun]").forEach(b=>b.onclick=(e)=>{
+  e.stopPropagation();
+  const x = XRUNS.find(x=>x.no===+b.dataset.schedrun);
+  if(x){ x.sched = true; saveRuns(); rebuildRuns(); render(); }
  });
 }
 
@@ -862,17 +834,17 @@ try { CUSTOM = JSON.parse(localStorage.getItem(COKEY)) || JSON.parse(localStorag
 if(CUSTOM) CUSTOM.forEach(o=>{ o.ms = o.ms||{}; delete o.ms["Materials"]; (TOOLDONE[o.num]||[]).forEach(s=>{ if(!o.ms[s]) o.ms[s]=true; }); });
 if(!CUSTOM) CUSTOM = [
  {id:"75805", name:"Floral Faces Print", num:"75805", due:"2026-06-22", styles:"3 CS + 2 CO", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · ship est 6/19"},
- {id:"75847", name:"TriCares Print", num:"75847", due:"2026-06-18", styles:"15 CS + 10 CO", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · materials ordered · ship est 6/18"},
- {id:"75637", name:"Columbia Patch", num:"75637", due:"2026-06-19", styles:"11 CS + 3 CO + 4 CP + 1 LS + 1 LP", emb:12, e:1, p:1, ms:{Cut:true}, note:"Navy · digitized · ship est 6/19"},
- {id:"75606", name:"Anesthesia Patch Black (2)", num:"75606", due:"2026-06-19", styles:"25 CS + 25 CO", emb:0, e:0, p:1, ms:{Cut:true}, note:"Black · ship est 6/19"},
- {id:"75853", name:"ER Survivor Print", num:"75853", due:"", styles:"10 CS", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · no date set"},
- {id:"75665", name:"Mobile Infirmary", num:"75665", due:"", styles:"40 CP + 27 CS + 43 CO + 40 CT", emb:0, e:0, p:0, ms:{}, note:"Wholesale · no date set"},
- {id:"75287", name:"WOGO 3", num:"75287", due:"2026-07-06", styles:"75 CS + 50 CP", emb:12, e:1, p:0, ms:{Cut:true,Embroidery:true,Sewing:true}, note:"Black · embroidery done · silver step ×2"}
+ {id:"75847", name:"TriCares Print", num:"75847", due:"2026-06-18", styles:"15 CS + 10 CO", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · materials ordered"},
+ {id:"75637", name:"Columbia Patch", num:"75637", due:"2026-06-19", styles:"11 CS + 3 CO + 4 CP + 1 LS + 1 LP", emb:12, e:1, p:1, ms:{Cut:true}, note:"Navy · digitized"},
+ {id:"75606", name:"Anesthesia Patch Black (2)", num:"75606", due:"2026-06-19", styles:"25 CS + 25 CO", emb:0, e:0, p:1, ms:{Cut:true}, note:"Black"},
+ {id:"75853", name:"ER Survivor Print", num:"75853", due:"", styles:"10 CS", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black"},
+ {id:"75665", name:"Mobile Infirmary", num:"75665", due:"", styles:"40 CP + 27 CS + 43 CO + 40 CT", emb:0, e:0, p:0, ms:{}, note:"Wholesale"},
+ {id:"75287", name:"WOGO 3", num:"75287", due:"2026-07-06", styles:"75 CS + 50 CP", emb:12, e:1, p:0, ms:{Cut:true,Embroidery:true,Sewing:true}, note:"Black · silver step ×2"}
 ];
 CUSTOM.forEach(o=>{ if(o.sewPct===undefined) o.sewPct = o.ms&&o.ms.Sewing?100:0; if(o.embPct===undefined) o.embPct = o.ms&&o.ms.Embroidery?100:0; });
 const PCTFILL = {"75637":{sew:3},"75606":{sew:34}};
 CUSTOM.forEach(o=>{ const f = PCTFILL[o.num]; if(f){ if(f.sew && !(o.sewPct>0)) o.sewPct = f.sew; if(f.emb && !(o.embPct>0)) o.embPct = f.emb; } });
-function saveCO(){ try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){} cloudSave(COKEY, CUSTOM); }
+function saveCO(){ try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){} try{ cloudSave(COKEY, CUSTOM); }catch(e){} }
 function parseStyles(s){
  const out = {}; if(!s) return out;
  const re = /(\d+)\s*(LTE|LT|LP|LS|LO|CTE|CT|CP|CO|CS)\b/gi; let m;
@@ -928,15 +900,15 @@ function renderCustom(){
    ${o.e?`<input class="coemb" type="number" min="0" step="1" value="${o.emb||0}" data-coemb="${o.id}" title="embroidery min/hat">`:""}
    <button class="btn" data-coedit="${o.id}">Edit</button>
    <div class="cobars">
-    <div class="cb"><span>Sewing</span><div class="cbar" data-cpct="${o.id}|sew" title="tap to set %"><i style="width:${o.sewPct||0}%"></i></div><b>${o.sewPct||0}%</b><em>${fmtH(t.sewRem)} left</em>
+    <div class="cb"><span>Sewing</span><div class="cbar" data-cpct="${o.id}|sew"><i style="width:${o.sewPct||0}%"></i></div><b>${o.sewPct||0}%</b><em>${fmtH(t.sewRem)} left</em>
      ${t.sewRem>1?`<button class="btn ${o.schedSew?"":"go"}" data-cosched="${o.id}|sew">${o.schedSew?"Unschedule":"Schedule sewing"}</button>`:`<em style="width:auto">✓ done</em>`}</div>
-    ${(o.e||o.emb)?`<div class="cb"><span>Embr.</span><div class="cbar" data-cpct="${o.id}|emb" title="tap to set %"><i style="width:${o.embPct||0}%"></i></div><b>${o.embPct||0}%</b><em>${fmtH(t.embRem)} left</em>
+    ${(o.e||o.emb)?`<div class="cb"><span>Embr.</span><div class="cbar" data-cpct="${o.id}|emb"><i style="width:${o.embPct||0}%"></i></div><b>${o.embPct||0}%</b><em>${fmtH(t.embRem)} left</em>
      ${t.embRem>1?`<button class="btn ${o.schedEmb?"":"go"}" data-cosched="${o.id}|emb">${o.schedEmb?"Unschedule":"Schedule embroidery"}</button>`:`<em style="width:auto">✓ done</em>`}</div>`:""}
    </div>
    <div class="cotl">${tl}</div>
   </div>`;
  }).join("");
- document.getElementById("colist").innerHTML = (rows || `<div class="empty">No custom orders yet — add one below.</div>`) + `
+ document.getElementById("colist").innerHTML = (rows || `<div class="empty">No custom orders yet.</div>`) + `
   <div class="coform">
    <input id="co-name" placeholder="Order name" style="flex:2;min-width:140px">
    <input id="co-num" placeholder="Order #" style="width:90px">
@@ -947,15 +919,15 @@ function renderCustom(){
   </div>`;
  document.getElementById("co-sync").onclick = ()=>{
   const code = JSON.stringify(CUSTOM.map(o=>({num:o.num, name:o.name, done:Object.keys(o.ms||{}).filter(k=>o.ms[k])})));
-  try { navigator.clipboard.writeText("Sync custom orders: " + code); document.getElementById("co-sync").textContent = "Copied — paste to Claude"; setTimeout(()=>{document.getElementById("co-sync").textContent="Copy sync code";}, 2500); } catch(e){ prompt("Copy this and paste it to Claude:", code); }
+  try { navigator.clipboard.writeText("Sync custom orders: " + code); } catch(e){ prompt("Copy this for Claude:", code); }
  };
  document.getElementById("co-add").onclick = ()=>{
   const nm = document.getElementById("co-name").value.trim();
   if(!nm) return;
   const hasE = confirm("Does this order have embroidery? OK = yes");
   const hasP = confirm("Does this order have a patch? OK = yes");
-  CUSTOM.push({id:String(Date.now()), name:nm, num:document.getElementById("co-num").value.trim(), due:document.getElementById("co-due").value, styles:document.getElementById("co-styles").value.trim(), emb:hasE?12:0, e:hasE?1:0, p:hasP?1:0, ms:{}});
-  saveCO(); renderCustom();
+  CUSTOM.push({id:String(Date.now()), name:nm, num:document.getElementById("co-num").value.trim(), due:document.getElementById("co-due").value, styles:document.getElementById("co-styles").value.trim(), emb:hasE?12:0, e:hasE?1:0, p:hasP?1:0, ms:{}, sewPct:0, embPct:0});
+  saveCO(); render();
  };
  document.querySelectorAll("[data-cms]").forEach(el=>el.onclick=()=>{
   const o = CUSTOM.find(x=>x.id===el.dataset.cms);
@@ -982,15 +954,8 @@ function renderCustom(){
   if(kind==="sew"){ o.sewPct = n; if(n>=100) o.ms.Sewing = true; } else { o.embPct = n; if(n>=100) o.ms.Embroidery = true; }
   saveCO(); render();
  });
- document.querySelectorAll("[data-coedit]").forEach(b=>b.onclick=()=>{
-  const o = CUSTOM.find(x=>x.id===b.dataset.coedit);
-  const s = prompt("Styles (e.g. 4 CS - 5 CTE - 5 CP):", o.styles||"");
-  if(s!==null){ o.styles = s; }
-  const d = prompt("Deadline (YYYY-MM-DD):", o.due||"");
-  if(d!==null) o.due = d;
-  saveCO(); renderCustom();
- });
 }
+
 function saveRuns(){ try{ localStorage.setItem(RKEY, JSON.stringify(XRUNS)); }catch(e){} if(typeof cloudSave==="function") cloudSave(RKEY, XRUNS); }
 function openBuilder(){
  const nextNo = Math.max(...RUNS.map(r=>r.no)) + 1;
@@ -1036,7 +1001,7 @@ function openBuilder(){
    if(p && q.some(x=>x>0)) lines.push({p, q});
   });
   if(!lines.length){ alert("Add at least one pattern with quantities."); return; }
-  const run = {no, name, mult: document.getElementById("nr-mult").checked?1.25:1, lines};
+  const run = {no, name, sched:false, mult: document.getElementById("nr-mult").checked?1.25:1, lines};
   const gl = document.getElementById("nr-golive").value; if(gl) run.goLive = gl;
   if(BASE_RUNS.some(r=>r.no===no)){ alert("Run "+no+" is a built-in run — pick a new number."); return; }
   XRUNS = XRUNS.filter(x=>x.no!==no).concat([run]);
@@ -1047,7 +1012,7 @@ document.getElementById("newrun").onclick = openBuilder;
 document.getElementById("nrwrap").addEventListener("click", e=>{ if(e.target.id==="nrwrap") document.getElementById("nrwrap").style.display="none"; });
 function renderTracker(items){
  const el = document.getElementById("trackwrap");
- el.innerHTML = RUNS.map((r,idx)=>{
+ el.innerHTML = RUNS.filter(r=>!r.done && r.sched!==false).map((r,idx)=>{
   const ri = Object.values(items).filter(i=>i.run===r.no);
   const order = [16,1,2,3,17,9,8,4,12,5,13,15,6,7,19,14,10,11];
   ri.sort((a,b)=> order.indexOf(a.step)-order.indexOf(b.step) || (a.seg<b.seg?1:-1));

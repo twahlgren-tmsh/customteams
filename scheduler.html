@@ -257,7 +257,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-12-E";
+const BUILD="2026-06-13-A";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -836,7 +836,7 @@ function renderRuns(items, sched){
    ${extra}
    <div class="rdnote">Tap for ${done?"the inventory sheet":"full schedule & pattern detail"}</div>
   </div>`;
- }).join("") + `<div class="rc" style="opacity:.7"><div class="rh"><div><h2 style="font-size:15px">Earlier runs (1–14)</h2><div class="rm">totals only — detail lives in the old sheet</div></div></div><div style="margin-top:10px">${HIST.map(h=>`<span class="pat">#${h[0]} ${h[1]} · ${h[2]}</span>`).join("")}</div></div>`;
+ }).join("") + HIST.map(h=>`<div class="rc" style="opacity:.55"><div class="rh"><span class="donut" style="background:conic-gradient(#9BB59B 100%, #EDEAE2 0)"><i>✓</i></span><div><h2>${h[1]}</h2><div class="rm">Run ${h[0]} · ${h[2]} hats · completed</div></div><span class="duechip" style="background:#E8F4E0;color:#3B6D11;margin-left:auto">COMPLETED</span></div><div class="rdnote">Totals only — per-pattern detail pending a clean re-read of the old sheet</div></div>`).join("");
  document.querySelectorAll("[data-open]").forEach(c=>c.onclick=()=>openRun(+c.dataset.open));
  document.querySelectorAll("[data-schedrun]").forEach(b=>b.onclick=(e)=>{
   e.stopPropagation();

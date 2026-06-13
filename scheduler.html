@@ -260,7 +260,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-13-F";
+const BUILD="2026-06-13-G";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -301,7 +301,7 @@ const EXC = {"2026-06-12":{"Trinna":{st:13,h:7,note:"in at 1p, 7 hrs (hours fini
 const isoOf = d => { const dt=dateOf(d); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); };
 function owner(step,sg){ if(step===8||step===15) return sg==="L"?"Trinna":"Drea"; return {1:"Mauricio",2:"Drea",3:"Karla",4:"Karla",5:"Mauricio",6:"Trinna",7:"Trinna",9:"Caitlynn",10:"Trinna",11:"Lora",12:"Karla",13:"Karla",14:"Drea",16:"Drea",17:"Mauricio",19:"Trinna"}[step]; }
 const BASE_RUNS = [
- {no:20,name:"Summer Bash",hex:"#0E9888",mult:1,qty:{CP:90,LP:176,CTE:93,LTE:92,CO:21,CS:24,LS:24},
+ {no:20,name:"Summer Bash",hex:"#0E9888",mult:1,thread:"White",qty:{CP:90,LP:176,CTE:93,LTE:92,CO:21,CS:24,LS:24},
   lines:[
    {p:"Slice of Summer",q:[6,12,9,10,0,0,0],satin:"Coral"},
    {p:"Seahorse Serenade",q:[6,12,8,7,2,2,2],satin:"Turquoise",ribbon:"Tornado Blue"},
@@ -317,7 +317,7 @@ const BASE_RUNS = [
    {p:"Polka Flamingo",q:[6,12,5,4,2,2,2],satin:"Pink",ribbon:"Azalea"},
    {p:"Core Solid: Ceil Blue",q:[6,8,6,4,0,0,0],satin:"White",ribbon:"White"},
    {p:"Magenta Floral",q:[4,8,6,4,1,2,1],satin:"Dusty Rose",ribbon:"Cerise"}]},
- {no:19,name:"Comfort+",hex:"#E2704A",mult:1.25,qty:{CP:172,CTE:168,CO:42,CS:40},
+ {no:19,name:"Comfort+",hex:"#E2704A",mult:1.25,thread:"White",threadNote:"2 patterns black thread",qty:{CP:172,CTE:168,CO:42,CS:40},
   lines:[
    {p:"Polka Dot Floral",q:[20,0,20,0,4,4,0]},
    {p:"Flamingo",q:[20,0,20,0,6,4,0]},
@@ -328,7 +328,7 @@ const BASE_RUNS = [
    {p:"Teal & Magenta Floral",q:[20,0,18,0,4,4,0]},
    {p:"Coral Floral",q:[24,0,24,0,4,4,0]},
    {p:"Lemons",q:[20,0,20,0,6,4,0]}]},
- {no:21,name:"Golden Medicine",hex:"#C99118",mult:1,qty:{CP:112,LP:158,CTE:89,LTE:99,CO:23,CS:32,LS:30},
+ {no:21,name:"Golden Medicine",hex:"#C99118",mult:1,thread:"White",qty:{CP:112,LP:158,CTE:89,LTE:99,CO:23,CS:32,LS:30},
   lines:[
    {p:"Lemonade Whimsy",q:[8,12,6,7,2,2,2],satin:"Light pink/turquoise",logo:"White/Gold"},
    {p:"Golden Ice",q:[8,12,8,6,1,2,1],satin:"Light yellow"},
@@ -875,7 +875,7 @@ function renderRuns(items, sched){
   return `<div class="rc" data-open="${r.no}" style="cursor:pointer;${done?"opacity:.62":""}${planned?"border-style:dashed;border-width:2px":""}">
    <div class="rh">
     <span class="donut" style="background:conic-gradient(${done?"#9BB59B":r.hex} ${pct}%, #EDEAE2 0)"><i>${done?"✓":pct+"%"}</i></span>
-    <div><h2>${r.name}${r.thread?` <span class="threadchip" style="background:${THREADHEX[r.thread]||"#999"};color:${r.thread==="White"?"#444":"#fff"}">${r.thread} thread</span>`:""}</h2><div class="rm">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.mult>1?" · new-material buffer":""}</div></div>
+    <div><h2>${r.name}${r.thread?` <span class="threadchip" style="background:${THREADHEX[r.thread]||"#999"};color:${r.thread==="White"?"#444":"#fff"}">${r.thread} thread</span>`:""}${r.threadNote?` <span class="threadchip" style="background:#2B2A28;color:#fff">+ ${r.threadNote}</span>`:""}</h2><div class="rm">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.mult>1?" · new-material buffer":""}</div></div>
     ${chip}
    </div>
    ${tiles}

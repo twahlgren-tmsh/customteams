@@ -956,6 +956,57 @@ function renderCustom(){
  });
 }
 
+function openRun(no){ rdRun = no; rdTab = "sched"; renderRD(); document.getElementById("rdwrap").classList.add("open"); }
+function closeRun(){ document.getElementById("rdwrap").classList.remove("open"); rdRun = null; }
+function renderRD(){
+ if(rdRun===null || !LAST) return;
+ const r = runBy(rdRun);
+ const {items, sched} = LAST;
+ const ri = Object.values(items).filter(i=>i.run===r.no);
+ const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
+ const pct = r.done ? 100 : (tot? Math.round(100*(tot-rem)/tot):0);
+ const hats = r.lines.reduce((s,l)=>s+l.q.reduce((a,b)=>a+b,0),0);
+ let body = "";
+ if(rdTab==="sched"){
+  const bl = sched.blocks.filter(b=>b.run===r.no).sort((a,b)=>a.t0-b.t0);
+  const byDay = {};
+  bl.forEach(b=>{ (byDay[b.day]=byDay[b.day]||[]).push(b); });
+  const days = Object.keys(byDay).map(Number).sort((a,b)=>a-b);
+  body = days.map(d=>{
+   const rows = byDay[d].map(b=>`<div class="agrow"><span class="tm">${fmtT(b.t0)}–${fmtT(b.t1)}</span><span class="wh">${b.person}</span><span>${b.sub?tokName(b.sub)+" · "+(SLABEL[tokStyle(b.sub)]||""):nameOf(b.step,b.seg)}${b.part?" (part "+b.part+")":""}</span><span class="hh">${b.hrs.toFixed(1)}h</span></div>`).join("");
+   return `<div class="dayagenda"><h4>${d===0?"Today":dateOf(d).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}</h4>${rows}</div>`;
+  }).join("") || `<div class="empty">${r.done?"Run completed — see Patterns & pairings for the inventory sheet.":(r.sched===false?"Not scheduled yet — tap ▶ Schedule this run on its card.":"No work scheduled — sewing is complete.")}</div>`;
+ } else {
+  const head = `<tr><th>Pattern</th>${QCOLS.map(c=>`<th style="text-align:center">${c}</th>`).join("")}<th>Logo</th><th>Satin</th><th>Ribbon</th></tr>`;
+  const rows = r.lines.map(l=>{
+   const cells = l.q.map(v=>`<td class="num${v?"":" zero"}">${v||"·"}</td>`).join("");
+   const pc = f => { const v = pairVal(r.no,l.p,f,l[f]); const ed = PAIR[r.no+"|"+l.p] && PAIR[r.no+"|"+l.p][f]!==undefined; return `<td><input class="pcell${ed?" edited":""}" data-run="${r.no}" data-pat="${l.p.replace(/"/g,"&quot;")}" data-f="${f}" value="${(v||"").replace(/"/g,"&quot;")}" placeholder="—"></td>`; };
+   return `<tr><td class="pname">${swatchHtml(l.p)}${l.p}</td>${cells}${pc("logo")}${pc("satin")}${pc("ribbon")}</tr>`;
+  }).join("");
+  const totals = QCOLS.map((c,i)=>r.lines.reduce((s,l)=>s+l.q[i],0));
+  body = `<div class="ptab"><table>${head}${rows}<tr><td class="pname" style="color:var(--soft)">Total · ${hats} hats</td>${totals.map(v=>`<td class="num"><b>${v||"·"}</b></td>`).join("")}<td></td><td></td><td></td></tr></table></div>
+  <div class="rdnote">Swipe the table left for logo / satin / ribbon. Edits save and highlight yellow — tell Claude "sync pairings" to write them back.</div>`;
+ }
+ document.getElementById("rd").innerHTML = `
+  <div class="rdtop">
+   <span class="donut" style="background:conic-gradient(${r.done?"#9BB59B":r.hex} ${pct}%, #EDEAE2 0)"><i>${r.done?"✓":pct+"%"}</i></span>
+   <div><h2 style="font-size:20px;font-weight:700">${r.name}</h2><div class="rm" style="color:var(--soft);font-size:12.5px">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.done?" · completed":""}</div></div>
+   <button class="rdclose" id="rdx">✕</button>
+  </div>
+  <div class="rdtabs"><button class="${rdTab==="sched"?"on":""}" data-rdt="sched">Schedule</button><button class="${rdTab==="pat"?"on":""}" data-rdt="pat">Patterns &amp; pairings</button></div>
+  ${body}`;
+ document.getElementById("rdx").onclick = closeRun;
+ document.querySelectorAll("[data-rdt]").forEach(b=>b.onclick=()=>{ rdTab=b.dataset.rdt; renderRD(); });
+ document.querySelectorAll(".pcell").forEach(inp=>{ if(!isLead){ inp.disabled = true; return; } inp.onchange=()=>{
+  const k = inp.dataset.run+"|"+inp.dataset.pat;
+  PAIR[k] = PAIR[k]||{};
+  PAIR[k][inp.dataset.f] = inp.value;
+  try{ localStorage.setItem(PKEY, JSON.stringify(PAIR)); }catch(e){}
+  try{ cloudSave(PKEY, PAIR); }catch(e){}
+  inp.classList.add("edited");
+ };});
+}
+
 function saveRuns(){ try{ localStorage.setItem(RKEY, JSON.stringify(XRUNS)); }catch(e){} if(typeof cloudSave==="function") cloudSave(RKEY, XRUNS); }
 function openBuilder(){
  const nextNo = Math.max(...RUNS.map(r=>r.no)) + 1;

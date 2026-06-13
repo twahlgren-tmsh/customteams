@@ -260,7 +260,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-13-G";
+const BUILD="2026-06-13-I";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -1318,6 +1318,51 @@ function findRun(x){
  const r = RUNS.find(r=>String(r.no)===s || r.name.toLowerCase().includes(s));
  return r ? r.no : null;
 }
+
+function parseDayWord(s){
+ s=s.toLowerCase();
+ if(/\btoday\b/.test(s)) return 0;
+ if(/\btomorrow\b/.test(s)) return 1;
+ if(/\byesterday\b/.test(s)) return -1;
+ const wd={sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,sun:0,mon:1,tue:2,tues:2,wed:3,thu:4,thur:4,thurs:4,fri:5,sat:6};
+ for(const k in wd){ if(new RegExp("\\b"+k+"\\b").test(s)){ const today=new Date(); today.setHours(0,0,0,0); let off=(wd[k]-today.getDay()+7)%7; if(off>0&&/\bnext\b/.test(s)) off+=7; return off; } }
+ return null;
+}
+function parseTime(s){
+ const m=s.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i); if(!m) return null;
+ let h=+m[1]; const mi=m[2]?+m[2]/60:0; const ap=(m[3]||"").toLowerCase();
+ if(ap==="pm"&&h<12) h+=12; if(ap==="am"&&h===12) h=0;
+ if(!ap && h<=7) h+=12;
+ return h+mi;
+}
+function personIn(s){ s=s.toLowerCase(); for(const p in TEAM){ const fn=p.toLowerCase().split(" ")[0]; if(s.includes(fn)) return p; } return null; }
+function localInterpret(text){
+ const s=text.toLowerCase().trim(); const ops=[];
+ const person=personIn(s); const day=parseDayWord(s);
+ // out / absent
+ if(person && /\b(out|off|absent|can'?t come|not coming|called in|sick)\b/.test(s)){ ops.push({op:"out",person,day:day??0}); return {ops}; }
+ // arrive / late
+ if(person && /\b(in at|arriv|come?s? in|coming in|start)\b/.test(s)){ const st=parseTime(s); const hm=s.match(/(\d+)\s*h(ou)?r/); if(st!==null){ ops.push({op:"arrive",person,day:day??0,startHour:st,hours:hm?+hm[1]:undefined}); return {ops}; } }
+ if(person && /\blate\b/.test(s)){ const hm=s.match(/(\d+)\s*h(ou)?r/); ops.push({op:"late",person,day:day??0,hoursLost:hm?+hm[1]:2}); return {ops}; }
+ // custom order progress
+ const pct=s.match(/(\d{1,3})\s*%/); const ord=CUSTOM.find(o=>{ if(shipped(o)) return false; if(o.num&&s.includes(o.num)) return true; const nm=o.name.toLowerCase(); if(s.includes(nm)) return true; return nm.split(/[^a-z0-9]+/).some(w=>w.length>3&&s.includes(w)); });
+ if(ord){
+  const emb=/embroider/.test(s), sew=/\bsew|sewn|sewing\b/.test(s);
+  const hatm=s.match(/(\d+)\s*(hats?|caps?)\b/);
+  if(pct){ ops.push({op:"customProgress",order:ord.num,[emb&&!sew?"embPct":"sewPct"]:+pct[1]}); return {ops}; }
+  if(hatm){ ops.push({op:"customProgress",order:ord.num,[emb?"hatsEmbDone":"hatsSewDone"]:+hatm[1]}); return {ops}; }
+  if(/\b(done|complete|finished)\b/.test(s)){ ops.push({op:"customProgress",order:ord.num,[emb?"embPct":"sewPct"]:100}); return {ops}; }
+ }
+ // schedule a run
+ if(/\bschedule\b/.test(s)){ const rn=RUNS.find(r=>r.sched===false&&s.includes(r.name.toLowerCase())); if(rn){ ops.push({op:"scheduleRun",run:rn.no}); return {ops}; } }
+ // mark a step done  (on a run)
+ if(/\b(done|complete|completed|finished)\b/.test(s)){ const st=findStep(s); const rn=findRunFuzzy(s); if(st!==null){ ops.push({op:"markDone",run:rn,step:st}); return {ops}; } }
+ // move a step to a day/person
+ if(/\bmove\b/.test(s)){ const st=findStep(s); const rn=findRunFuzzy(s); if(st!==null){ ops.push({op:"move",run:rn,stepName:String(st),person,day:day??0,_stepNum:st}); return {ops}; } }
+ return {ops:[],note:text};
+}
+function findRunFuzzy(s){ const r=RUNS.find(r=>!r.done&&s.includes(r.name.toLowerCase())); return r?r.no:null; }
+
 async function interpret(text){
  const daysL = Array.from({length:14},(_,d)=>d+"="+dateOf(d).toDateString()).join("; ");
  const stepNames = "Satin to cotton (LUXE serging); Serge classic tops; " + Object.entries(GN).map(([k,v])=>v).join("; ");
@@ -1350,8 +1395,9 @@ async function handleInstruction(text){
  const btn = document.getElementById("voxbtn");
  btn.textContent = "Thinking…";
  try {
-  const res = await interpret(text);
-  if(!res || !res.ops || !res.ops.length) throw new Error("no ops");
+  const useAI = !!(window.cowork && window.cowork.askClaude);
+  const res = useAI ? await interpret(text) : localInterpret(text);
+  if(!res || !res.ops || !res.ops.length){ OVR.log.push('Didn\'t catch that — try e.g. "Drea is out Saturday", "top stitching done on Jewels", "WOGO is 40% embroidered"'); save(); render(); btn.textContent="🎙 Tell the schedule"; return; }
   res.ops.forEach(o=>{
    if(o.op==="out"){ OVR.avail[o.person+"|"+o.day]=0; OVR.log.push(`${o.person} out ${fmtDay(o.day)}`); }
    else if(o.op==="arrive"){
@@ -1392,6 +1438,12 @@ async function handleInstruction(text){
      OVR.log.push(`${ord.name}: sew ${ord.sewPct||0}% · emb ${ord.embPct||0}%`);
     } else OVR.log.push(`Couldn't find custom order "${o.order}"`);
    }
+   else if(o.op==="markDone"){
+    const st=o.step, rn=o.run; let done=0;
+    ATOMS.forEach(a=>{ if((rn===null||a.run===rn)&&a.step===st){ const pk=a.run+"|"+a.step+"|"+segKey(a.step,a.style); if(!OVR.pins[pk]&&LAST&&LAST.sched){ const bl=LAST.sched.blocks.filter(x=>x.key===pk); if(bl.length) OVR.pins[pk]={startDay:Math.min(...bl.map(x=>x.day)),hard:true,person:bl[0].person}; } DONE[atomKey(a.run,a.style,a.i)]=true; done++; } });
+    OVR.log.push(done?`Marked ${GN[st]||"step "+st}${rn?" ("+runBy(rn).name+")":""} done`:`Couldn't find that step`);
+   }
+   else if(o.op==="scheduleRun"){ const x=XRUNS.find(x=>x.no===o.run); if(x){ x.sched=true; saveRuns(); rebuildRuns(); OVR.log.push(`Scheduled run ${o.run}`); } }
    else if(o.note){ OVR.log.push(`Not sure: ${o.note}`); }
   });
   save(); render();
@@ -1518,7 +1570,7 @@ document.getElementById("liBtn").onclick = async ()=>{
 };
 document.getElementById("liPass").addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("liBtn").click(); });
 document.getElementById("soBtn").onclick = async ()=>{ try{ await sb.auth.signOut(); }catch(e){} location.reload(); };
-if(!(window.cowork && window.cowork.askClaude)){ const v=document.getElementById("voxbtn"); if(v) v.style.display="none"; }
+/* voice button stays — uses local command parser when Claude backend is absent */
 </script>
 </body>
 </html>

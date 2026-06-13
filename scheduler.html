@@ -258,7 +258,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-13-C";
+const BUILD="2026-06-13-D";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -769,6 +769,8 @@ function renderBoard(items, sched){
 
 function renderHome(sched){
  if(!OVR.trips) OVR.trips = {};
+ if(!OVR.homeDay) OVR.homeDay = {};
+ if(!OVR.homeHide) OVR.homeHide = {};
  const segName = sgs => { const a=[...sgs]; return a.length>1 ? "classic & LUXE ponytails" : (a[0]==="C" ? "classic ponytails" : "LUXE ponytails"); };
  const mkEvts = [];
  RUNS.forEach(r=>{
@@ -781,7 +783,7 @@ function renderHome(sched){
   mkEvts.push({kind:"drop", day:end+1, who:"Lora", hex:r.hex, run:r.name, styles, det:`Finished ${styles} back for folding`});
  });
  mkEvts.sort((a,b)=>a.day-b.day);
- const evts = [];
+ let evts = [];
  for(let i=0;i<mkEvts.length;i++){
   const e = mkEvts[i], nx = mkEvts[i+1];
   if(e.kind==="drop" && nx && nx.kind==="pick" && nx.who===e.who && nx.day-e.day>=-1 && nx.day-e.day<=4){
@@ -804,20 +806,26 @@ function renderHome(sched){
    evts.push({id:`Anna|fold|${r.no}`, day, who:"Anna Cristina", hex:r.hex, icon:"✓", title:`Pickup — fold &amp; inspect ${r.name}`, det:`All styles · ${hats} hats · go-live ${fmtDay((dd<0?0:dd)+3)}`});
   }
  });
+ evts.forEach(e=>{ if(OVR.homeDay[e.id]!==undefined) e.day = OVR.homeDay[e.id]; });
+ evts = evts.filter(e=>!OVR.homeHide[e.id]);
  evts.sort((a,b)=>a.day-b.day);
  const vis = evts.filter(e=> (e.day>=selDay && e.day<=selDay+7) || (e.day<selDay && !OVR.trips[e.id]) );
+ const canEdit = (typeof isLead==="undefined") || isLead;
  const rows = vis.map(e=>{
   const done = !!OVR.trips[e.id];
   const late = e.day<selDay && !done;
   return `
   <div class="evt${done?" done":""}">
    <div class="eicon" style="background:${tint(e.hex,"1C")};color:${e.hex}">${e.icon}</div>
-   <div><b>${e.title}</b><span class="ed">${e.who} · ${e.det}</span></div>
+   <div><b>${e.title}</b><span class="ed">${e.who} · ${e.det}${OVR.homeDay[e.id]!==undefined?" · moved":""}</span></div>
    <div class="when">${late?`<span class="overdue">OVERDUE</span>`:(e.day===selDay?`<span class="now">${selDay===0?"TODAY":"THIS DAY"}</span>`:fmtDay(e.day))}</div>
+   ${canEdit?`<button class="btn" data-hedit="${e.id}" style="min-height:0;padding:4px 9px;font-size:11px">Date</button><button class="btn" data-hdel="${e.id}" style="min-height:0;padding:4px 9px;font-size:11px">✕</button>`:""}
    <label class="evchk"><input type="checkbox" data-trip="${e.id}" ${done?"checked":""}></label>
   </div>`;}).join("");
  document.getElementById("homecard").innerHTML = `<h3>At home — pickups &amp; drop-offs <span>tap the box when the hand-off happens</span></h3>` + (rows || `<div class="empty" style="margin-top:8px">No pickups or drop-offs in the next week.</div>`);
  document.querySelectorAll("[data-trip]").forEach(c=>c.onchange=()=>{ if(c.checked) OVR.trips[c.dataset.trip]=true; else delete OVR.trips[c.dataset.trip]; save(); render(); });
+ document.querySelectorAll("[data-hedit]").forEach(b=>b.onclick=()=>{ const id=b.dataset.hedit; const v=prompt("Move this hand-off to which date? (YYYY-MM-DD), or blank to reset",""); if(v===null) return; if(!v){ delete OVR.homeDay[id]; } else { const dt=new Date(v+"T12:00:00"); const td=new Date(); td.setHours(0,0,0,0); OVR.homeDay[id]=Math.round((dt-td)/86400000); } save(); render(); });
+ document.querySelectorAll("[data-hdel]").forEach(b=>b.onclick=()=>{ OVR.homeHide[b.dataset.hdel]=true; save(); render(); });
 }
 
 function renderRuns(items, sched){
@@ -1134,6 +1142,8 @@ function renderTracker(items){
  el.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.toggle).classList.toggle("open"));
  el.querySelectorAll("[data-markrun]").forEach(b=>b.onclick=()=>{
   const run=+b.dataset.markrun, step=+b.dataset.markstep, sg=b.dataset.markseg, to=b.dataset.to==="1";
+  const pk = run+"|"+step+"|"+sg;
+  if(to && !OVR.pins[pk] && LAST && LAST.sched){ const bl = LAST.sched.blocks.filter(x=>x.key===pk); if(bl.length){ const d0=Math.min(...bl.map(x=>x.day)); OVR.pins[pk]={startDay:d0, hard:true, person:bl[0].person}; } }
   ATOMS.forEach(a=>{ if(a.run===run&&a.step===step&&segKey(a.step,a.style)===sg){ if(to) DONE[atomKey(a.run,a.style,a.i)]=true; else delete DONE[atomKey(a.run,a.style,a.i)]; }});
   save(); render();
  });

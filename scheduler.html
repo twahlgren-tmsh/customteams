@@ -257,7 +257,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-12-C";
+const BUILD="2026-06-12-D";
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
  CP:[["Serge tops",.231,1],["Case top",.257,4],["Logo",.921,4],["Ribbons",1.219,12],["Serge top/bot",1.142,6],["Serge scrunchies",.871,5],["Case scrunchie",1.098,11],["Attachment",2.23,11]],
@@ -407,7 +407,24 @@ const SWATCH = {
  "Flamingo Paradise":"flamingoparadise-p_96x96.webp?v=1770382666","Pastel Petals":"pastel-petals-p_96x96.webp?v=1757468291",
  "Pastel Potion":"pastel-potion-p_96x96.webp?v=1762388734","Pastel Paws":"pastelpaws-p_96x96.webp?v=1770389730",
  "Peach Planters":"peachplanters-p_96x96.webp?v=1773544536","Blush Rush":"blush-rush-p_96x96.webp?v=1762389386",
- "Shark Week":"sharkweek-p_96x96.webp?v=1770936305"
+ "Shark Week":"sharkweek-p_96x96.webp?v=1770936305",
+ "Starry Night":"Starry_Night-p_96x96.webp?v=1780934526","Vintage Map":"Vintage_Map-p_96x96.webp?v=1781122014",
+ "Latte Love":"latte-love-p_96x96.webp?v=1736856623","Cupids Confetti":"cupid_sconfetti-p_96x96.webp?v=1767657768",
+ "Camo":"camo-p_cb1e0ee3-d7d3-4118-b430-403e695b9c1b_96x96.webp?v=1752143076","Boho Calico":"Boho_Calico-p_96x96.webp?v=1780927538",
+ "Ophelia's Garden":"Ophelia_s_Garden-p_96x96.webp?v=1780932753","Neon Whimsy":"Neon_Whimsy-p_96x96.webp?v=1780932752",
+ "Royal Swirls":"Royal_Swirls-p_96x96.webp?v=1780932751","Sapphire Mist":"Sapphire_Mist-p_96x96.webp?v=1780932750",
+ "Jewel Swirls":"Jewel_Swirls-p_96x96.webp?v=1780932817","Glow In The Deep":"glow-in-the-deep-p_96x96.webp?v=1746100090",
+ "Enchanted Flutter":"enchanted-flutter-p_96x96.webp?v=1756842837","Sunflower Meadow":"Sunflower_Meadow-p_96x96.webp?v=1780932817",
+ "Electric Palms":"Electric_Palms-p_96x96.webp?v=1780932817","Blueberry Riptide":"blueberry-riptide-p_96x96.webp?v=1765240974",
+ "Indigo Petals":"indigopetals-p_96x96.webp?v=1768250990","Midnight Mirage":"midnight-mirage-p_96x96.webp?v=1756908545",
+ "Magenta Mirage":"magenta-mirage-p_96x96.webp?v=1765240232","Petal Eclipse":"petal-eclipse-p_96x96.webp?v=1762738281",
+ "Teal Sketch Floral":"tealsketchfloral-p_96x96.webp?v=1779037172","Turquoise Flutterwave":"turquoiseflutterwave-p_96x96.webp?v=1779037317",
+ "Glow in the Dark Galaxy":"glow-in-the-dark-galaxy-p_96x96.webp?v=1721611967","Glow in the Dark Anatomy":"glow-in-the-dark-anatomy-p_96x96.webp?v=1721611968",
+ "Ultraviolet Storm":"UltravioletStorm-p_96x96.webp?v=1779465945","Solar Flare":"solar-flare-p_96x96.webp?v=1748529886",
+ "Lavender Meadow":"lavendarmeadow-p_96x96.webp?v=1779465639","Amethyst Meadow":"AmethystMeadow-p_96x96.webp?v=1779464795",
+ "Fuchsia Flow":"fuchsiaflow-p_96x96.webp?v=1779465347","Lavender Petals":"lavenderpetals-p_96x96.webp?v=1768250096",
+ "Caribbean Petals":"CaribbeanPetals-p_96x96.webp?v=1779458666","Blood Mist":"Blood_Mist-p_96x96.webp?v=1781122014",
+ "Mint Chocolate Swirls":"Mint_Chocolate_Swirls-p_96x96.webp?v=1781122014"
 };
 const SOLIDHEX = {"Core Solid: Ceil Blue":"#9DBBD8","Core Solid: Steel Grey":"#9A9FA4","Black Comfort+":"#3A3A3C"};
 function tileColor(name){ if(SOLIDHEX[name]) return SOLIDHEX[name]; let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))%360; return `hsl(${h},45%,78%)`; }

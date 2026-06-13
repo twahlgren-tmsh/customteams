@@ -78,6 +78,7 @@ nav button.on { background:var(--ink); color:#fff; }
 .evt.done b, .evt.done .ed { text-decoration:line-through; opacity:.5; }
 .evt.done .eicon { opacity:.4; }
 .evchk input { width:22px; height:22px; accent-color:#23211C; }
+.hdate { border:1.5px solid var(--line); border-radius:9px; padding:5px 8px; font-size:12px; font-family:inherit; background:var(--card); color:var(--ink); cursor:pointer; }
 .ctx { position:fixed; z-index:120; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.18); overflow:hidden; min-width:190px; }
 .ctx button { display:block; width:100%; border:0; background:#fff; text-align:left; padding:12px 15px; font-size:13px; font-weight:600; cursor:pointer; }
 .ctx button:hover { background:#F5F3EC; }
@@ -258,7 +259,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-13-D";
+const BUILD="2026-06-13-E";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -819,12 +820,12 @@ function renderHome(sched){
    <div class="eicon" style="background:${tint(e.hex,"1C")};color:${e.hex}">${e.icon}</div>
    <div><b>${e.title}</b><span class="ed">${e.who} · ${e.det}${OVR.homeDay[e.id]!==undefined?" · moved":""}</span></div>
    <div class="when">${late?`<span class="overdue">OVERDUE</span>`:(e.day===selDay?`<span class="now">${selDay===0?"TODAY":"THIS DAY"}</span>`:fmtDay(e.day))}</div>
-   ${canEdit?`<button class="btn" data-hedit="${e.id}" style="min-height:0;padding:4px 9px;font-size:11px">Date</button><button class="btn" data-hdel="${e.id}" style="min-height:0;padding:4px 9px;font-size:11px">✕</button>`:""}
+   ${canEdit?`<input type="date" class="hdate" data-hedit="${e.id}" value="${isoOf(e.day)}" title="Move this hand-off"><button class="btn" data-hdel="${e.id}" style="min-height:0;padding:4px 9px;font-size:11px" title="Remove">✕</button>`:""}
    <label class="evchk"><input type="checkbox" data-trip="${e.id}" ${done?"checked":""}></label>
   </div>`;}).join("");
  document.getElementById("homecard").innerHTML = `<h3>At home — pickups &amp; drop-offs <span>tap the box when the hand-off happens</span></h3>` + (rows || `<div class="empty" style="margin-top:8px">No pickups or drop-offs in the next week.</div>`);
  document.querySelectorAll("[data-trip]").forEach(c=>c.onchange=()=>{ if(c.checked) OVR.trips[c.dataset.trip]=true; else delete OVR.trips[c.dataset.trip]; save(); render(); });
- document.querySelectorAll("[data-hedit]").forEach(b=>b.onclick=()=>{ const id=b.dataset.hedit; const v=prompt("Move this hand-off to which date? (YYYY-MM-DD), or blank to reset",""); if(v===null) return; if(!v){ delete OVR.homeDay[id]; } else { const dt=new Date(v+"T12:00:00"); const td=new Date(); td.setHours(0,0,0,0); OVR.homeDay[id]=Math.round((dt-td)/86400000); } save(); render(); });
+ document.querySelectorAll("input.hdate[data-hedit]").forEach(inp=>inp.onchange=()=>{ const id=inp.dataset.hedit; if(!inp.value){ delete OVR.homeDay[id]; } else { const dt=new Date(inp.value+"T12:00:00"); const td=new Date(); td.setHours(0,0,0,0); OVR.homeDay[id]=Math.round((dt-td)/86400000); } save(); render(); });
  document.querySelectorAll("[data-hdel]").forEach(b=>b.onclick=()=>{ OVR.homeHide[b.dataset.hdel]=true; save(); render(); });
 }
 

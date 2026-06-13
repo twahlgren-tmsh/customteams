@@ -84,6 +84,7 @@ nav button.on { background:var(--ink); color:#fff; }
 .ctx button:hover { background:#F5F3EC; }
 .exwrap { background:transparent; }
 .exhead { font-size:10.5px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; padding:2px 4px; }
+.threadchip { font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:99px; vertical-align:3px; margin-left:6px; }
 .rcards { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:14px; }
 .rc { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:18px; }
 .rc .rh { display:flex; gap:14px; align-items:center; }
@@ -259,7 +260,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-13-E";
+const BUILD="2026-06-13-F";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -290,9 +291,11 @@ const TEAM = {
  "Mauricio":{days:[5,6],h:8,st:7,en:15,sub:"Fri & Sat · 7a–3p"},
  "Karla":{days:[5,6],h:8,st:7,en:15,sub:"Fri & Sat · 7a–3p"},
  "Lora":{days:[1,2,3,4,5,6],h:5,st:8,en:20,sub:"works from home",home:true},
- "Anna Cristina":{days:[1,2,3,4,5,6],h:5,st:8,en:20,sub:"works from home",home:true}
+ "Anna Cristina":{days:[1,2,3,4,5,6],h:5,st:8,en:20,sub:"works from home",home:true},
+ "Taylor":{days:[0,1,2,3,4,5,6],h:12,st:8,en:20,sub:"owner — assign yourself",me:true}
 };
 const PIPE = {"1|2":1,"2|3":1};
+const THREADHEX = {"White":"#EDEAE0","Black":"#2B2A28","Navy":"#23355C"};
 const fmtT = m => { const mm=((Math.round(m)%1440)+1440)%1440; let h=Math.floor(mm/60), mi=mm%60; const ap=h>=12?"p":"a"; h=h%12||12; return h+(mi?":"+String(mi).padStart(2,"0"):"")+ap; };
 const EXC = {"2026-06-12":{"Trinna":{st:13,h:7,note:"in at 1p, 7 hrs (hours finished early this week)"}}};
 const isoOf = d => { const dt=dateOf(d); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); };
@@ -656,7 +659,7 @@ let isLead = false;
 const runBy = n => RUNS.find(r=>r.no===n);
 const fmtH = m => { const h=m/60; return (h>=10?h.toFixed(0):h.toFixed(1).replace(/\.0$/,""))+"h"; };
 const initials = n => n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
-function dateOf(d){ const dt=new Date(); dt.setDate(dt.getDate()+d); return dt; }
+function dateOf(d){ const dt=new Date(); dt.setHours(0,0,0,0); dt.setDate(dt.getDate()+d); return dt; }
 const fmtDay = d => d===0 ? "today" : dateOf(d).toLocaleDateString("en-US",{weekday:"short", month:"short", day:"numeric"});
 
 function render(){
@@ -717,6 +720,7 @@ function renderBoard(items, sched){
  for(const p in TEAM){
   const t = TEAM[p];
   if(t.home) continue;
+  if(t.me){ continue; }
   const av = availOf(p, selDay, dow);
   const bl = sched.blocks.filter(b=>b.person===p && b.day===selDay);
   if(av<=0 && !bl.length){ off.push(p + (OVR.avail[p+"|"+selDay]===0 ? " (out)" : "")); continue; }
@@ -763,7 +767,18 @@ function renderBoard(items, sched){
    <div class="stack">${blocks || `<div class="empty">Nothing scheduled — open for custom orders &amp; catch-up.</div>`}</div>
   </div>`;
  }
+ {
+  const bl = sched.blocks.filter(b=>b.person==="Taylor" && b.day===selDay);
+  const used = bl.reduce((s,b)=>s+b.hrs,0);
+  const open = OVR.meOpen!==false;
+  const blocks = bl.map(b=>{ const r=b.custom?{hex:"#6B7280",name:"Custom"}:runBy(b.run); const h=Math.max(34,Math.round(b.hrs*30)); const nm=b.custom?b.label:(b.sub?tokName(b.sub):nameOf(b.step,b.seg)); return `<div class="tblk" data-key="${b.key}" data-base="${b.base}" data-label="${nm}" data-hex="${r.hex}" title="${fmtT(b.t0)}–${fmtT(b.t1)}" style="height:${h}px;background:${tint(r.hex,"1C")};border-left:5px solid ${r.hex};color:#2B2A25${b.done?";opacity:.5":""}"><span class="hbadge">${b.done?"✓ ":""}${b.hrs.toFixed(1)}h</span><div class="nm">${b.done?"✓ ":""}${nm}</div><div class="mt"><span style="color:${r.hex};font-weight:700">${r.name}</span></div></div>`; }).join("");
+  html += `<div class="person" data-person="Taylor" style="border-style:dashed;background:#FBFAF6">
+   <div class="phead" style="cursor:pointer" id="meHead"><div class="av" style="background:#6B7280">ME</div><div><b>Me (Taylor)</b><span>${open?"drop tasks you'll do yourself":"tap to expand"}</span></div><div class="hrs"><b>${used.toFixed(1)}h</b> ${open?"▾":"▸"}</div></div>
+   ${open?`<div class="stack">${blocks||`<div class="empty">Nothing yet — drag a task here to take it on.</div>`}</div>`:""}
+  </div>`;
+ }
  document.getElementById("board").innerHTML = html;
+ const _mh=document.getElementById("meHead"); if(_mh) _mh.onclick=()=>{ OVR.meOpen=!(OVR.meOpen!==false); save(); render(); };
  document.getElementById("offline").textContent = off.length ? "Off this day: " + off.join(", ") : "";
  wireDrag();
 }
@@ -825,7 +840,7 @@ function renderHome(sched){
   </div>`;}).join("");
  document.getElementById("homecard").innerHTML = `<h3>At home — pickups &amp; drop-offs <span>tap the box when the hand-off happens</span></h3>` + (rows || `<div class="empty" style="margin-top:8px">No pickups or drop-offs in the next week.</div>`);
  document.querySelectorAll("[data-trip]").forEach(c=>c.onchange=()=>{ if(c.checked) OVR.trips[c.dataset.trip]=true; else delete OVR.trips[c.dataset.trip]; save(); render(); });
- document.querySelectorAll("input.hdate[data-hedit]").forEach(inp=>inp.onchange=()=>{ const id=inp.dataset.hedit; if(!inp.value){ delete OVR.homeDay[id]; } else { const dt=new Date(inp.value+"T12:00:00"); const td=new Date(); td.setHours(0,0,0,0); OVR.homeDay[id]=Math.round((dt-td)/86400000); } save(); render(); });
+ document.querySelectorAll("input.hdate[data-hedit]").forEach(inp=>inp.onchange=()=>{ const id=inp.dataset.hedit; if(!inp.value){ delete OVR.homeDay[id]; } else { const dt=new Date(inp.value+"T00:00:00"); const td=new Date(); td.setHours(0,0,0,0); OVR.homeDay[id]=Math.round((dt-td)/86400000); } save(); render(); });
  document.querySelectorAll("[data-hdel]").forEach(b=>b.onclick=()=>{ OVR.homeHide[b.dataset.hdel]=true; save(); render(); });
 }
 
@@ -860,7 +875,7 @@ function renderRuns(items, sched){
   return `<div class="rc" data-open="${r.no}" style="cursor:pointer;${done?"opacity:.62":""}${planned?"border-style:dashed;border-width:2px":""}">
    <div class="rh">
     <span class="donut" style="background:conic-gradient(${done?"#9BB59B":r.hex} ${pct}%, #EDEAE2 0)"><i>${done?"✓":pct+"%"}</i></span>
-    <div><h2>${r.name}</h2><div class="rm">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.mult>1?" · new-material buffer":""}</div></div>
+    <div><h2>${r.name}${r.thread?` <span class="threadchip" style="background:${THREADHEX[r.thread]||"#999"};color:${r.thread==="White"?"#444":"#fff"}">${r.thread} thread</span>`:""}</h2><div class="rm">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.mult>1?" · new-material buffer":""}</div></div>
     ${chip}
    </div>
    ${tiles}
@@ -1005,7 +1020,9 @@ function renderCustom(){
  });
 }
 
+function runOrder(){ return RUNS.slice().sort((a,b)=>b.no-a.no).map(r=>r.no); }
 function openRun(no){ rdRun = no; rdTab = "sched"; renderRD(); document.getElementById("rdwrap").classList.add("open"); }
+function stepRun(dir){ const o=runOrder(); const i=o.indexOf(rdRun); if(i<0) return; const j=i+dir; if(j<0||j>=o.length) return; rdRun=o[j]; renderRD(); }
 function closeRun(){ document.getElementById("rdwrap").classList.remove("open"); rdRun = null; }
 function renderRD(){
  if(rdRun===null || !LAST) return;
@@ -1040,11 +1057,13 @@ function renderRD(){
   <div class="rdtop">
    <span class="donut" style="background:conic-gradient(${r.done?"#9BB59B":r.hex} ${pct}%, #EDEAE2 0)"><i>${r.done?"✓":pct+"%"}</i></span>
    <div><h2 style="font-size:20px;font-weight:700">${r.name}</h2><div class="rm" style="color:var(--soft);font-size:12.5px">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.done?" · completed":""}</div></div>
-   <button class="rdclose" id="rdx">✕</button>
+   <button class="rdclose" id="rdprev" title="Previous run">‹</button><button class="rdclose" id="rdnext" title="Next run">›</button><button class="rdclose" id="rdx">✕</button>
   </div>
   <div class="rdtabs"><button class="${rdTab==="sched"?"on":""}" data-rdt="sched">Schedule</button><button class="${rdTab==="pat"?"on":""}" data-rdt="pat">Patterns &amp; pairings</button></div>
   ${body}`;
  document.getElementById("rdx").onclick = closeRun;
+ document.getElementById("rdprev").onclick=()=>stepRun(-1);
+ document.getElementById("rdnext").onclick=()=>stepRun(1);
  document.querySelectorAll("[data-rdt]").forEach(b=>b.onclick=()=>{ rdTab=b.dataset.rdt; renderRD(); });
  document.querySelectorAll(".pcell").forEach(inp=>{ if(!isLead){ inp.disabled = true; return; } inp.onchange=()=>{
   const k = inp.dataset.run+"|"+inp.dataset.pat;
@@ -1067,6 +1086,7 @@ function openBuilder(){
    <input id="nr-no" type="number" value="${nextNo}" style="width:80px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14px" title="Run number">
    <input id="nr-name" placeholder="Run name (e.g. Autumn Glow)" style="flex:2;min-width:180px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14px">
    <input id="nr-golive" type="date" style="width:160px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14px" title="Go-live date">
+   <select id="nr-thread" style="width:130px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14px" title="Run thread color"><option value="">Thread…</option><option>White</option><option>Black</option><option>Navy</option></select>
    <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--soft)"><input id="nr-mult" type="checkbox" style="width:17px;height:17px"> new-material buffer (×1.25)</label>
   </div>
   <div class="ptab"><table id="nr-table"><tr><th>Pattern</th>${QCOLS.map(c=>`<th style="text-align:center">${c}</th>`).join("")}</tr>${rowHtml()}${rowHtml()}${rowHtml()}</table></div>
@@ -1102,6 +1122,7 @@ function openBuilder(){
   });
   if(!lines.length){ alert("Add at least one pattern with quantities."); return; }
   const run = {no, name, sched:false, mult: document.getElementById("nr-mult").checked?1.25:1, lines};
+  const _th=document.getElementById("nr-thread").value; if(_th) run.thread=_th;
   const gl = document.getElementById("nr-golive").value; if(gl) run.goLive = gl;
   if(BASE_RUNS.some(r=>r.no===no)){ alert("Run "+no+" is a built-in run — pick a new number."); return; }
   XRUNS = XRUNS.filter(x=>x.no!==no).concat([run]);

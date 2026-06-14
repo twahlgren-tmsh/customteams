@@ -283,7 +283,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-13-N";
+const BUILD="2026-06-13-O";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -709,25 +709,26 @@ const THREADPILL = {navy:["#23355C","#fff"],white:["#EDEAE0","#444"],black:["#2B
 const BOLT_YD = 15, HATS_PER_YD = 46/15;
 const LEAD = {MDG:4,Michaels:5,"Timeless Treasures":8,"Dear Stella":8,Hoffman:7,"Little Cocalico":10};
 const PRINT_RECS = [
- {p:"Daisies",vendor:"Michaels",sku:"Daisies on Teal",why:"395 sold, top floral"},
- {p:"Eternal Bloom",vendor:"Little Cocalico",sku:"owned print",why:"245 sold, out"},
- {p:"Sedation Squad",vendor:"Little Cocalico",sku:"owned print",why:"255 sold (medical)"},
- {p:"Dose of Doze",vendor:"Little Cocalico",sku:"owned print",why:"176 sold (medical)"},
- {p:"Glow in the Dark Anatomy",vendor:"Timeless Treasures",sku:"",why:"272 sold, glow"},
- {p:"Glow in the Dark Galaxy",vendor:"Timeless Treasures",sku:"",why:"240 sold"},
- {p:"Glow in The Deep",vendor:"Timeless Treasures",sku:"",why:"154 sold"},
- {p:"Starry Night",vendor:"Timeless Treasures",sku:"",why:"245 sold"},
- {p:"Aqua Pulse",vendor:"MDG",sku:"Fairy Tale Digital – 28",why:"212 sold, summer"},
- {p:"Galactic Mist",vendor:"MDG",sku:"Digitally Printed Batik – 21",why:"154 sold"},
- {p:"Petal Pusher",vendor:"MDG",sku:"Secret Garden – Blue",why:"155 sold"},
- {p:"Boho Botanicals",vendor:"MDG",sku:"Country Floral – White",why:"122 sold"},
- {p:"Seahorse Serenade",vendor:"MDG",sku:"Coastal Seahorse – Turquoise",why:"summer, out"},
- {p:"Sea Turtle Drift",vendor:"MDG",sku:"Coastal Turtles – Navy",why:"summer, out"},
- {p:"Cabana Bloom",vendor:"Timeless Treasures",sku:"",why:"summer floral"},
- {p:"Wildflower Muse",vendor:"Dear Stella",sku:"",why:"summer floral"},
- {p:"Coral Mist",vendor:"MDG",sku:"Digitally Printed Batik – 17",why:"summer"},
- {p:"Furry Love",vendor:"MDG",sku:"Animal Skin – 6",why:"153 sold"}
+ {p:"Daisies",vendor:"Michaels",sku:"Daisies on Teal",vel:21.9},
+ {p:"Glow in the Dark Anatomy",vendor:"Timeless Treasures",sku:"",vel:15.1},
+ {p:"Sedation Squad",vendor:"Little Cocalico",sku:"owned print",vel:14.2},
+ {p:"Eternal Bloom",vendor:"Little Cocalico",sku:"owned print",vel:13.6},
+ {p:"Starry Night",vendor:"Timeless Treasures",sku:"",vel:13.6},
+ {p:"Glow in the Dark Galaxy",vendor:"Timeless Treasures",sku:"",vel:13.3},
+ {p:"Aqua Pulse",vendor:"MDG",sku:"Fairy Tale Digital – 28",vel:11.8},
+ {p:"Dose of Doze",vendor:"Little Cocalico",sku:"owned print",vel:9.8},
+ {p:"Seahorse Serenade",vendor:"MDG",sku:"Coastal Seahorse – Turquoise",vel:8.9},
+ {p:"Glow in The Deep",vendor:"Timeless Treasures",sku:"",vel:8.6},
+ {p:"Galactic Mist",vendor:"MDG",sku:"Digitally Printed Batik – 21",vel:8.6},
+ {p:"Petal Pusher",vendor:"MDG",sku:"Secret Garden – Blue",vel:8.6},
+ {p:"Furry Love",vendor:"MDG",sku:"Animal Skin – 6",vel:8.5},
+ {p:"Cabana Bloom",vendor:"Timeless Treasures",sku:"",vel:7.1},
+ {p:"Sea Turtle Drift",vendor:"MDG",sku:"Coastal Turtles – Navy",vel:7.0},
+ {p:"Boho Botanicals",vendor:"MDG",sku:"Country Floral – White",vel:6.8},
+ {p:"Coral Mist",vendor:"MDG",sku:"Digitally Printed Batik – 17",vel:6.1},
+ {p:"Wildflower Muse",vendor:"Dear Stella",sku:"",vel:5.8}
 ];
+const FAST_MO = 12;  // ≥ this many/mo = reorder ahead even while in a queued run
 function fabInit(){ if(!OVR.fabric) OVR.fabric={}; if(!OVR.fabric.yards) OVR.fabric.yards={}; if(!OVR.fabric.orders) OVR.fabric.orders=[]; }
 function coreDemand(color){
  let hats=0;
@@ -763,14 +764,21 @@ function renderFabric(){
 
  // TO ORDER (core + prints)
  const coreRecs=colors.filter(low).filter(c=>!ord.some(o=>!o.received&&o.fabric==="Core Solid: "+c));
+ const noReorder=new Set(OVR.fabric.noReorder||[]);
  const queued=new Set(); RUNS.forEach(r=>{ if(r.done) return; r.lines.forEach(l=>queued.add(l.p.toLowerCase())); });
- const covered=PRINT_RECS.filter(r=>queued.has(r.p.toLowerCase()));
- const printRecs=PRINT_RECS.filter(r=>!queued.has(r.p.toLowerCase()) && !ord.some(o=>o.fabric===r.p && (!o.cut)));
- h+=`<div class="fabsec">To order <span class="pill2">${coreRecs.length+printRecs.length}</span></div>`;
- if(covered.length) h+=`<div class="note" style="background:#EAF3DE;border-radius:10px;padding:8px 12px;color:#3B6D11">Already in a queued run — no reorder needed now: ${covered.map(r=>r.p).join(", ")}.</div>`;
+ const cadence=v=>Math.round(46/Math.max(v/4.33,0.1)); // weeks per bolt
+ const onOrder=r=>ord.some(o=>o.fabric===r.p && !o.cut);
+ const recs=[], covered=[];
+ PRINT_RECS.forEach(r=>{ if(noReorder.has(r.p)||onOrder(r)) return;
+   const inQ=queued.has(r.p.toLowerCase()), fast=r.vel>=FAST_MO;
+   if(inQ && !fast) covered.push(r); else recs.push(Object.assign({inQ,fast},r)); });
+ h+=`<div class="fabsec">To order <span class="pill2">${coreRecs.length+recs.length}</span></div>`;
  coreRecs.sort((a,b)=>CORE_VEL[b]-CORE_VEL[a]).forEach(c=>{ const need=Math.max(2,Math.ceil((CORE_VEL[c]/4.33*4)/46));
-  h+=`<div class="frow"><span class="swdot" style="background:${CORE_HEX[c]}"></span><div class="fi"><b>Core Solid: ${c}</b><span>MDG · $2.95/yd · ~4d · ~${need} bolt${need>1?'s':''} (${need*BOLT_YD} yd)</span></div>${tchip(CORE_THREAD[c]||'white')}<button class="btn go" data-forder="${c}|${need}">Mark ordered</button></div>`; });
- printRecs.forEach((r,i)=>{ h+=`<div class="frow"><div class="fi"><b>${r.p}</b><span>${r.vendor}${r.sku?' · '+r.sku:''} · ~${LEAD[r.vendor]||7}d lead · ${r.why}</span></div><button class="btn go" data-porder="${i}">Mark ordered</button></div>`; });
+  h+=`<div class="frow"><span class="swdot" style="background:${CORE_HEX[c]}"></span><div class="fi"><b>Core Solid: ${c}</b><span>MDG · $2.95/yd · ~4d · every ~${cadence(CORE_VEL[c])} wk · ~${need} bolt${need>1?'s':''}</span></div>${tchip(CORE_THREAD[c]||'white')}<button class="btn go" data-forder="${c}|${need}">Mark ordered</button></div>`; });
+ recs.sort((a,b)=>b.vel-a.vel).forEach((r)=>{ const idx=PRINT_RECS.indexOf(PRINT_RECS.find(x=>x.p===r.p));
+  h+=`<div class="frow"><div class="fi"><b>${r.p}</b> ${r.inQ&&r.fast?'<span class="fbadge" style="background:#FAEEDA;color:#854F0B">fast · reorder ahead</span>':''}<span>${r.vendor}${r.sku?' · '+r.sku:''} · ~${LEAD[r.vendor]||7}d lead · ${Math.round(r.vel)}/mo · every ~${cadence(r.vel)} wk${r.inQ?' · in a queued run':''}</span></div><button class="btn" data-fno="${r.p}" title="Don't reorder this">✕</button><button class="btn go" data-porder="${idx}">Mark ordered</button></div>`; });
+ if(covered.length) h+=`<div class="note" style="background:#EAF3DE;border-radius:10px;padding:8px 12px;color:#3B6D11">Covered by a queued run (will reorder next cycle): ${covered.map(r=>r.p).join(", ")}.</div>`;
+ if(noReorder.size) h+=`<div class="note">Not reordering: ${[...noReorder].join(", ")} · <a href="#" id="fnoreset" style="color:#5B50D6">reset</a></div>`;
  h+=`<div style="margin-top:8px"><button class="btn" id="faddorder">+ Add a fabric order</button></div>`;
 
  // INCOMING
@@ -798,6 +806,8 @@ function renderFabric(){
  document.querySelectorAll("[data-freceive]").forEach(b=>b.onclick=()=>{ const o=OVR.fabric.orders.find(x=>x.id===b.dataset.freceive); if(o){ o.received=true; if(o.core){ const m=(o.fabric||"").replace("Core Solid: ",""); if(CORE_VEL[m]!==undefined) OVR.fabric.yards[m]=(OVR.fabric.yards[m]||0)+(o.bolts||1)*BOLT_YD; } } save(); render(); });
  document.querySelectorAll("[data-fcancel]").forEach(b=>b.onclick=()=>{ OVR.fabric.orders=OVR.fabric.orders.filter(x=>x.id!==b.dataset.fcancel); save(); render(); });
  document.querySelectorAll("[data-fcut]").forEach(b=>b.onclick=()=>{ cutIntoRun(b.dataset.fcut); });
+ document.querySelectorAll("[data-fno]").forEach(b=>b.onclick=()=>{ OVR.fabric.noReorder=[...new Set([...(OVR.fabric.noReorder||[]),b.dataset.fno])]; save(); render(); });
+ const fnr=document.getElementById("fnoreset"); if(fnr) fnr.onclick=(e)=>{ e.preventDefault(); OVR.fabric.noReorder=[]; save(); render(); };
  const ao=document.getElementById("faddorder"); if(ao) ao.onclick=()=>{
   const nm=prompt("Fabric / pattern name:"); if(!nm) return;
   const ven=prompt("Vendor:","MDG")||""; const bl=+prompt("Bolts?","1")||1;

@@ -283,7 +283,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-14-P";
+const BUILD="2026-06-14-Q";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -740,79 +740,81 @@ function tchip(t){ if(!t) return ""; const c=THREADPILL[t]||["#999","#fff"]; ret
 function renderFabric(){
  fabInit();
  const colors=Object.keys(CORE_VEL);
- const yd=c=>OVR.fabric.yards[c]||0, wkCover=c=>yd(c)*HATS_PER_YD/Math.max(CORE_VEL[c]/4.33,0.1), low=c=>yd(c)===0||wkCover(c)<3;
+ const yd=c=>OVR.fabric.yards[c]||0, CB=25; // core bolt = 25 yd
+ const wkCover=c=>yd(c)*HATS_PER_YD/Math.max(CORE_VEL[c]/4.33,0.1), low=c=>yd(c)===0||wkCover(c)<3;
  const lowN=colors.filter(low).length;
  const ord=OVR.fabric.orders;
  const incoming=ord.filter(o=>!o.received), ready=ord.filter(o=>o.received&&!o.cut&&!o.core);
- const totYd=colors.reduce((s,c)=>s+yd(c),0);
- document.getElementById("fabsummary").innerHTML=`<div class="cosnap">
-  <div class="cs"><b>${Math.round(totYd)}</b><span>core yards on hand</span></div>
-  <div class="cs"><b style="${lowN?'color:#C2452D':''}">${lowN}</b><span>core to reorder</span></div>
-  <div class="cs"><b>${incoming.length}</b><span>incoming</span></div>
-  <div class="cs"><b style="${ready.length?'color:#0F8A6D':''}">${ready.length}</b><span>ready to cut</span></div>
- </div><div class="note">Lifecycle: recommended → ordered → delivered → ready to cut → cut into a run (becomes a run line). Core solids tracked in yards (kept stock); prints flow through to a cut.</div>`;
-
- // CORE STOCK
- let h=`<div class="fabsec">On hand · core solids</div><div class="fabgrid">`;
- colors.forEach(c=>{ const y=yd(c),dem=coreDemand(c),lw=low(c);
-  h+=`<div class="fcard${lw?' low':''}"><div class="fn"><span class="swdot" style="background:${CORE_HEX[c]}"></span>${c} ${tchip(CORE_THREAD[c]||'white')}</div>
-   <div class="fstep"><button data-fminus="${c}">−</button><b data-fset="${c}">${Math.round(y)}</b><button data-fplus="${c}">+</button><span>yd${y?` · ${(y/BOLT_YD).toFixed(1)} bolts`:''}</span></div>
-   <div class="fmeta">${y?`~${Math.round(y*HATS_PER_YD)} hats · ~${Math.round(wkCover(c))} wk`:'<b style="color:#C2452D">out</b>'} · ${Math.round(CORE_VEL[c])}/mo${dem?` · ${dem} committed`:''}</div>
-   ${lw?'<div style="margin-top:7px"><span class="fbadge" style="background:#FCEBEB;color:#A32D2D">reorder</span></div>':''}</div>`;
- });
- h+=`</div>`;
-
- // TO ORDER (core + prints)
- const coreRecs=colors.filter(low).filter(c=>!ord.some(o=>!o.received&&o.fabric==="Core Solid: "+c));
  const noReorder=new Set(OVR.fabric.noReorder||[]);
  const queued=new Set(); RUNS.forEach(r=>{ if(r.done) return; r.lines.forEach(l=>queued.add(l.p.toLowerCase())); });
- const cadence=v=>Math.round(46/Math.max(v/4.33,0.1)); // weeks per bolt
+ const cadence=v=>Math.round(46/Math.max(v/4.33,0.1));
  const onOrder=r=>ord.some(o=>o.fabric===r.p && !o.cut);
+ const coreRecs=colors.filter(low).filter(c=>!ord.some(o=>!o.received&&o.fabric==="Core Solid: "+c));
  const recs=[], covered=[];
- PRINT_RECS.forEach(r=>{ if(noReorder.has(r.p)||onOrder(r)) return;
-   const inQ=queued.has(r.p.toLowerCase()), fast=r.vel>=FAST_MO;
-   if(inQ && !fast) covered.push(r); else recs.push(Object.assign({inQ,fast},r)); });
- h+=`<div class="fabsec">To order <span class="pill2">${coreRecs.length+recs.length}</span></div>`;
- coreRecs.sort((a,b)=>CORE_VEL[b]-CORE_VEL[a]).forEach(c=>{ const need=Math.max(2,Math.ceil((CORE_VEL[c]/4.33*4)/46));
-  h+=`<div class="frow"><span class="swdot" style="background:${CORE_HEX[c]}"></span><div class="fi"><b>Core Solid: ${c}</b><span>MDG · $2.95/yd · ~4d · every ~${cadence(CORE_VEL[c])} wk · ~${need} bolt${need>1?'s':''}</span></div>${tchip(CORE_THREAD[c]||'white')}<button class="btn go" data-forder="${c}|${need}">Mark ordered</button></div>`; });
- recs.sort((a,b)=>b.vel-a.vel).forEach((r)=>{ const idx=PRINT_RECS.indexOf(PRINT_RECS.find(x=>x.p===r.p));
-  h+=`<div class="frow"><div class="fi"><b>${r.p}</b> ${r.inQ&&r.fast?'<span class="fbadge" style="background:#FAEEDA;color:#854F0B">fast · reorder ahead</span>':''}<span>${r.vendor}${r.sku?' · '+r.sku:''} · ~${LEAD[r.vendor]||7}d lead · ${Math.round(r.vel)}/mo · every ~${cadence(r.vel)} wk${r.inQ?' · in a queued run':''}</span></div><button class="btn" data-fno="${r.p}" title="Don't reorder this">✕</button><button class="btn go" data-porder="${idx}">Mark ordered</button></div>`; });
- if(covered.length) h+=`<div class="note" style="background:#EAF3DE;border-radius:10px;padding:8px 12px;color:#3B6D11">Covered by a queued run (will reorder next cycle): ${covered.map(r=>r.p).join(", ")}.</div>`;
+ PRINT_RECS.forEach(r=>{ if(noReorder.has(r.p)||onOrder(r)) return; const inQ=queued.has(r.p.toLowerCase()), fast=r.vel>=FAST_MO; if(inQ&&!fast) covered.push(r); else recs.push(Object.assign({inQ,fast},r)); });
+
+ // SNAPSHOT
+ document.getElementById("fabsummary").innerHTML=`<div class="cosnap">
+  <div class="cs"><b style="${(coreRecs.length+recs.length)?'color:#C2452D':''}">${coreRecs.length+recs.length}</b><span>to order</span></div>
+  <div class="cs"><b>${incoming.length}</b><span>awaiting intake</span></div>
+  <div class="cs"><b style="${ready.length?'color:#0F8A6D':''}">${ready.length}</b><span>ready to cut</span></div>
+  <div class="cs"><b style="${lowN?'color:#C2452D':''}">${lowN}</b><span>core low</span></div>
+ </div>`;
+
+ let h="";
+ // 1) TO ORDER — the headline
+ h+=`<div class="fabsec">▸ To order <span class="pill2">${coreRecs.length+recs.length}</span></div>`;
+ coreRecs.sort((a,b)=>CORE_VEL[b]-CORE_VEL[a]).forEach(c=>{ const need=Math.max(1,Math.ceil((CORE_VEL[c]/4.33*5)/(CB*HATS_PER_YD)));
+  h+=`<div class="frow"><span class="swdot" style="background:${CORE_HEX[c]}"></span><div class="fi"><b>Core Solid: ${c}</b><span>MDG · 25yd bolt ($74) · ~4d · every ~${cadence(CORE_VEL[c])} wk · ~${need} bolt${need>1?'s':''}</span></div>${tchip(CORE_THREAD[c]||'white')}<button class="btn go" data-forder="${c}|${need}">Ordered ▸</button></div>`; });
+ recs.sort((a,b)=>b.vel-a.vel).forEach(r=>{ const idx=PRINT_RECS.indexOf(PRINT_RECS.find(x=>x.p===r.p));
+  h+=`<div class="frow"><div class="fi"><b>${r.p}</b> ${r.inQ&&r.fast?'<span class="fbadge" style="background:#FAEEDA;color:#854F0B">fast · reorder ahead</span>':''}<span>${r.vendor}${r.sku?' · '+r.sku:''} · ~${LEAD[r.vendor]||7}d · ${Math.round(r.vel)}/mo · every ~${cadence(r.vel)} wk${r.inQ?' · in a queued run':''}</span></div><button class="btn" data-fno="${r.p}" title="Don't reorder">✕</button><button class="btn go" data-porder="${idx}">Ordered ▸</button></div>`; });
+ if(!coreRecs.length && !recs.length) h+=`<div class="note">Nothing to order right now. 👍</div>`;
+ if(covered.length) h+=`<div class="note" style="background:#EAF3DE;border-radius:10px;padding:8px 12px;color:#3B6D11">Covered by a queued run: ${covered.map(r=>r.p).join(", ")}.</div>`;
  if(noReorder.size) h+=`<div class="note">Not reordering: ${[...noReorder].join(", ")} · <a href="#" id="fnoreset" style="color:#5B50D6">reset</a></div>`;
  h+=`<div style="margin-top:8px"><button class="btn" id="faddorder">+ Add a fabric order</button></div>`;
 
- // INCOMING
- h+=`<div class="fabsec">Incoming <span class="pill2">${incoming.length}</span></div>`;
+ // 2) AWAITING INTAKE
+ h+=`<div class="fabsec">Awaiting intake <span class="pill2">${incoming.length}</span></div>`;
  if(incoming.length){ incoming.forEach(o=>{ const arr=o.arrive!==undefined?fmtDay(o.arrive):"—";
-  h+=`<div class="frow"><div class="fi"><b>${o.fabric}${o.bolts?` · ${o.bolts} bolt${o.bolts>1?'s':''}`:''}</b><span>${o.vendor||''} · ordered ${fmtDay(o.placed||0)} · arriving ~${arr}</span></div>${tchip(o.thread)}<button class="btn" data-fcancel="${o.id}">Cancel</button><button class="btn go" data-freceive="${o.id}">Delivered</button></div>`; }); }
+  h+=`<div class="frow"><div class="fi"><b>${o.fabric}${o.bolts?` · ${o.bolts} bolt${o.bolts>1?'s':''} (~${o.bolts*(o.boltYd||15)} yd)`:''}</b><span>${o.vendor||''} · ordered ${fmtDay(o.placed||0)} · arriving ~${arr}</span></div>${tchip(o.thread)}<button class="btn" data-fcancel="${o.id}">Cancel</button><button class="btn go" data-freceive="${o.id}">Receive ▸</button></div>`; }); }
  else h+=`<div class="note">Nothing on order.</div>`;
 
- // READY TO CUT (delivered prints)
+ // 3) READY TO CUT
  h+=`<div class="fabsec">Ready to cut <span class="pill2">${ready.length}</span></div>`;
  if(ready.length){ ready.forEach(o=>{
-  h+=`<div class="frow" style="border-color:#9FE1CB"><div class="fi"><b>${o.fabric}${o.bolts?` · ${o.bolts} bolt${o.bolts>1?'s':''}`:''}</b><span>${o.vendor||''} · delivered · ready for a Thursday cut</span></div>${tchip(o.thread)}<button class="btn go" data-fcut="${o.id}">Cut into run ▸</button></div>`; }); }
- else h+=`<div class="note">Nothing waiting to be cut. Mark incoming fabric "Delivered" when it arrives.</div>`;
+  h+=`<div class="frow" style="border-color:#9FE1CB"><div class="fi"><b>${o.fabric}</b><span>${o.vendor||''} · ${o.yards?o.yards+' yd received':(o.bolts+' bolt'+(o.bolts>1?'s':''))} · ready for Thursday</span></div>${tchip(o.thread)}<button class="btn go" data-fcut="${o.id}">Cut into run ▸</button></div>`; }); }
+ else h+=`<div class="note">Mark incoming fabric received when it arrives.</div>`;
 
- // CUT HELPER
- h+=`<div class="fabsec">Cut helper</div><div class="card"><div class="fmeta" style="font-size:12.5px;line-height:1.7"><b>15 yd → ~46:</b> 16 LP · 8 CP · 8 CTE · 8 LTE · 2 LS · 2 CO · 2 CS<br><b>12 yd → ~39:</b> 12 LP · 8 CP · 7 CTE · 6 LTE · 2 LS · 2 CO · 2 CS<br><b>Comfort+ 15 yd → 48:</b> 20 CTE · 20 CP · 4 CO · 4 CS</div></div>`;
+ // 4) CORE STOCK (compact)
+ h+=`<div class="fabsec">Core solids on hand <span class="pill2">${Math.round(colors.reduce((s,c)=>s+yd(c),0))} yd</span></div><div class="fabgrid">`;
+ colors.slice().sort((a,b)=>(low(a)?0:1)-(low(b)?0:1)||CORE_VEL[b]-CORE_VEL[a]).forEach(c=>{ const y=yd(c),dem=coreDemand(c),lw=low(c);
+  h+=`<div class="fcard${lw?' low':''}" style="padding:9px 11px"><div class="fn" style="font-size:12.5px"><span class="swdot" style="background:${CORE_HEX[c]}"></span>${c}</div>
+   <div class="fstep" style="margin:5px 0 3px"><button data-fminus="${c}">−</button><b data-fset="${c}" style="font-size:18px">${Math.round(y)}</b><button data-fplus="${c}">+</button><span>yd</span></div>
+   <div class="fmeta">${y?`~${Math.round(wkCover(c))}wk · ${(y/CB).toFixed(1)} bolt`:'<b style="color:#C2452D">out</b>'}${dem?` · ${dem} due`:''}</div></div>`; });
+ h+=`</div><div class="fmeta" style="margin-top:5px">−/+ adds a 25yd core bolt; tap the number to set exact yards.</div>`;
+
+ // 5) CUT HELPER
+ h+=`<div class="fabsec">Cut helper</div><div class="card"><div class="fmeta" style="font-size:12.5px;line-height:1.7"><b>Print 15 yd → ~46:</b> 16 LP·8 CP·8 CTE·8 LTE·2 LS·2 CO·2 CS<br><b>Print 12 yd → ~39:</b> 12 LP·8 CP·7 CTE·6 LTE·2 LS·2 CO·2 CS<br><b>Comfort+ 15 yd → 48:</b> 20 CTE·20 CP·4 CO·4 CS<br><b>Core solid bolt = 25 yd</b> (≈77 hats across styles).</div></div>`;
 
  document.getElementById("fabwrap").innerHTML=h;
  const adj=(c,d)=>{ OVR.fabric.yards[c]=Math.max(0,Math.round((OVR.fabric.yards[c]||0)+d)); save(); render(); };
- document.querySelectorAll("[data-fplus]").forEach(b=>b.onclick=()=>adj(b.dataset.fplus,BOLT_YD));
- document.querySelectorAll("[data-fminus]").forEach(b=>b.onclick=()=>adj(b.dataset.fminus,-BOLT_YD));
- document.querySelectorAll("[data-fset]").forEach(b=>b.onclick=()=>{ const c=b.dataset.fset,v=prompt(c+" — exact yards:",OVR.fabric.yards[c]||0); if(v!==null){OVR.fabric.yards[c]=Math.max(0,+v||0);save();render();} });
- document.querySelectorAll("[data-forder]").forEach(b=>b.onclick=()=>{ const [c,n]=b.dataset.forder.split("|"); OVR.fabric.orders.push({id:"o"+Date.now()+c,fabric:"Core Solid: "+c,bolts:+n,vendor:"MDG",thread:CORE_THREAD[c]||"white",core:true,placed:0,arrive:4,received:false}); save(); render(); });
- document.querySelectorAll("[data-porder]").forEach(b=>b.onclick=()=>{ const r=printRecs[+b.dataset.porder]; const th=(prompt("Thread for "+r.p+" (navy/white/black):","white")||"white").toLowerCase(); OVR.fabric.orders.push({id:"o"+Date.now()+r.p,fabric:r.p,bolts:1,vendor:r.vendor,sku:r.sku,thread:th,core:false,placed:0,arrive:LEAD[r.vendor]||7,received:false}); save(); render(); });
- document.querySelectorAll("[data-freceive]").forEach(b=>b.onclick=()=>{ const o=OVR.fabric.orders.find(x=>x.id===b.dataset.freceive); if(o){ o.received=true; if(o.core){ const m=(o.fabric||"").replace("Core Solid: ",""); if(CORE_VEL[m]!==undefined) OVR.fabric.yards[m]=(OVR.fabric.yards[m]||0)+(o.bolts||1)*BOLT_YD; } } save(); render(); });
+ document.querySelectorAll("[data-fplus]").forEach(b=>b.onclick=()=>adj(b.dataset.fplus,CB));
+ document.querySelectorAll("[data-fminus]").forEach(b=>b.onclick=()=>adj(b.dataset.fminus,-CB));
+ document.querySelectorAll("[data-fset]").forEach(b=>b.onclick=()=>{ const c=b.dataset.fset,v=prompt(c+" — exact yards on hand:",OVR.fabric.yards[c]||0); if(v!==null){OVR.fabric.yards[c]=Math.max(0,+v||0);save();render();} });
+ document.querySelectorAll("[data-forder]").forEach(b=>b.onclick=()=>{ const [c,n]=b.dataset.forder.split("|"); OVR.fabric.orders.push({id:"o"+Date.now()+c,fabric:"Core Solid: "+c,bolts:+n,boltYd:CB,vendor:"MDG",thread:CORE_THREAD[c]||"white",core:true,placed:0,arrive:4,received:false}); save(); render(); });
+ document.querySelectorAll("[data-porder]").forEach(b=>b.onclick=()=>{ const r=PRINT_RECS[+b.dataset.porder]; const th=(prompt("Thread for "+r.p+" (navy/white/black):","white")||"white").toLowerCase(); OVR.fabric.orders.push({id:"o"+Date.now()+r.p,fabric:r.p,bolts:1,boltYd:15,vendor:r.vendor,sku:r.sku,thread:th,core:false,placed:0,arrive:LEAD[r.vendor]||7,received:false}); save(); render(); });
+ document.querySelectorAll("[data-freceive]").forEach(b=>b.onclick=()=>{ const o=OVR.fabric.orders.find(x=>x.id===b.dataset.freceive); if(!o) return; const exp=(o.bolts||1)*(o.boltYd||15); const v=prompt("Actual yards received for "+o.fabric+"? (delivered amounts vary)",exp); if(v===null) return; o.yards=Math.max(0,+v||exp); o.received=true; if(o.core){ const m=(o.fabric||"").replace("Core Solid: ",""); if(CORE_VEL[m]!==undefined) OVR.fabric.yards[m]=(OVR.fabric.yards[m]||0)+o.yards; } save(); render(); });
  document.querySelectorAll("[data-fcancel]").forEach(b=>b.onclick=()=>{ OVR.fabric.orders=OVR.fabric.orders.filter(x=>x.id!==b.dataset.fcancel); save(); render(); });
- document.querySelectorAll("[data-fcut]").forEach(b=>b.onclick=()=>{ cutIntoRun(b.dataset.fcut); });
+ document.querySelectorAll("[data-fcut]").forEach(b=>b.onclick=()=>cutIntoRun(b.dataset.fcut));
  document.querySelectorAll("[data-fno]").forEach(b=>b.onclick=()=>{ OVR.fabric.noReorder=[...new Set([...(OVR.fabric.noReorder||[]),b.dataset.fno])]; save(); render(); });
  const fnr=document.getElementById("fnoreset"); if(fnr) fnr.onclick=(e)=>{ e.preventDefault(); OVR.fabric.noReorder=[]; save(); render(); };
  const ao=document.getElementById("faddorder"); if(ao) ao.onclick=()=>{
   const nm=prompt("Fabric / pattern name:"); if(!nm) return;
   const ven=prompt("Vendor:","MDG")||""; const bl=+prompt("Bolts?","1")||1;
+  const isCore=CORE_VEL[nm.replace("Core Solid: ","")]!==undefined, isCplus=/comfort\+/i.test(nm);
+  const by=isCore?25:15;
   const th=(prompt("Thread (navy/white/black):","white")||"white").toLowerCase();
-  OVR.fabric.orders.push({id:"o"+Date.now()+nm,fabric:nm,bolts:bl,vendor:ven,thread:th,core:(CORE_VEL[nm.replace("Core Solid: ","")]!==undefined),placed:0,arrive:LEAD[ven]||7,received:false});
+  OVR.fabric.orders.push({id:"o"+Date.now()+nm,fabric:nm,bolts:bl,boltYd:by,vendor:ven,thread:th,core:isCore,placed:0,arrive:LEAD[ven]||7,received:false});
   save(); render();
  };
 }

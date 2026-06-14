@@ -283,7 +283,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-13-K";
+const BUILD="2026-06-13-L";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -703,84 +703,88 @@ function render(){
 
 
 const CORE_VEL = {"Black":37.6,"Navy":28.7,"Steel Grey":9.2,"Lilac":6.4,"Ceil Blue":6.2,"Flamingo":4.6,"Wedgewood":4.4,"Caribbean":4.3,"Maroon":2.9,"Royal Blue":0.9,"Red":0.6,"Dusty Pink":0.6,"Hunter Green":0.1};
-const CORE_HEX = {"Black":"#2B2A28","Navy":"#1F2D4D","Steel Grey":"#9A9FA4","Lilac":"#C9B8E0","Ceil Blue":"#9DBBD8","Flamingo":"#E89BB0","Wedgewood":"#6E8CA8","Caribbean":"#3FB6B6","Maroon":"#6E2433","Royal Blue":"#274BimagB0".replace("imag",""),"Red":"#C0392B","Dusty Pink":"#D8A7B5","Hunter Green":"#2F5E45"};
-const CORE_THREAD = {"Black":"Black","Navy":"Navy","Steel Grey":"Black","Maroon":"Black","Red":"Black","Royal Blue":"Navy","Hunter Green":"Black"};
-const BOLT_HATS = 46;
-function fabInit(){ if(!OVR.fabric) OVR.fabric={bolts:{},orders:[]}; if(!OVR.fabric.bolts) OVR.fabric.bolts={}; if(!OVR.fabric.orders) OVR.fabric.orders=[]; }
+const CORE_HEX = {"Black":"#2B2A28","Navy":"#1F2D4D","Steel Grey":"#9A9FA4","Lilac":"#C9B8E0","Ceil Blue":"#9DBBD8","Flamingo":"#E89BB0","Wedgewood":"#6E8CA8","Caribbean":"#3FB6B6","Maroon":"#6E2433","Royal Blue":"#2748A8","Red":"#C0392B","Dusty Pink":"#D8A7B5","Hunter Green":"#2F5E45"};
+const CORE_THREAD = {"Black":"black","Navy":"navy","Steel Grey":"black","Maroon":"black","Red":"black","Royal Blue":"navy","Hunter Green":"black"};
+const THREADPILL = {navy:["#23355C","#fff"],white:["#EDEAE0","#444"],black:["#2B2A28","#fff"]};
+const BOLT_YD = 15;            // a "bolt" when ordering core solids
+const HATS_PER_YD = 46/15;     // ~3.07 hats per yard
+function fabInit(){ if(!OVR.fabric) OVR.fabric={}; if(!OVR.fabric.yards) OVR.fabric.yards={}; if(!OVR.fabric.orders) OVR.fabric.orders=[]; if(!OVR.fabric.thread) OVR.fabric.thread={}; }
 function coreDemand(color){
  let hats=0;
  RUNS.forEach(r=>{ if(r.done) return; r.lines.forEach(l=>{ if(l.p==="Core Solid: "+color) hats+=l.q.reduce((a,b)=>a+b,0); }); });
  try{ CUSTOM.forEach(o=>{ if(shipped(o)) return; const c=(o.note||"")+" "+o.name; if(c.toLowerCase().includes(color.toLowerCase())) hats+=coTime(o).hats; }); }catch(e){}
  return hats;
 }
+function threadChipHtml(t){ if(!t) return ""; const c=THREADPILL[t]||["#999","#fff"]; return `<span class="fbadge" style="background:${c[0]};color:${c[1]}">${t} thread</span>`; }
 function renderFabric(){
  fabInit();
  const colors=Object.keys(CORE_VEL);
- let lowN=0;
- colors.forEach(c=>{ const b=OVR.fabric.bolts[c]||0; const wk=b*BOLT_HATS/Math.max(CORE_VEL[c]/4.33,0.1); if(b===0||wk<3) lowN++; });
+ const yd=c=>OVR.fabric.yards[c]||0;
+ const wkCover=c=>yd(c)*HATS_PER_YD/Math.max(CORE_VEL[c]/4.33,0.1);
+ const low=c=>yd(c)===0||wkCover(c)<3;
+ const lowN=colors.filter(low).length;
  const incoming=OVR.fabric.orders.filter(o=>!o.received);
+ const totYd=colors.reduce((s,c)=>s+yd(c),0);
  document.getElementById("fabsummary").innerHTML=`<div class="cosnap">
-  <div class="cs"><b>${colors.reduce((s,c)=>s+(OVR.fabric.bolts[c]||0),0)}</b><span>core bolts on hand</span></div>
+  <div class="cs"><b>${Math.round(totYd)}</b><span>core yards on hand</span></div>
   <div class="cs"><b style="${lowN?'color:#C2452D':''}">${lowN}</b><span>colors to reorder</span></div>
   <div class="cs"><b>${incoming.length}</b><span>orders incoming</span></div>
- </div><div class="note">Core solids are your kept stock (also the blanks for embroidery customs). Tap − / + as you cut or receive. Prints are buy-to-cut, tracked as orders below.</div>`;
+ </div><div class="note">On-hand tracked in yards; you order in bolts (1 bolt ≈ 15 yd ≈ 46 hats). Core solids are kept stock + embroidery blanks. Demand reflects runs 20/21/22 + pending customs. Prints are buy-to-cut — add them under “To order”.</div>`;
 
- // CORE SOLIDS STOCK
  let h=`<div class="fabsec">On hand · core solids</div><div class="fabgrid">`;
  colors.forEach(c=>{
-  const b=OVR.fabric.bolts[c]||0;
-  const wk=b*BOLT_HATS/Math.max(CORE_VEL[c]/4.33,0.1);
-  const dem=coreDemand(c);
-  const low=b===0||wk<3;
-  if(low) lowN=lowN;
-  h+=`<div class="fcard${low?' low':''}">
-   <div class="fn"><span class="swdot" style="background:${CORE_HEX[c]||'#999'}"></span>${c}</div>
-   <div class="fstep"><button data-fminus="${c}">−</button><b>${b}</b><button data-fplus="${c}">+</button><span>bolts</span></div>
-   <div class="fmeta">${b?`~${Math.round(wk)} wk cover`:'<b style="color:#C2452D">out</b>'} · ${Math.round(CORE_VEL[c])}/mo${dem?` · ${dem} committed`:''}</div>
-   ${low?`<div style="margin-top:7px"><span class="fbadge" style="background:#FCEBEB;color:#A32D2D">reorder</span></div>`:''}
+  const y=yd(c), bolts=(y/BOLT_YD), dem=coreDemand(c), lw=low(c);
+  h+=`<div class="fcard${lw?' low':''}">
+   <div class="fn"><span class="swdot" style="background:${CORE_HEX[c]}"></span>${c} ${threadChipHtml(CORE_THREAD[c]||'white')}</div>
+   <div class="fstep"><button data-fminus="${c}">−</button><b data-fset="${c}">${Math.round(y)}</b><button data-fplus="${c}">+</button><span>yd${y?` · ~${bolts.toFixed(1)} bolts`:''}</span></div>
+   <div class="fmeta">${y?`~${Math.round(y*HATS_PER_YD)} hats · ~${Math.round(wkCover(c))} wk cover`:'<b style="color:#C2452D">out</b>'} · ${Math.round(CORE_VEL[c])}/mo${dem?` · ${dem} committed`:''}</div>
+   ${lw?`<div style="margin-top:7px"><span class="fbadge" style="background:#FCEBEB;color:#A32D2D">reorder</span></div>`:''}
   </div>`;
  });
- h+=`</div>`;
+ h+=`</div><div class="fmeta" style="margin-top:6px">Tap − / + to add/remove a bolt (15 yd). Tap the number to set exact yards.</div>`;
 
- // TO ORDER
- const recs=colors.filter(c=>{ const b=OVR.fabric.bolts[c]||0; const wk=b*BOLT_HATS/Math.max(CORE_VEL[c]/4.33,0.1); return b===0||wk<3; })
-   .filter(c=>!OVR.fabric.orders.some(o=>!o.received&&o.fabric==="Core Solid: "+c));
- h+=`<div class="fabsec">To order <span class="pill2">${recs.length}</span></div>`;
- if(recs.length){
-  recs.sort((a,b)=>CORE_VEL[b]-CORE_VEL[a]);
-  recs.forEach(c=>{
-   const need=Math.max(2,Math.ceil((CORE_VEL[c]/4.33*4)/BOLT_HATS)); // ~4 weeks cover
-   h+=`<div class="frow"><span class="swdot" style="background:${CORE_HEX[c]||'#999'}"></span>
-    <div class="fi"><b>Core Solid: ${c}</b><span>MDG solid · $2.95/yd · ~4 day lead · buy ~${need} bolt${need>1?'s':''} (≈$${(need*44).toFixed(0)})</span></div>
-    <button class="btn go" data-forder="${c}|${need}">Mark ordered</button></div>`;
-  });
- } else { h+=`<div class="note">Nothing below reorder point. 👍</div>`; }
+ const recs=colors.filter(low).filter(c=>!OVR.fabric.orders.some(o=>!o.received&&o.fabric==="Core Solid: "+c));
+ h+=`<div class="fabsec">To order <span class="pill2">${recs.length} core</span></div>`;
+ recs.sort((a,b)=>CORE_VEL[b]-CORE_VEL[a]);
+ recs.forEach(c=>{
+  const need=Math.max(2,Math.ceil((CORE_VEL[c]/4.33*4)/46));
+  h+=`<div class="frow"><span class="swdot" style="background:${CORE_HEX[c]}"></span>
+   <div class="fi"><b>Core Solid: ${c}</b><span>MDG solid · $2.95/yd · ~4 day lead · ~${need} bolt${need>1?'s':''} (${need*BOLT_YD} yd, ≈$${(need*BOLT_YD*2.95).toFixed(0)})</span></div>
+   ${threadChipHtml(CORE_THREAD[c]||'white')}<button class="btn go" data-forder="${c}|${need}">Mark ordered</button></div>`;
+ });
+ h+=`<div style="margin-top:8px"><button class="btn" id="faddorder">+ Add a print/other fabric order</button></div>`;
 
- // INCOMING (pipeline)
  h+=`<div class="fabsec">Incoming <span class="pill2">${incoming.length}</span></div>`;
- if(incoming.length){
-  incoming.forEach(o=>{
+ if(incoming.length){ incoming.forEach(o=>{
    const arr=o.arrive!==undefined?fmtDay(o.arrive):"—";
-   h+=`<div class="frow"><div class="fi"><b>${o.fabric}${o.qty?` ×${o.qty}`:''}</b><span>${o.vendor||'MDG'} · ordered ${fmtDay(o.placed)} · arriving ~${arr}</span></div>
-    <button class="btn" data-fcancel="${o.id}">Cancel</button><button class="btn go" data-freceive="${o.id}">Mark received</button></div>`;
-  });
- } else { h+=`<div class="note">No fabric on order.</div>`; }
+   h+=`<div class="frow"><div class="fi"><b>${o.fabric}${o.bolts?` · ${o.bolts} bolt${o.bolts>1?'s':''} (${o.bolts*BOLT_YD} yd)`:''}</b><span>${o.vendor||'MDG'} · ordered ${fmtDay(o.placed||0)} · arriving ~${arr}</span></div>
+    ${threadChipHtml(o.thread)}<button class="btn" data-fcancel="${o.id}">Cancel</button><button class="btn go" data-freceive="${o.id}">Received</button></div>`;
+ }); } else h+=`<div class="note">No fabric on order.</div>`;
 
- // CUT HELPER
- h+=`<div class="fabsec">Cut helper</div>
-  <div class="card"><div class="fmeta" style="font-size:12.5px;line-height:1.7">
-  One bolt cuts from 144" double-layered, sectioned by style. Default yields:<br>
+ h+=`<div class="fabsec">Cut helper</div><div class="card"><div class="fmeta" style="font-size:12.5px;line-height:1.7">
+  Bolt cuts from 144" double-layered, sectioned by style:<br>
   <b>12 yd → ~39 hats:</b> 12 LP · 8 CP · 7 CTE · 6 LTE · 2 LS · 2 CO · 2 CS<br>
   <b>15 yd → ~46 hats:</b> 16 LP · 8 CP · 8 CTE · 8 LTE · 2 LS · 2 CO · 2 CS<br>
   <b>Comfort+ 15 yd → 48:</b> 20 CTE · 20 CP · 4 CO · 4 CS<br>
-  Tip: layer up your fastest-selling style for a pattern to skew the mix. When you plan a run, set the per-style quantities in the run builder and the schedule sizes itself.</div></div>`;
+  Layer up the fastest-selling style to skew the mix.</div></div>`;
 
  document.getElementById("fabwrap").innerHTML=h;
- document.querySelectorAll("[data-fplus]").forEach(b=>b.onclick=()=>{ const c=b.dataset.fplus; OVR.fabric.bolts[c]=(OVR.fabric.bolts[c]||0)+1; save(); render(); });
- document.querySelectorAll("[data-fminus]").forEach(b=>b.onclick=()=>{ const c=b.dataset.fminus; OVR.fabric.bolts[c]=Math.max(0,(OVR.fabric.bolts[c]||0)-1); save(); render(); });
- document.querySelectorAll("[data-forder]").forEach(b=>b.onclick=()=>{ const [c,n]=b.dataset.forder.split("|"); OVR.fabric.orders.push({id:String(Date.now())+c,fabric:"Core Solid: "+c,qty:+n,vendor:"MDG",placed:0,arrive:4,received:false}); save(); render(); });
- document.querySelectorAll("[data-freceive]").forEach(b=>b.onclick=()=>{ const o=OVR.fabric.orders.find(x=>x.id===b.dataset.freceive); if(o){ o.received=true; const m=(o.fabric||"").replace("Core Solid: ",""); if(CORE_VEL[m]!==undefined) OVR.fabric.bolts[m]=(OVR.fabric.bolts[m]||0)+(o.qty||1); } save(); render(); });
+ const adj=(c,d)=>{ OVR.fabric.yards[c]=Math.max(0,Math.round((OVR.fabric.yards[c]||0)+d)); save(); render(); };
+ document.querySelectorAll("[data-fplus]").forEach(b=>b.onclick=()=>adj(b.dataset.fplus,BOLT_YD));
+ document.querySelectorAll("[data-fminus]").forEach(b=>b.onclick=()=>adj(b.dataset.fminus,-BOLT_YD));
+ document.querySelectorAll("[data-fset]").forEach(b=>b.onclick=()=>{ const c=b.dataset.fset; const v=prompt(c+" — exact yards on hand:",OVR.fabric.yards[c]||0); if(v!==null){ OVR.fabric.yards[c]=Math.max(0,+v||0); save(); render(); } });
+ document.querySelectorAll("[data-forder]").forEach(b=>b.onclick=()=>{ const [c,n]=b.dataset.forder.split("|"); OVR.fabric.orders.push({id:String(Date.now())+c,fabric:"Core Solid: "+c,bolts:+n,vendor:"MDG",thread:CORE_THREAD[c]||"white",placed:0,arrive:4,received:false}); save(); render(); });
+ document.querySelectorAll("[data-freceive]").forEach(b=>b.onclick=()=>{ const o=OVR.fabric.orders.find(x=>x.id===b.dataset.freceive); if(o){ o.received=true; const m=(o.fabric||"").replace("Core Solid: ",""); if(CORE_VEL[m]!==undefined) OVR.fabric.yards[m]=(OVR.fabric.yards[m]||0)+(o.bolts||1)*BOLT_YD; } save(); render(); });
  document.querySelectorAll("[data-fcancel]").forEach(b=>b.onclick=()=>{ OVR.fabric.orders=OVR.fabric.orders.filter(x=>x.id!==b.dataset.fcancel); save(); render(); });
+ const ao=document.getElementById("faddorder"); if(ao) ao.onclick=()=>{
+  const nm=prompt("Fabric / pattern name:"); if(!nm) return;
+  const ven=prompt("Vendor (MDG / Michaels / Timeless Treasures / Dear Stella / Hoffman / Little Cocalico):","MDG")||"";
+  const bl=+prompt("How many bolts?","1")||1;
+  const th=(prompt("Thread group (navy / white / black):","white")||"white").toLowerCase();
+  const lead={mdg:4,michaels:5,"timeless treasures":8,"dear stella":8,hoffman:7,"little cocalico":10}[ven.toLowerCase()]||7;
+  OVR.fabric.orders.push({id:String(Date.now())+nm,fabric:nm,bolts:bl,vendor:ven,thread:th,placed:0,arrive:lead,received:false});
+  save(); render();
+ };
 }
 
 function applyPerms(){

@@ -283,7 +283,7 @@ section { display:none; } section.on { display:block; }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD="2026-06-13-O";
+const BUILD="2026-06-14-P";
 let ACCESS_TOKEN = null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -847,7 +847,7 @@ function renderOps(){
  const el = document.getElementById("opslog");
  el.innerHTML = OVR.log.length ? `<div class="opsbar"><b>Adjustments:</b> ${OVR.log.join(" · ")} <button class="btn" id="clearops">Clear all</button></div>` : "";
  const b = document.getElementById("clearops");
- if(b) b.onclick = ()=>{ OVR = {avail:{},pins:{},log:[],trips:(OVR.trips||{}),detach:{},splits:{},arrive:{},gates:[]}; save(); render(); };
+ if(b) b.onclick = ()=>{ OVR = {avail:{},pins:{},log:[],trips:(OVR.trips||{}),detach:{},splits:{},arrive:{},gates:[],fabric:(OVR.fabric||{})}; ALLOW_CLEAR=true; save(); ALLOW_CLEAR=false; render(); };
 }
 
 function renderDays(sched){
@@ -1645,10 +1645,14 @@ document.getElementById("resetbtn").onclick=()=>{ DONE=seedDone(); save(); rende
 
 /* ---------- shared state (Supabase) ---------- */
 const CLOUD_KEYS = {};
-let CLOUD_READY = false, APP_STARTED = false, USER_TOUCHED = false;
+let CLOUD_READY = false, APP_STARTED = false, USER_TOUCHED = false, ALLOW_CLEAR = false;
 const saveTimers = {}, PENDING = {};
 function cloudSave(key, value){
  if(!CLOUD_READY || !USER_TOUCHED) return;
+ if(key===OVRKEY && !ALLOW_CLEAR){
+  try{ const prev=CLOUD_KEYS[key]?JSON.parse(CLOUD_KEYS[key]):null;
+   if(prev){ const had=Object.keys(prev.pins||{}).length, now=Object.keys((value&&value.pins)||{}).length; if(had>0 && now===0) return; } }catch(e){}
+ }
  CLOUD_KEYS[key] = JSON.stringify(value);
  PENDING[key] = value;
  clearTimeout(saveTimers[key]);
@@ -1668,7 +1672,9 @@ window.addEventListener("pagehide", flushPending);
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPending(); });
 function applyRemote(key, val, skipRender){
  if(key===LSKEY) DONE = val||{};
- else if(key===OVRKEY){ OVR = val||{avail:{},pins:{},log:[]}; if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; }
+ else if(key===OVRKEY){ const inc=Object.keys((val&&val.pins)||{}).length, loc=Object.keys((OVR&&OVR.pins)||{}).length;
+  if(inc===0 && loc>0 && USER_TOUCHED){ try{cloudSave(OVRKEY,OVR);}catch(e){} return; }
+  OVR = val||{avail:{},pins:{},log:[]}; if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; if(!OVR.fabric)OVR.fabric={}; }
  else if(key===PKEY) PAIR = val||{};
  else if(key===COKEY && Array.isArray(val) && val.length) CUSTOM = val;
  else if(key===RKEY && Array.isArray(val)){ XRUNS = val; rebuildRuns(); }

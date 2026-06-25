@@ -248,6 +248,7 @@ button{font-family:var(--sans);cursor:pointer}
     <div class="herorow">
       <img class="herologo" src="/White%20Logo.png" alt="Taylor Made Scrub Hats">
       <div class="heroactions">
+        <a class="btn ghost tiny" href="/scheduler.html" style="text-decoration:none">⚙ Production</a>
         <button class="btn ghost tiny" id="refreshBtn">↻ Refresh</button>
         <span class="rolechip" id="roleChip">Team</span>
         <button class="btn ghost tiny" id="importBtn">⤒ Import</button>
@@ -427,6 +428,7 @@ function renderAnalytics(){
   if(ct)ct.onchange=()=>{cTo=ct.value;renderDetail();};
 }
 function custTitle(c){const o=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return (o&&o.iname)||c.name;}
+function teamTitle(c){const o=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return (o&&o.iname)||(o&&o.id?('#'+o.id):'')||'Custom order';}
 function custInames(c){return c.orders.map(o=>o.iname||'').join(' ');}
 function custOrderNums(c){return c.orders.map(o=>String(o.id||'')).join(' ');}
 function emailOf(c){const m=((c.email||'')+' '+(c.contact||'')).match(/[^\s·,;|<>]+@[^\s·,;|<>]+\.[^\s·,;|<>]+/);return m?m[0]:'';}
@@ -436,7 +438,7 @@ function renderList(){
   const f=(document.getElementById('q').value||'').trim().toLowerCase();
   const rows=[...state].sort((a,b)=>latest(b).localeCompare(latest(a))).filter(c=>!f||custSearchBlob(c).includes(f));
   document.getElementById('lcount').textContent=rows.length+' order'+(rows.length===1?'':'s');
-  document.getElementById('custlist').innerHTML=rows.map(c=>{const types=[...new Set(c.orders.flatMap(o=>o.type||[]))];const title=custTitle(c);const ce=emailOf(c),cp=contactName(c);const sub=(title!==c.name?esc(c.name)+' · ':'')+esc(cp||'—')+(ce?' · '+esc(ce):'');
+  document.getElementById('custlist').innerHTML=rows.map(c=>{const types=[...new Set(c.orders.flatMap(o=>o.type||[]))];const title=isLead?custTitle(c):teamTitle(c);const ce=emailOf(c),cp=contactName(c);const sub=isLead?((title!==c.name?esc(c.name)+' · ':'')+esc(cp||'—')+(ce?' · '+esc(ce):'')):(c.orders.length+' order'+(c.orders.length>1?'s':''));
     return '<div class="cust'+(sel===c.id?' active':'')+'" data-cust="'+c.id+'"><div><div class="nm">'+esc(title)+'</div><div class="sub">'+sub+'</div><div>'+typeTags(types)+'</div></div>'+
       '<div class="right"><div class="cnt">'+d(latest(c))+'</div>'+(c.orders.length>1?'<div class="badge rep">Repeat ×'+c.orders.length+'</div>':'<div class="cnt">'+c.orders.length+' order</div>')+'</div></div>';}).join('');
 }
@@ -464,7 +466,7 @@ function orderEdit(c,o){const tchk=t=>'<label><input type="checkbox" data-t="'+t
   return '<div class="order"><div class="ohead"><span class="onum">Editing '+(o.iname?esc(o.iname):'#'+esc(o.id||''))+'</span></div><div class="edit" data-form="'+o.dbid+'"><div class="fld full"><label>Internal team name (used in Clockify)</label><input data-k="iname" value="'+esc(o.iname)+'"></div><div class="erow" style="margin-top:10px">'+fld('Order #','id',o.id)+fld('Order date','date',o.date,'date')+fld('Customer deadline','deadline',o.deadline,'date')+fld('Goal completion','ideadline',o.ideadline,'date')+fld('Est. ship','est',o.est,'date')+'</div><div class="fld full"><label>Type</label><div class="types">'+tchk('Embroidery')+tchk('Custom Print')+tchk('Patch')+'</div></div><div class="erow" style="margin-top:10px">'+fld('Styles / qty','styles',o.styles)+fld('Scrub hat color','scrub',o.scrub)+fld('Logo','logo',o.logo)+fld('Ribbon / ties','ribbon',o.ribbon)+fld('Sewing thread','sewing',o.sewing)+fld('Embroidery thread','emb',o.emb)+'</div><div class="fld full"><label>Placement</label><input data-k="placement" value="'+esc(o.placement)+'"></div><div class="fld full" style="margin-top:10px"><label>Notes</label><textarea data-k="notes" rows="2">'+esc(o.notes)+'</textarea></div><div class="secthead">Production timeline</div><div class="msgrid">'+ms+'</div>'+finS+'<div class="editbar"><button class="btn" data-save="'+o.dbid+'">Save</button><button class="link" data-cancel="1">Cancel</button><span class="right"><button class="btn danger tiny" data-del="'+o.dbid+'">Delete order</button></span></div></div></div>';}
 function renderPending(){const rows=pendingOrders();
   const dl=o=>{const x=effDeadline(o)||o.ship;if(!x)return '<span class="dl-chip dl-none">no date</span>';const days=Math.round((new Date(x+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);const lbl=d(x)+(days<0?' · '+(-days)+'d late':(days===0?' · today':' · '+days+'d'));return '<span class="dl-chip '+(days<0?'dl-over':(days<=7?'dl-soon':'dl-ok'))+'">'+lbl+'</span>';};
-  const body=rows.map(({c,o,s})=>'<tr data-go="'+c.id+'"><td><b>'+esc(o.iname||c.name)+'</b>'+(o.iname?'<div style="color:var(--muted);font-size:12px">'+esc(c.name)+'</div>':'')+'</td><td>#'+esc(o.id||'')+'</td><td>'+statusPill(s)+'</td><td>'+(o.type||[]).join(', ')+'</td><td>'+dl(o)+'</td></tr>').join('');
+  const body=rows.map(({c,o,s})=>'<tr data-go="'+c.id+'"><td><b>'+esc(o.iname||(isLead?c.name:('#'+(o.id||''))))+'</b>'+((isLead&&o.iname)?'<div style="color:var(--muted);font-size:12px">'+esc(c.name)+'</div>':'')+'</td><td>#'+esc(o.id||'')+'</td><td>'+statusPill(s)+'</td><td>'+(o.type||[]).join(', ')+'</td><td>'+dl(o)+'</td></tr>').join('');
   document.getElementById('detail').innerHTML='<div class="dhead"><div><h2>In progress</h2><div class="meta">'+rows.length+' open · by deadline</div></div><div class="acts"><button class="link" data-closepend="1">Close</button></div></div><div class="pending">'+(rows.length?'<table class="ptab"><thead><tr><th>Customer</th><th>Order</th><th>Status</th><th>Type</th><th>Deadline</th></tr></thead><tbody>'+body+'</tbody></table>':'<div class="empty">All caught up! 🎉</div>')+'</div>';}
 function renderDetail(){
   if(view==='pending'){renderPending();return;}
@@ -472,7 +474,7 @@ function renderDetail(){
   const c=state.find(x=>x.id===sel),el=document.getElementById('detail');
   if(!c){el.innerHTML='<div class="empty">Select a customer.</div>';return;}
   const orders=[...c.orders].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  el.innerHTML='<div class="dhead"><div><h2>'+esc(c.name)+'</h2><div class="meta">Contact · '+esc(contactName(c)||c.contact||'—')+(emailOf(c)?' · ✉ <a href="mailto:'+esc(emailOf(c))+'">'+esc(emailOf(c))+'</a>':'')+' · '+c.orders.length+' order'+(c.orders.length>1?'s':'')+'</div></div><div class="acts">'+(c.orders.length>1?'<span class="badge rep">Repeat customer</span>':'')+'<button class="link" data-editcust="'+c.id+'">Edit customer</button><button class="btn tiny" data-addorder="'+c.id+'">+ Add order</button></div></div><div class="timeline-wrap"><div class="tl-label">Order history · newest first</div>'+orders.map((o,i)=>editing===o.dbid?orderEdit(c,o):orderView(c,o,i===0)).join('')+'</div>';
+  el.innerHTML='<div class="dhead"><div><h2>'+esc(isLead?c.name:teamTitle(c))+'</h2><div class="meta">'+(isLead?('Contact · '+esc(contactName(c)||c.contact||'—')+(emailOf(c)?' · ✉ <a href="mailto:'+esc(emailOf(c))+'">'+esc(emailOf(c))+'</a>':'')+' · '):'')+c.orders.length+' order'+(c.orders.length>1?'s':'')+'</div></div><div class="acts">'+(c.orders.length>1?'<span class="badge rep">Repeat customer</span>':'')+(isLead?'<button class="link" data-editcust="'+c.id+'">Edit customer</button>':'')+'<button class="btn tiny" data-addorder="'+c.id+'">+ Add order</button></div></div><div class="timeline-wrap"><div class="tl-label">Order history · newest first</div>'+orders.map((o,i)=>editing===o.dbid?orderEdit(c,o):orderView(c,o,i===0)).join('')+'</div>';
 }
 function render(){renderStats();renderList();renderDetail();const g=document.querySelector('.grid');if(g)g.classList.toggle('topview',view==='pending'||view==='analytics'||(view==='detail'&&!!sel));}
 function mScroll(){if(window.innerWidth<=820){const d=document.getElementById('detail');if(d)setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'start'}),60);}}

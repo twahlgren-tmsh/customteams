@@ -364,14 +364,14 @@ section { display:none; } section.on { display:block; }
 </section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-06-24 · web1 (Hosted: team login, live cross-device sync, custom orders read live from the orders table)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-06-24 · web2 (Hosted + live editable custom-order production details, mockups, team Fabric/Cut hidden)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-06-24-web1";
+const BUILD="2026-06-24-web2";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -779,7 +779,8 @@ function orderToCustom(o){
   due:due?String(due).slice(0,10):"", styles:o.styles||"",
   emb:isEmb?12:0, e:isEmb?1:0, p:(isPrint||isPatch)?1:0,
   ms, sewPct:dn("sewing")?100:0, embPct:dn("embroidery")?100:0,
-  note:((types.join(" · "))||"")+(o.scrub_color?(" · "+o.scrub_color):"") };
+  note:((types.join(" · "))||"")+(o.scrub_color?(" · "+o.scrub_color):""),
+  scrub:o.scrub_color||"", logo:o.logo||"", ribbon:o.ribbon||"", sthread:o.sewing_thread||"", ethread:o.embroidery_thread||"", place:o.placement||"", font:o.font_option||"", pnotes:o.notes||"", mockup:o.mockup_url||"" };
 }
 async function loadOrders(){ if(typeof sb==="undefined") return; try{
   const {data,error}=await sb.from("orders").select("*");
@@ -788,11 +789,15 @@ async function loadOrders(){ if(typeof sb==="undefined") return; try{
   CUSTOM=mapped; try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){} render();
  }catch(e){} }
 let _pushT=null;
+const PROD_COL={scrub:"scrub_color",logo:"logo",ribbon:"ribbon",sthread:"sewing_thread",ethread:"embroidery_thread",place:"placement",font:"font_option",pnotes:"notes"};
+let _selfWrite=0;
+function prodField(label,id,field,val){ return `<label style="display:flex;flex-direction:column;font-size:10.5px;color:#7A766B;font-weight:600;gap:2px">${label}<input class="coprodf" data-prod="${id}|${field}" value="${(val||"").replace(/"/g,"&quot;")}" style="border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:13px;font-weight:400;color:var(--ink)"></label>`; }
+async function saveOrderField(o,field,value){ try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){} if(typeof sb==="undefined"||!o._db||!o._onum) return; const col=PROD_COL[field]; if(!col) return; _selfWrite=Date.now(); try{ await sb.from("orders").update({[col]:value, updated_at:new Date().toISOString()}).eq("order_number", o._onum); }catch(e){} }
 function pushCustomAll(){
  try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
  if(typeof sb==="undefined"||!CLOUD_READY) return;
  clearTimeout(_pushT);
- _pushT=setTimeout(async()=>{ const today=new Date().toISOString().slice(0,10);
+ _pushT=setTimeout(async()=>{ _selfWrite=Date.now(); const today=new Date().toISOString().slice(0,10);
   for(const o of CUSTOM){ if(!o._db||!o._onum) continue;
    const prev=o._ms0||{}; const base=Object.assign({}, prev);
    for(const step in MS_MAP){ const mk=MS_MAP[step]; const want=!!(o.ms&&o.ms[step]); const cur=base[mk]||{done:false,date:""};
@@ -1884,6 +1889,7 @@ function wireCutAll(){
 function applyPerms(){
  if(isLead) return;
  ["voxbtn","typebox","resetbtn","clearops","co-add","co-sync","co-refresh","editBtn","newrun","cutpick","cutrec","cutadd","cutclear","cutaccept","cutconfirm","resuggest","bkupBtn","restoreBtn"].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display="none"; });
+ ["fabric","cut"].forEach(v=>{ const b=document.querySelector('nav button[data-v="'+v+'"]'); if(b){ b.style.display="none"; if(b.classList.contains("on")){ const bd=document.querySelector('nav button[data-v="board"]'); if(bd) bd.click(); } } });
  document.querySelectorAll("[data-clstart],[data-clend],[data-cldel],[data-cutready]").forEach(e=>{ e.style.pointerEvents="none"; e.style.opacity=".6"; });
  const f = document.querySelector(".coform"); if(f) f.style.display="none";
  document.querySelectorAll(".pcell").forEach(i=>i.disabled=true);
@@ -2214,6 +2220,23 @@ function renderCustom(){
       ${t.embRem>1?`<button class="btn ${o.schedEmb?"":"go"}" data-cosched="${o.id}|emb">${o.schedEmb?"Unschedule":"Schedule embroidery"}</button>`:`<em style="width:auto">✓ done</em>`}</div>`:""}
     </div>
     <div class="cotl">${tl}</div>
+    <div class="coprod" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
+     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start">
+      ${o.mockup?`<a href="${o.mockup}" target="_blank" rel="noopener"><img src="${o.mockup}" alt="mockup" style="height:96px;border-radius:8px;border:1px solid var(--line);object-fit:cover" loading="lazy" onerror="this.style.display='none'"></a>`:""}
+      <div style="flex:1;min-width:240px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+       ${prodField("Scrub / base color",o.id,"scrub",o.scrub)}
+       ${prodField("Logo colors",o.id,"logo",o.logo)}
+       ${prodField("Ribbon / ties",o.id,"ribbon",o.ribbon)}
+       ${prodField("Sewing thread",o.id,"sthread",o.sthread)}
+       ${prodField("Embroidery thread",o.id,"ethread",o.ethread)}
+       ${prodField("Placement",o.id,"place",o.place)}
+       ${prodField("Font",o.id,"font",o.font)}
+      </div>
+     </div>
+     <label style="display:block;margin-top:8px;font-size:10.5px;color:#7A766B;font-weight:600">Production notes · embroidery details · sizing requests</label>
+     <textarea class="coprodnote" data-prod="${o.id}|pnotes" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px" placeholder="Add embroidery text, sizing requests, special instructions…">${(o.pnotes||"").replace(/</g,"&lt;")}</textarea>
+     <span class="prodsaved" data-saved="${o.id}" style="font-size:11px;color:#3B6D11;opacity:0;transition:opacity .3s">Saved ✓</span>
+    </div>
    </div>
   </details>`;
  }).join("");
@@ -2259,6 +2282,7 @@ function renderCustom(){
   saveCO(); render();
  });
  document.querySelectorAll("[data-coemb]").forEach(i=>i.onchange=()=>{ const o=CUSTOM.find(x=>x.id===i.dataset.coemb); o.emb=+i.value||0; saveCO(); render(); });
+ document.querySelectorAll(".coprodf,.coprodnote").forEach(el=>{ el.onchange=()=>{ const parts=el.dataset.prod.split("|"); const id=parts[0], field=parts[1]; const o=CUSTOM.find(x=>x.id===id); if(!o) return; o[field]=el.value; saveOrderField(o,field,el.value); const sv=document.querySelector('[data-saved="'+id+'"]'); if(sv){ sv.style.opacity=1; setTimeout(()=>{sv.style.opacity=0;},1500); } }; });
  document.querySelectorAll("[data-cosched]").forEach(b=>b.onclick=()=>{
   const [id,kind] = b.dataset.cosched.split("|");
   const o = CUSTOM.find(x=>x.id===id);
@@ -2931,7 +2955,7 @@ function startApp(){ if(APP_STARTED) return; APP_STARTED=true;
  var lg=document.getElementById("login"); if(lg) lg.style.display="none";
  (async()=>{ try{ const {data:{user}}=await sb.auth.getUser(); const {data:prof}=await sb.from("profiles").select("role").eq("id",user.id).maybeSingle(); isLead=!!(prof&&prof.role==="lead"); }catch(e){ isLead=true; }
   await bootCloud(); await loadOrders();
-  try{ sb.channel("orders-live").on("postgres_changes",{event:"*",schema:"public",table:"orders"},()=>loadOrders()).subscribe(); }catch(e){}
+  try{ sb.channel("orders-live").on("postgres_changes",{event:"*",schema:"public",table:"orders"},()=>{ if(Date.now()-_selfWrite<2500) return; loadOrders(); }).subscribe(); }catch(e){}
   const touch=()=>{ USER_TOUCHED=true; window.removeEventListener("pointerdown",touch); window.removeEventListener("keydown",touch); };
   window.addEventListener("pointerdown",touch); window.addEventListener("keydown",touch);
   try{ document.querySelector(".foot").innerHTML += "  ·  web "+BUILD; }catch(e){}

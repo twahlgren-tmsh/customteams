@@ -273,7 +273,7 @@ button{font-family:var(--sans);cursor:pointer}
     </div>
     <div class="detail" id="detail"><div class="empty">Select a customer.</div></div>
   </div>
-  <div class="foot">Live database · synced to Shopify &amp; Clockify · Team view hides financials</div>
+  <div class="foot">Live database · updates in real time · synced to Shopify &amp; Clockify · Team view hides financials</div>
 </div>
 <div id="toast"></div>
 
@@ -281,6 +281,7 @@ button{font-family:var(--sans);cursor:pointer}
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const BUILD='2026-07-02-rt1';
 
 const MILE=[
  {key:'placed',label:'Order placed'},
@@ -346,6 +347,7 @@ async function enterApp(){
   document.getElementById('roleChip').textContent = isLead?'Lead':'Team';
   document.getElementById('importBtn').style.display = isLead?'':'none';
   await loadData(); render();
+  startRealtime();
 }
 document.getElementById('liBtn').onclick=async()=>{
   const email=document.getElementById('liEmail').value.trim(), pass=document.getElementById('liPass').value;
@@ -377,6 +379,20 @@ function computeLaborEst(){
   const per={emb:agg.emb.h?agg.emb.lab/agg.emb.h:null,print:agg.print.h?agg.print.lab/agg.print.h:null};
   state.forEach(c=>c.orders.forEach(o=>{o.fin=o.fin||{};const lab=num(o.fin.lab);const shipped=!!(o.delivered||(o.ms&&o.ms.shipped&&o.ms.shipped.done));if(shipped&&!(lab&&lab>0)){const cat=orderCat(o),p=cat?per[cat]:null,h=num(o.hats);if(p&&h)o.fin.labEst=Math.round(p*h*100)/100;}}));
   window.__laborPer=per;
+}
+
+/* ---------- realtime (live updates, BUILD rt1) ---------- */
+let _rtChan=null,_rtTimer=null,_rtPending=false;
+async function rtReload(){_rtPending=false;await loadData();render();}
+function rtFlush(){if(!_rtPending||editing)return false;rtReload();return true;}
+function rtKick(){if(editing){_rtPending=true;return;}clearTimeout(_rtTimer);_rtTimer=setTimeout(rtReload,400);}
+function startRealtime(){
+  if(_rtChan)return;
+  _rtChan=sb.channel('orders-live')
+    .on('postgres_changes',{event:'*',schema:'public',table:'orders'},rtKick)
+    .on('postgres_changes',{event:'*',schema:'public',table:'customers'},rtKick)
+    .subscribe();
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!editing)rtKick();});
 }
 
 /* ---------- stats / list / pending / detail (render) ---------- */
@@ -557,7 +573,7 @@ document.addEventListener('click',e=>{
   else if(t.dataset.go){sel=t.dataset.go;editing=null;view='detail';render();mScroll();}
   else if(t.dataset.closepend){view='detail';render();}
   else if(t.dataset.edit){editing=t.dataset.edit;renderDetail();}
-  else if(t.dataset.cancel){editing=null;renderDetail();}
+  else if(t.dataset.cancel){editing=null;if(!rtFlush())renderDetail();}
   else if(t.dataset.save){saveOrder(t.dataset.save);}
   else if(t.dataset.del){delOrder(t.dataset.del);}
   else if(t.dataset.addorder){addOrder(t.dataset.addorder);}

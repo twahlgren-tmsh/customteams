@@ -59,6 +59,10 @@ button{font-family:var(--sans);cursor:pointer}
 .heroactions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
 .heroactions .btn{border-color:rgba(255,255,255,.6)}
 .heroactions .btn.ghost{background:rgba(255,255,255,.95)}
+.appnav{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.appnav a{color:rgba(255,255,255,.85);text-decoration:none;font-weight:600;font-size:13px;padding:7px 14px;border-radius:999px}
+.appnav a:hover{background:rgba(255,255,255,.18)}
+.appnav a.on{background:rgba(255,255,255,.95);color:var(--dark)}
 .rolechip{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700}
 .search{position:relative;min-width:200px;flex:1;max-width:380px;margin-top:14px}
 .search input{width:100%;padding:11px 14px 11px 38px;border:none;border-radius:999px;background:rgba(255,255,255,.95);font:14px var(--sans);color:var(--ink);outline:none}
@@ -248,13 +252,20 @@ button{font-family:var(--sans);cursor:pointer}
     <div class="herorow">
       <img class="herologo" src="/White%20Logo.png" alt="Taylor Made Scrub Hats">
       <div class="heroactions">
-        <a class="btn ghost tiny" href="/scheduler.html" style="text-decoration:none">⚙ Production</a>
         <button class="btn ghost tiny" id="refreshBtn">↻ Refresh</button>
         <span class="rolechip" id="roleChip">Team</span>
         <button class="btn ghost tiny" id="importBtn">⤒ Import</button>
         <input type="file" id="importFile" accept="application/json" class="hidden">
         <button class="btn ghost tiny" id="logoutBtn">Sign out</button>
       </div>
+    </div>
+    <div class="appnav">
+      <a class="on" href="/index.html">Orders</a>
+      <a href="/scheduler.html#board">Board</a>
+      <a href="/scheduler.html#runs">Runs</a>
+      <a href="/scheduler.html#tracker">Tracker</a>
+      <a id="navFabric" href="/scheduler.html#fabric">Fabric</a>
+      <a id="navCut" href="/scheduler.html#cut">Cut</a>
     </div>
     <div class="search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -281,7 +292,7 @@ button{font-family:var(--sans);cursor:pointer}
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const BUILD='2026-07-02-rt1';
+const BUILD='2026-07-02-web6';
 
 const MILE=[
  {key:'placed',label:'Order placed'},
@@ -346,6 +357,7 @@ async function enterApp(){
   profileName = (prof&&prof.full_name)||user.email;
   document.getElementById('roleChip').textContent = isLead?'Lead':'Team';
   document.getElementById('importBtn').style.display = isLead?'':'none';
+  ['navFabric','navCut'].forEach(id=>{const a=document.getElementById(id);if(a)a.style.display=isLead?'':'none';});
   await loadData(); render();
   startRealtime();
 }

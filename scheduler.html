@@ -297,30 +297,55 @@ details.cocard[open] .chev { transform:rotate(90deg); }
 .chwm { position:absolute; top:3px; right:6px; font-size:10.5px; font-weight:700; color:var(--faint); }
 section { display:none; } section.on { display:block; }
 @media (min-width:700px){ .tiles{grid-template-columns:repeat(4,1fr);} }
+
+/* ---------- Taylor Made brand shell (web6) ---------- */
+:root{
+ --ink:#143a40; --soft:#6f8c8f; --faint:#93aeb1; --line:#e3efee; --bg:#f3faf9; --card:#ffffff;
+ --dark:#045863; --teal:#00acb2; --aqua:#91d5d4; --tmsoft:#e8f6f5;
+ --serif:'The Seasons','Didot','Hoefler Text','Cormorant Garamond',Georgia,'Times New Roman',serif;
+ --sans:'Avenir Next','Avenir','Century Gothic',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+body{ font-family:var(--sans); }
+.top{ background:linear-gradient(120deg,var(--dark) 0%,#067a85 55%,var(--teal) 100%); color:#fff; border-radius:22px; padding:16px 20px; box-shadow:0 12px 30px rgba(4,88,99,.18); align-items:center; margin-bottom:12px; }
+.brandlogo{ height:58px; width:auto; display:block; }
+.today{ color:rgba(255,255,255,.85); }
+.top .btn{ background:rgba(255,255,255,.95); color:var(--dark); border-color:transparent; }
+.top .vox{ background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.65); color:#fff; }
+nav button.on{ background:var(--dark); color:#fff; }
+nav a.navlink{ border:0; background:transparent; color:var(--soft); font-size:clamp(13px,1.5vw,15px); font-weight:600; padding:9px 16px; border-radius:999px; cursor:pointer; text-decoration:none; display:inline-block; }
+nav a.navlink:hover{ background:var(--tmsoft); }
+.btn.go{ background:var(--dark); border-color:var(--dark); }
+.av{ background:var(--dark); }
+.day.sel{ border-color:var(--dark); box-shadow:0 0 0 1px var(--dark); }
+.day.hot{ border-color:#C99118; box-shadow:0 0 0 2px #C9911855; }
+.vox{ background:var(--dark); border-color:var(--dark); }
+.cutgauge i{ background:var(--dark); }
+.cutgauge i.over{ background:#C2452D; }
+.segwrap{ background:var(--tmsoft); }
 </style>
 </head>
 <body>
-<div id="login" style="position:fixed;inset:0;z-index:999;background:#045863;display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,'Segoe UI',Roboto,sans-serif">
+<div id="login" style="position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,#045863,#00acb2);display:flex;align-items:center;justify-content:center;padding:20px;font-family:'Avenir Next','Avenir','Century Gothic',-apple-system,'Segoe UI',Roboto,sans-serif">
  <div style="background:#fff;border-radius:20px;padding:30px 26px;max-width:360px;width:100%;text-align:center">
-  <h1 style="font-size:19px;font-weight:700;margin:4px 0 2px;color:#23211C">Production scheduler</h1>
-  <p style="color:#7A766B;font-size:13px;margin-bottom:16px">Sign in with your team account</p>
+  <div style="background:linear-gradient(135deg,#045863,#00acb2);border-radius:16px;padding:20px 18px;margin:0 0 16px"><img src="/White%20Logo.png" alt="Taylor Made Scrub Hats" style="width:100%;height:auto;display:block"></div>
+  <h1 style="font-size:19px;font-weight:700;margin:4px 0 2px;color:#045863">Production</h1>
+  <p style="color:#6f8c8f;font-size:13px;margin-bottom:16px">Sign in with your team account</p>
   <input id="liEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:8px">
   <input id="liPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:12px">
   <button id="liBtn" style="width:100%;background:#045863;color:#fff;border:0;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer">Sign in</button>
   <div id="liErr" style="color:#C2452D;font-size:12px;margin-top:8px;min-height:14px"></div>
  </div>
 </div>
-<div id="updpill" style="display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:500;background:#23211C;color:#fff;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.3)">↻ Update available — tap to refresh</div>
+<div id="updpill" style="display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:500;background:#045863;color:#fff;border-radius:999px;padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.3)">↻ Update available — tap to refresh</div>
 <div id="lightbox" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(20,18,15,.9);align-items:center;justify-content:center;padding:20px;cursor:zoom-out"><img id="lightboximg" src="" alt="mockup" style="max-width:95%;max-height:95%;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.5)"></div>
 <div class="top">
   <div>
-    <div class="brand">Production <em>· Taylor Made</em></div>
+    <img class="brandlogo" src="/White%20Logo.png" alt="Taylor Made Scrub Hats">
     <div class="today" id="subdate"></div>
   </div>
   <div class="pills" id="runpills"></div>
   <button class="btn" id="editBtn" style="border-radius:999px">✎ Edit schedule</button>
   <button class="vox" id="voxbtn">🎙 Tell the schedule</button>
-  <a class="btn" href="/index.html" style="border-radius:999px;text-decoration:none">↗ Orders</a>
   <button class="btn" id="soBtn" style="border-radius:999px">Sign out</button>
 </div>
 <div class="typebox" id="typebox">
@@ -329,6 +354,7 @@ section { display:none; } section.on { display:block; }
 </div>
 <div id="opslog"></div>
 <nav>
+  <a class="navlink" href="/index.html">Orders</a>
   <button class="on" data-v="board">Board</button>
   <button data-v="runs">Runs</button>
   <button data-v="tracker">Tracker</button>
@@ -366,14 +392,14 @@ section { display:none; } section.on { display:block; }
 </section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-06-24 · web5 (mockup tap-to-zoom, bigger auto-growing notes, completed runs sink to bottom)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-07-02 · web6 (Taylor Made brand shell + shared navigation with the order app)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-06-24-web5";
+const BUILD="2026-07-02-web6";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -2943,9 +2969,11 @@ document.querySelectorAll("nav button").forEach(t=>t.onclick=()=>{
  document.getElementById("view-"+t.dataset.v).classList.add("on");
  if(t.dataset.v==="tracker"){ trkOpen.clear(); document.querySelectorAll('#view-tracker details[data-trk]').forEach(d=>d.open=false); }
 });
+/* web6: deep links from the order app (/scheduler.html#runs etc.) */
+(function(){ const h=(location.hash||"").replace("#",""); if(h && document.getElementById("view-"+h)){ const b=document.querySelector('nav button[data-v="'+h+'"]'); if(b) b.click(); } })();
 document.getElementById("rdwrap").addEventListener("click", e=>{ if(e.target.id==="rdwrap") closeRun(); });
 const _eb = document.getElementById("editBtn");
-function setEdit(on){ editMode = on; _eb.textContent = on ? "✓ Done — hold in place" : "✎ Edit schedule"; _eb.style.background = on ? "#23211C" : ""; _eb.style.color = on ? "#fff" : ""; _eb.style.borderColor = on ? "#23211C" : ""; render(); }
+function setEdit(on){ editMode = on; _eb.textContent = on ? "✓ Done — hold in place" : "✎ Edit schedule"; _eb.style.background = on ? "#045863" : ""; _eb.style.color = on ? "#fff" : ""; _eb.style.borderColor = on ? "#045863" : ""; render(); }
 _eb.onclick = ()=>setEdit(!editMode);
 const _rs=document.getElementById("resuggest"); if(_rs) _rs.onclick=()=>{ if(typeof isLead!=="undefined" && !isLead) return; if(!confirm("Re-optimize the open schedule? Completed work stays locked; your manual placements will be redone fresh.")) return; Object.keys(OVR.pins).forEach(k=>{ if(OVR.pins[k] && !OVR.pins[k].done) delete OVR.pins[k]; }); save(); render(); };
 const _bk=document.getElementById("bkupBtn"); if(_bk) _bk.onclick=boardBackup;

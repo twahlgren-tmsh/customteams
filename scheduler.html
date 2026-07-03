@@ -1179,6 +1179,7 @@ function applyFabLive(){
   try{
    const c=(typeof CATALOG!=="undefined")&&CATALOG.find(x=>x.p===pr.p);
    if(c){ c.on=pr.on; if(pr.v!=null) c.v=pr.v; if(pr.ven&&!c.ven) c.ven=pr.ven; }
+   else if(typeof CATALOG!=="undefined"){ CATALOG.push({p:pr.p, ven:pr.ven||"", v:pr.v!=null?pr.v:0, on:pr.on||0, _new:true}); } /* web8: NEW Shopify products join the catalog (so pairing finds them) */
    if(typeof CSTYLE!=="undefined"&&CSTYLE[pr.p]&&Array.isArray(pr.styles)) CSTYLE[pr.p].o=pr.styles.slice();
   }catch(e){}
  });
@@ -1559,7 +1560,7 @@ function openFabricPicker(onPick){
  const m=document.createElement("div"); m.id="fpick"; m.className="fpickwrap";
  m.innerHTML=`<div class="fpick"><div class="fpickhead"><b>${onPick?"Search products":"Add a fabric to your order"}</b><button class="rdclose" id="fpx">✕</button></div>
   <input id="fpq" placeholder="Search any product…" autocomplete="off">
-  <div class="fmeta" style="margin:2px 0 8px">Every active product is here. Pick one, or type a name and tap “Add anyway”.</div>
+  <div class="fmeta" style="margin:2px 0 8px;display:flex;align-items:center;gap:8px"><span style="flex:1">Every active product is here. Just created it in Shopify? Tap refresh.</span><button class="btn" id="fprefresh" style="min-height:30px;padding:4px 11px;font-size:11.5px;flex:none">↻ New products</button></div>
   <div id="fplist" class="fplist"></div>
   <button class="btn" id="fpcustom" style="margin-top:10px;width:100%">＋ Add a fabric not listed</button></div>`;
  document.body.appendChild(m);
@@ -1571,6 +1572,14 @@ function openFabricPicker(onPick){
   list.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ const nm=b.dataset.pick; const c=CATALOG.find(x=>x.p===nm); closeFabricPicker(); pick(nm, c?c.ven:""); });
  };
  q.oninput=draw; draw(); setTimeout(()=>q.focus(),30);
+ const fpr=m.querySelector("#fprefresh"); if(fpr) fpr.onclick=async()=>{ /* web8: pull newly created Shopify products into the picker */
+  fpr.disabled=true; fpr.textContent="↻ Checking…";
+  try{
+   const {data,error}=await sb.functions.invoke("sync-fabric");
+   if(!error&&data&&data.ok){ const {data:row}=await sb.from("sched_state").select("value").eq("key","tmsh-fablive").maybeSingle(); if(row&&row.value){ window.FAB_LIVE=row.value; try{ applyFabLive(); }catch(e){} } }
+  }catch(e){}
+  fpr.disabled=false; fpr.textContent="↻ New products"; draw();
+ };
  m.querySelector("#fpx").onclick=closeFabricPicker;
  m.onclick=e=>{ if(e.target===m) closeFabricPicker(); };
  m.querySelector("#fpcustom").onclick=()=>{ const nm=(q.value||"").trim()||prompt("Fabric / pattern name:"); if(!nm) return; const ven=prompt("Vendor for "+nm+":","MDG")||""; closeFabricPicker(); pick(nm, ven); };

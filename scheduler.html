@@ -386,7 +386,6 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 
 <section id="view-tracker">
   <div id="trackwrap"></div>
-  <button class="btn" id="resetbtn">Reset to imported status (June 12)</button>
 </section>
 <section id="view-cut">
   <div id="cutwrap"></div>
@@ -1454,7 +1453,7 @@ function renderFabric(){
  let h="";
  const so = id => !fabFocus || fabFocus===id; // section open?
  const secHead = (id,label,count) => `<div class="fabsec sechead" data-fabsec="${id}">${label} <span class="pill2">${count}</span>${(fabFocus&&fabFocus!==id)?'<span class="secshow">show</span>':''}</div>`;
- h+=`<div class="coctl"><button class="btn" id="velrefresh">↻ Refresh velocity</button><button class="btn" id="pullimgs">↻ Pull pattern images</button><span class="fmeta" style="margin:0">Velocity re-pulls this week's Shopify sales; runs weekly on its own too.</span></div>`;
+ h+=`<div class="coctl"><button class="btn" id="velrefresh">↻ Refresh inventory &amp; velocity</button><span class="fmeta" style="margin:0">Fresh from Shopify as of ${typeof VEL_ASOF!=="undefined"?VEL_ASOF:"the last sync"} — updates itself every morning.</span></div>`;
  // 1) TO ORDER — visual gallery, action button lives on each card
  h+=secHead("order","▸ To order",coreRecs.length+recs.length);
  if(so("order")){
@@ -1534,12 +1533,10 @@ function renderFabric(){
  document.querySelectorAll("[data-upskip]").forEach(b=>b.onclick=()=>{ OVR.fabric.upOpen=true; OVR.fabric.upSkip=[...new Set([...(OVR.fabric.upSkip||[]),b.dataset.upskip])]; save(); render(); });
  const um=document.getElementById("upmore"); if(um) um.onclick=()=>{ OVR.fabric.upOpen=true; OVR.fabric.upOff=((OVR.fabric.upOff||0)+5); save(); render(); };
  const upd=document.querySelector("details.upnext"); if(upd) upd.addEventListener("toggle",()=>{ OVR.fabric.upOpen=upd.open; save(); });
- const pi=document.getElementById("pullimgs"); if(pi) pi.onclick=()=>pullImages(pi);
- const vr=document.getElementById("velrefresh"); if(vr) vr.onclick=()=>{
-  if(window.cowork && window.cowork.runScheduledTask){
-   try{ window.cowork.runScheduledTask("refresh-fabric-velocity"); vr.textContent="Refreshing in the background… reload in ~1 min"; vr.disabled=true; return; }catch(e){}
-  }
-  vr.textContent="Just ask Claude: “refresh fabric velocity”"; setTimeout(()=>vr.textContent="↻ Refresh velocity",4000);
+ const vr=document.getElementById("velrefresh"); if(vr) vr.onclick=async()=>{ /* web8: live refresh via sync-fabric */
+  vr.disabled=true; const o=vr.textContent; vr.textContent="↻ Refreshing…";
+  try{ const {data,error}=await sb.functions.invoke("sync-fabric"); if(error||!data||!data.ok){ if(typeof boardToast==="function") boardToast("Refresh failed — try again"); } else if(typeof boardToast==="function") boardToast(`✓ Fresh from Shopify (${data.prints} prints, ${data.coreColors} colors)`); }catch(e){}
+  vr.disabled=false; vr.textContent=o;
  };
  document.querySelectorAll("[data-fabjump]").forEach(b=>b.onclick=()=>{ const id=b.dataset.fabjump; fabFocus=(fabFocus===id?null:id); render(); if(fabFocus) setTimeout(()=>{ const el=document.querySelector('[data-fabsec="'+id+'"]'); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); },40); });
  document.querySelectorAll("[data-fabsec]").forEach(b=>b.onclick=()=>{ const id=b.dataset.fabsec; fabFocus=(fabFocus===id?null:id); render(); });
@@ -3218,7 +3215,7 @@ const _bk=document.getElementById("bkupBtn"); if(_bk) _bk.onclick=boardBackup;
 const _rst=document.getElementById("restoreBtn"); if(_rst) _rst.onclick=boardRestore;
 document.getElementById("dprev").onclick = ()=>document.getElementById("daystrip").scrollBy({left:-280,behavior:"smooth"});
 document.getElementById("dnext").onclick = ()=>document.getElementById("daystrip").scrollBy({left:280,behavior:"smooth"});
-document.getElementById("resetbtn").onclick=()=>{ DONE=seedDone(); save(); render(); };
+{ const _rb=document.getElementById("resetbtn"); if(_rb) _rb.onclick=()=>{ DONE=seedDone(); save(); render(); }; } /* web8: reset button removed (artifact-era; would wipe real progress) */
 function startApp(){ if(APP_STARTED) return; APP_STARTED=true;
  var lg=document.getElementById("login"); if(lg) lg.style.display="none";
  (async()=>{ try{ const {data:{user}}=await sb.auth.getUser(); const {data:prof}=await sb.from("profiles").select("role").eq("id",user.id).maybeSingle(); isLead=!!(prof&&prof.role==="lead"); }catch(e){ isLead=true; }

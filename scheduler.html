@@ -1494,7 +1494,7 @@ function renderFabric(){
    ready.forEach(o=>{ const onhand=o.yards||((o.bolts||1)*(o.boltYd||15));
     h+=`<div class="focard" style="border-color:#9FE1CB"><div style="position:relative">${fabCardImg(o.fabric)}<span class="fbadge" style="position:absolute;top:8px;left:8px;background:#0F8A6D;color:#fff">ready</span></div><div class="fbody"><div class="ftitle">${o.fabric} ${threadEdit("order", o.id, o.thread)}</div><div class="fsub"><b data-fyd="ord|${o.id}" style="cursor:pointer;border-bottom:1px dashed var(--soft)">${Math.round(onhand)} yd</b> on hand · ${o.vendor||''}<br>tap the yards to edit</div></div><div class="factions"><button class="btn go" data-fcut="${o.id}">Cut into run ▸</button></div></div>`; });
    coreReady.forEach(c=>{ const th=(OVR.fabric.threadOv||{})[c]||CORE_THREAD[c]||"white"; const y=OVR.fabric.yards[c]||0;
-    h+=`<div class="focard" style="border-color:#9FE1CB"><div style="position:relative"><div class="fimg" style="background:${CORE_HEX[c]}"></div><span class="fbadge" style="position:absolute;top:8px;left:8px;background:#0F8A6D;color:#fff">ready</span></div><div class="fbody"><div class="ftitle">Core Solid: ${c} ${threadEdit("core", c, th)}</div><div class="fsub"><b data-fyd="core|${c}" style="cursor:pointer;border-bottom:1px dashed var(--soft)">${Math.round(y)} yd</b> on hand · ${(y/CB).toFixed(1)} bolt<br>tap the yards to edit</div></div><div class="factions"><button class="btn go" data-corecut="${c}">＋ Add to cut ▸</button></div></div>`; });
+    h+=`<div class="focard" style="border-color:#9FE1CB"><div style="position:relative">${fabCardImg("Core Solid: "+c)}<span class="fbadge" style="position:absolute;top:8px;left:8px;background:#0F8A6D;color:#fff">ready</span></div><div class="fbody"><div class="ftitle">Core Solid: ${c} ${threadEdit("core", c, th)}</div><div class="fsub"><b data-fyd="core|${c}" style="cursor:pointer;border-bottom:1px dashed var(--soft)">${Math.round(y)} yd</b> on hand · ${(y/CB).toFixed(1)} bolt<br>tap the yards to edit</div></div><div class="factions"><button class="btn go" data-corecut="${c}">＋ Add to cut ▸</button></div></div>`; });
    h+=`</div>`; }
   else h+=`<div class="note">Mark incoming fabric received when it arrives, or add core-solid yards in the section below.</div>`;
  }
@@ -1504,7 +1504,7 @@ function renderFabric(){
  if(so("core")){
   h+=`<div class="fabgrid">`;
   colors.slice().sort((a,b)=>(low(a)?0:1)-(low(b)?0:1)||CORE_VEL[b]-CORE_VEL[a]).forEach(c=>{ const y=yd(c),dem=coreDemand(c),lw=low(c);
-   h+=`<div class="fcard${lw?' low':''}" style="padding:9px 11px"><div class="fn" style="font-size:12.5px"><span class="swdot" style="background:${CORE_HEX[c]}"></span>${c}</div>
+   h+=`<div class="fcard${lw?' low':''}" style="padding:9px 11px"><div class="fn" style="font-size:12.5px"><span class="swdot" style="background:${CORE_HEX[c]};overflow:hidden">${(typeof CORE_IMG!=="undefined"&&CORE_IMG[c])?`<img src="${CORE_IMG[c]}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.remove()">`:""}</span>${c}</div>
     <div class="fstep" style="margin:5px 0 3px"><button data-fminus="${c}">−</button><b data-fset="${c}" style="font-size:18px">${Math.round(y)}</b><button data-fplus="${c}">+</button><span>yd</span></div>
     <div class="fmeta">${y?`~${Math.round(wkCover(c))}wk · ${(y/CB).toFixed(1)} bolt`:'<b style="color:#C2452D">out</b>'}${dem?` · ${dem} due`:''}</div></div>`; });
   h+=`</div><div class="fmeta" style="margin-top:5px">−/+ adds a 25yd core bolt; tap the number to set exact yards.</div>`;

@@ -346,6 +346,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
   <div class="pills" id="runpills"></div>
   <button class="btn" id="editBtn" style="border-radius:999px">✎ Edit schedule</button>
   <button class="vox" id="voxbtn">🎙 Tell the schedule</button>
+  <button class="btn" id="aiundo" style="display:none;border-radius:999px" title="Undo the last voice/typed command">↶ Undo</button>
   <button class="btn" id="soBtn" style="border-radius:999px">Sign out</button>
 </div>
 <div class="typebox" id="typebox">
@@ -392,14 +393,14 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 </section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-07-02 · web7 (one tool: unified Orders tab — customers, history, financials for leads; production view for team)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-07-02 · web8 (one tool + one-click Shopify upload + AI voice commands with confirm &amp; undo)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-02-web7";
+const BUILD="2026-07-02-web8";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -528,6 +529,7 @@ function rebuildRuns(){
  let ex = {}; try { if(OVR && OVR.extraLines) ex = OVR.extraLines; } catch(e){}
  const merge = r => { const e=ex[r.no]; return (e&&e.length) ? Object.assign({}, r, {lines:(r.lines||[]).concat(e)}) : r; };
  RUNS = BASE_RUNS.map(merge).concat(XRUNS.map(x=>{ const base=Object.assign({hex:RPAL[x.no%RPAL.length], mult:x.mult||1}, x); const e=ex[x.no]; if(e&&e.length) base.lines=(x.lines||[]).concat(e); return base; }));
+ try{ const tOv=(OVR&&OVR.runThread)||{}; RUNS.forEach(r=>{ if(tOv[r.no]) r.thread=tOv[r.no]; }); }catch(e){} /* web8: run-thread overrides */
  RUNS.forEach(prepRun);
  ATOMS = allAtoms();
 }
@@ -715,14 +717,30 @@ let SWATCH_OV = {};
 try { SWATCH_OV = JSON.parse(localStorage.getItem(SWKEY)) || {}; } catch(e){ SWATCH_OV = {}; }
 Object.assign(SWATCH, SWATCH_OV);
 const SOLIDHEX = {"Core Solid: Ceil Blue":"#9DBBD8","Core Solid: Steel Grey":"#9A9FA4","Black Comfort+":"#3A3A3C"};
+/* web8: Core Solids ponytail images (from Shopify Core Solids Scrub Hat variants, pulled 2026-07-02) */
+const CORE_IMG = {
+ "Black":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/black-p.webp?v=1719571247",
+ "Steel Grey":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/steel-grey-p.webp?v=1717076415",
+ "Navy":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/navy-p.webp?v=1748727535",
+ "Ceil Blue":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/ceil-blue-p.webp?v=1748727535",
+ "Red":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/red-p_d0e963f2-49c6-4692-8385-d27c7888ce53.webp?v=1779466642",
+ "Maroon":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/maroon-p_d01baa8e-5c29-46bb-8349-5b3a66193b17.webp?v=1779470908",
+ "Lilac":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/lilac-p.webp?v=1763079710",
+ "Caribbean":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/caribbean-p.webp?v=1763079710",
+ "Flamingo":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/flamingo-p.webp?v=1763079710",
+ "Wedgewood":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/wedgewood-p.webp?v=1763079710",
+ "Dusty Pink":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/dustyrose-p_93350697-1077-4af0-9b39-cd2e74ec6374.webp?v=1779466889",
+ "Royal Blue":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/royalblue-p_e372d07a-bd2e-4023-9c8d-35ae97e2c125.webp?v=1779466881",
+ "Hunter Green":"https://cdn.shopify.com/s/files/1/0576/3307/9460/files/HUNTER_Green-p_58b6284d-0988-45ff-bd2f-a3379b30ffad.webp?v=1781122547"
+};
 function tileColor(name){ if(SOLIDHEX[name]) return SOLIDHEX[name]; let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))%360; return `hsl(${h},45%,78%)`; }
 function inits(name){ return name.replace("Core Solid: ","").replace(/\(Comfort\+\)/i,"").split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
-function swImg(name, big){ let f=null; if(typeof OVR!=="undefined" && OVR.shop && OVR.shop[name]!==undefined){ const v=OVR.shop[name]; let lk=null; if(v && typeof v==="object"){ if(!v.none) lk=v.prod; } else if(typeof v==="string" && v) lk=v; if(lk){ const b=lk.replace(/ Scrub Hat$/,""); f=SWATCH[lk]||SWATCH[b]; } } if(!f) f=SWATCH[name]; if(!f && typeof shopTarget==="function"){ try{ const pr=shopTarget(name).prod; if(pr) f=SWATCH[pr]||SWATCH[pr.replace(/ Scrub Hat$/,"")]; }catch(e){} } if(!f) return ""; const src = /^https?:/.test(f) ? f : CDN + (big ? f.replace(/_96x96(?=\.webp)/,"_400x400") : f); return `<img src="${src}" loading="lazy" onerror="this.remove()">`; }
+function swImg(name, big){ if(/^core solid/i.test(name)){ const c=name.replace(/^core solid:\s*/i,"").trim(); const f2=(typeof CORE_IMG!=="undefined")&&CORE_IMG[c]; if(f2) return `<img src="${f2}" loading="lazy" onerror="this.remove()">`; } let f=null; if(typeof OVR!=="undefined" && OVR.shop && OVR.shop[name]!==undefined){ const v=OVR.shop[name]; let lk=null; if(v && typeof v==="object"){ if(!v.none) lk=v.prod; } else if(typeof v==="string" && v) lk=v; if(lk){ const b=lk.replace(/ Scrub Hat$/,""); f=SWATCH[lk]||SWATCH[b]; } } if(!f) f=SWATCH[name]; if(!f && typeof shopTarget==="function"){ try{ const pr=shopTarget(name).prod; if(pr) f=SWATCH[pr]||SWATCH[pr.replace(/ Scrub Hat$/,"")]; }catch(e){} } if(!f) return ""; const src = /^https?:/.test(f) ? f : CDN + (big ? f.replace(/_96x96(?=\.webp)/,"_400x400") : f); return `<img src="${src}" loading="lazy" onerror="this.remove()">`; }
 function swatchHtml(name, big){
  return `<span class="sw${big?" swbig":""}" style="background:${tileColor(name)}"><i>${inits(name)}</i>${swImg(name, big)}</span>`;
 }
 function fabCardImg(name){
- if(/^core solid/i.test(name)){ const c=name.replace("Core Solid: ",""); return `<div class="fimg" style="background:${(typeof CORE_HEX!=='undefined'&&CORE_HEX[c])||tileColor(name)}"></div>`; }
+ if(/^core solid/i.test(name)){ const c=name.replace("Core Solid: ",""); const f2=(typeof CORE_IMG!=="undefined")&&CORE_IMG[c]; return `<div class="fimg" style="background:${(typeof CORE_HEX!=='undefined'&&CORE_HEX[c])||tileColor(name)}">${f2?`<img src="${f2}" loading="lazy" onerror="this.remove()">`:""}</div>`; }
  return `<div class="fimg" style="background:${tileColor(name)}"><span class="fimgini">${inits(name)}</span>${swImg(name, true)}</div>`;
 }
 const MIN = {}; 
@@ -1051,7 +1069,7 @@ function schedule(items){
 
 let selDay = 0;
 let editMode = false;
-let rdRun = null, rdTab = "sched", LAST = null;
+let rdRun = null, rdTab = "pat", LAST = null; /* web8: default run tab = Patterns & pairings */
 let isLead = true;
 const runBy = n => RUNS.find(r=>r.no===n);
 const fmtH = m => { const h=m/60; return (h>=10?h.toFixed(0):h.toFixed(1).replace(/\.0$/,""))+"h"; };
@@ -1343,6 +1361,7 @@ function wireThreadEdits(){
    if(kind==="order"){ const o=OVR.fabric.orders.find(x=>x.id===id); if(o){ o.thread=val; } }
    else if(kind==="core"){ OVR.fabric.threadOv=OVR.fabric.threadOv||{}; if(val) OVR.fabric.threadOv[id]=val; else delete OVR.fabric.threadOv[id]; }
    else if(kind==="cut"){ const sp=(OVR.cut&&OVR.cut.sess||[]).find(s=>s.id===id); if(sp) sp.thread=val||"white"; }
+   else if(kind==="run"){ OVR.runThread=OVR.runThread||{}; if(val) OVR.runThread[id]=val; else delete OVR.runThread[id]; try{ const x=(typeof XRUNS!=="undefined")&&XRUNS.find(z=>String(z.no)===String(id)); if(x&&val){ x.thread=val; if(typeof saveRuns==="function") saveRuns(); } }catch(e){} if(typeof rebuildRuns==="function") rebuildRuns(); }
    save(); render();
   });
  });
@@ -1430,7 +1449,7 @@ function renderFabric(){
   h+=`<button class="focard foadd" id="faddorder"><span class="foaddplus">＋</span><span>Add any fabric<br>(search all products)</span></button>`;
   coreRecs.sort((a,b)=>CORE_VEL[b]-CORE_VEL[a]).forEach(c=>{ const need=Math.max(1,Math.ceil((CORE_VEL[c]/4.33*5)/(CB*HATS_PER_YD)));
    const cth=(OVR.fabric.threadOv||{})[c] || CORE_THREAD[c] || 'white';
-   h+=`<div class="focard"><div class="fimg" style="background:${CORE_HEX[c]}"></div><div class="fbody"><div class="ftitle">Core Solid: ${c} ${threadEdit("core", c, cth)}</div><div class="fsub">${Math.round(CORE_VEL[c])}/mo · every ~${cadence(CORE_VEL[c])} wk<br>MDG · 25yd bolt ($74) · ~4d · ~${need} bolt${need>1?'s':''}</div></div><div class="factions"><button class="btn go" data-forder="${c}|${need}">Ordered ▸</button></div></div>`; });
+   h+=`<div class="focard">${fabCardImg("Core Solid: "+c)}<div class="fbody"><div class="ftitle">Core Solid: ${c} ${threadEdit("core", c, cth)}</div><div class="fsub">${Math.round(CORE_VEL[c])}/mo · every ~${cadence(CORE_VEL[c])} wk<br>MDG · 25yd bolt ($74) · ~4d · ~${need} bolt${need>1?'s':''}</div></div><div class="factions"><button class="btn go" data-forder="${c}|${need}">Ordered ▸</button></div></div>`; });
   recs.forEach(c=>{ const pth=(OVR.fabric.threadOv||{})[c.p]||'';
    h+=`<div class="focard">${fabCardImg(c.p)}<div class="fbody"><div class="ftitle">${c.p}${stockBadge(c.stock)} ${threadEdit("core", c.p, pth)}</div><div class="fsub">${c.v}/mo · ${c.on} on hand${c.inc?` · +${c.inc} in production`:''} · <b>~${c.wk}wk cover</b><br>${c.ven} · ~${LEAD[c.ven]||7}d</div></div><div class="factions"><button class="btn" data-fno="${c.p.replace(/"/g,'&quot;')}" title="Don't reorder" style="flex:0 0 auto">Skip</button><button class="btn go" data-catorder="${c.p.replace(/"/g,'&quot;')}">Ordered ▸</button></div></div>`; });
   if(!coreRecs.length && !recs.length) h+=`<div class="note">Nothing needs ordering right now. 👍</div>`;
@@ -1887,12 +1906,16 @@ function renderCut(){
   if(!OVR.cut.sess.length){ h+=`<div class="note">No fabrics in this cut yet. <a href="#" id="cutgochoose" style="color:#5B50D6;font-weight:700">＋ Choose fabrics</a> to add some.</div>`; }
   else {
    const threadsUsed=new Set(OVR.cut.sess.map(s=>s.thread));
-   h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap"><b style="font-size:15px">This cut — ${OVR.cut.sess.length} fabric${OVR.cut.sess.length>1?"s":""}</b>${threadsUsed.size>1?`<span class="fbadge" style="background:#FBE3DC;color:#B23A1B">mixed thread — use one color</span>`:`${tchip([...threadsUsed][0])}`}<button class="btn" id="cutgochoose" style="margin-left:auto">＋ Add fabric</button></div>`;
+   h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap"><b style="font-size:15px">This cut — ${OVR.cut.sess.length} fabric${OVR.cut.sess.length>1?"s":""}</b>${threadsUsed.size>1?`<span class="fbadge" style="background:#EDE9FB;color:#5B50D6">${threadsUsed.size} thread colors — grouped below</span>`:`${tchip([...threadsUsed][0])}`}<button class="btn" id="cutgochoose" style="margin-left:auto">＋ Add fabric</button></div>`;
    { const _t={}; CUT_SECT.forEach(s=>_t[s.s]=0); OVR.cut.sess.forEach(sp=>{ const hh=cutHats(sp.layers); CUT_SECT.forEach(s=>_t[s.s]+=hh[s.s]); }); const _sum=Object.values(_t).reduce((a,b)=>a+b,0);
      h+=`<div class="card" style="margin-bottom:12px"><b style="font-size:13.5px">This cut produces — live total</b><div class="cuthats" style="margin-top:6px">${CUT_SECT.map(s=>`<div class="chat"><b>${_t[s.s]}</b><span>${s.s}</span></div>`).join("")}<div class="chat" style="background:#23211C"><b style="color:#fff">${_sum}</b><span style="color:#fff">total</span></div></div><div class="fmeta" style="margin-top:6px">“have” = your on-hand stock by style as of ${typeof VEL_ASOF!=="undefined"?VEL_ASOF:"the last refresh"} (auto-refreshes Mon &amp; Thu). Want it updated now? Ask Claude to “refresh cut inventory”.</div></div>`; }
    const _allAcc=OVR.cut.sess.length&&OVR.cut.sess.every(s=>s.accepted);
    if(_allAcc){ h+=cutAuditTable(); }
-   OVR.cut.sess.forEach(sp=>{ h+=cutCardHtml(sp); });
+   { /* web8: group session fabrics by thread color (multi-thread welcome) */
+     const _ord=[...OVR.cut.sess].sort((a,b)=>String(a.thread||"white").localeCompare(String(b.thread||"white")));
+     let _lastTh=null;
+     _ord.forEach(sp=>{ const th=String(sp.thread||"white"); if(threadsUsed.size>1 && th!==_lastTh){ _lastTh=th; h+=`<div class="fabsec" style="margin-top:12px;display:flex;align-items:center;gap:7px">${tchip(th)}<span>${th.charAt(0).toUpperCase()+th.slice(1)} thread</span></div>`; } h+=cutCardHtml(sp); });
+   }
    if(!_allAcc){ h+=`<div style="display:flex;margin-top:2px"><button class="btn go" id="cutaccept" style="margin-left:auto">✓ Accept cut plan</button></div>`; }
    else { const _thr=[...new Set(OVR.cut.sess.map(s=>s.thread))][0]||"white"; const _no=Math.max(...RUNS.map(r=>r.no))+1; h+=`<div class="card" style="border:1.5px solid #0F8A6D"><b style="font-size:14.5px">Turn this cut into a production run</b><div class="fmeta" style="margin:3px 0 10px">Confirm the counts in the audit grid above, then create the run — a ${_thr.charAt(0).toUpperCase()+_thr.slice(1)}-thread run with a line per fabric, ready to schedule on the Board.</div><div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center"><input id="cutrunname" placeholder="Run name (e.g. ${_thr.charAt(0).toUpperCase()+_thr.slice(1)} Restock)" style="flex:2;min-width:150px;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;font-family:inherit"><input id="cutrungl" type="date" title="go-live date" style="border:1.5px solid var(--line);border-radius:10px;padding:9px;font-size:13px;font-family:inherit"><button class="btn go" id="cutmakerun">✓ Create run #${_no}</button></div></div>`; }
   }
@@ -2451,7 +2474,7 @@ function renderCustom(){
 }
 
 function runOrder(){ return RUNS.slice().sort((a,b)=>b.no-a.no).map(r=>r.no); }
-function openRun(no){ rdRun = no; rdTab = "sched"; renderRD(); document.getElementById("rdwrap").classList.add("open"); }
+function openRun(no){ rdRun = no; rdTab = "pat"; renderRD(); document.getElementById("rdwrap").classList.add("open"); }
 function stepRun(dir){ const o=runOrder(); const i=o.indexOf(rdRun); if(i<0) return; const j=i+dir; if(j<0||j>=o.length) return; rdRun=o[j]; renderRD(); }
 function closeRun(){ document.getElementById("rdwrap").classList.remove("open"); rdRun = null; }
 // Verified pattern -> Shopify product map (confirmed against live Shopify 2026-06-17).
@@ -2591,12 +2614,13 @@ function renderRD(){
  document.getElementById("rd").innerHTML = `
   <div class="rdtop">
    <span class="donut" style="background:conic-gradient(${r.done?"#9BB59B":r.hex} ${pct}%, #EDEAE2 0)"><i>${r.done?"✓":pct+"%"}</i></span>
-   <div><h2 style="font-size:20px;font-weight:700">${r.name}</h2><div class="rm" style="color:var(--soft);font-size:12.5px">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.done?" · completed":""}</div></div>
+   <div><h2 style="font-size:20px;font-weight:700">${r.name} ${isLead?threadEdit("run", r.no, r.thread):""}</h2><div class="rm" style="color:var(--soft);font-size:12.5px">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.done?" · completed":""}</div></div>
    <button class="rdclose" id="rdprev" title="Previous run">‹</button><button class="rdclose" id="rdnext" title="Next run">›</button><button class="rdclose" id="rdx">✕</button>
   </div>
   <div class="rdtabs"><button class="${rdTab==="sched"?"on":""}" data-rdt="sched">Schedule</button><button class="${rdTab==="pat"?"on":""}" data-rdt="pat">Patterns &amp; pairings</button><button class="${rdTab==="post"?"on":""}" data-rdt="post">Finish &amp; post${_unlinkedN?" ⚠":""}</button></div>
   <div style="display:flex;align-items:center;gap:8px;margin:9px 0 2px;font-size:12.5px;color:var(--soft)">Go-live date <input type="date" id="rdgolive" value="${goLiveOf(r)||''}" style="border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12.5px;font-family:inherit"${isLead?'':' disabled'}>${(OVR.goLive&&OVR.goLive[r.no])?' <span style="color:#0F8A6D;font-weight:700">· adjusted</span>':''}</div>
   ${body}`;
+ wireThreadEdits(); /* web8: editable run thread in run detail */
  document.getElementById("rdx").onclick = closeRun;
  document.getElementById("rdprev").onclick=()=>stepRun(-1);
  document.getElementById("rdnext").onclick=()=>stepRun(1);
@@ -2703,7 +2727,7 @@ document.getElementById("nrwrap").addEventListener("click", e=>{ if(e.target.id=
 let trkOpen = new Set(); // tracker run cards open this visit (in-memory); collapses again when you leave & return to the tab
 function renderTracker(items){
  const el = document.getElementById("trackwrap");
- el.innerHTML = RUNS.filter(r=>!r.done && r.sched!==false).map((r,idx)=>{
+ el.innerHTML = RUNS.filter(r=>r.sched!==false).slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0) || b.no-a.no).map((r,idx)=>{ /* web8: completed sink+gray, newest on top, still editable */
   const ri = Object.values(items).filter(i=>i.run===r.no);
   const order = [16,1,2,3,17,9,8,4,12,5,13,15,6,7,19,14,10,11];
   const fin = i => i.rem<=1 ? 1 : 0; // finished steps sink to the bottom
@@ -2730,7 +2754,7 @@ function renderTracker(items){
     <div class="subs" id="${id}">${subRows}</div>
    </div>`;
   }).join("");
-  return `<details class="tkcard" data-trk="${r.no}"${trkOpen.has(r.no)?" open":""}><summary><span class="dot" style="background:${r.hex}"></span><span class="tkhead"><h2>${r.name}</h2></span><span class="tksum">${pct}% · ${fmtH(rem)} left</span><span class="chev">▶</span></summary>${rows}</details>`;
+  return `<details class="tkcard" data-trk="${r.no}"${trkOpen.has(r.no)?" open":""} style="${r.done?"opacity:.5;filter:grayscale(.3)":""}"><summary><span class="dot" style="background:${r.done?"#9BB59B":r.hex}"></span><span class="tkhead"><h2>${r.name}</h2></span><span class="tksum">${r.done?"✓ completed":pct+"% · "+fmtH(rem)+" left"}</span><span class="chev">▶</span></summary>${rows}</details>`;
  }).join("");
  el.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.toggle).classList.toggle("open"));
  el.querySelectorAll("details[data-trk]").forEach(d=>d.addEventListener("toggle",()=>{ if(d.open) trkOpen.add(+d.dataset.trk); else trkOpen.delete(+d.dataset.trk); }));
@@ -3025,18 +3049,46 @@ Reply with ONLY JSON {"ops":[...]}. Op shapes:
 {"op":"unknown","note":"why"} — only if truly unclear.
 Multiple ops allowed. If the user names a person for a step, include person in the move op. Day defaults: "today"=0, "tomorrow"=1, weekday names = next occurrence.
 Instruction: "${text}"`;
- const r = await window.cowork.askClaude(prompt, []);
- const t = typeof r==="string" ? r : (r && r.content && r.content[0] && r.content[0].text) || (r && r.text) || JSON.stringify(r);
+ let t=null;
+ if(window.cowork && window.cowork.askClaude){ /* legacy Cowork bridge */
+  const r = await window.cowork.askClaude(prompt, []);
+  t = typeof r==="string" ? r : (r && r.content && r.content[0] && r.content[0].text) || (r && r.text) || JSON.stringify(r);
+ } else { /* web8: AI brain via interpret-schedule edge function (needs ANTHROPIC_API_KEY secret) */
+  const {data,error}=await sb.functions.invoke("interpret-schedule",{body:{prompt}});
+  if(error||!data||!data.ok||!data.text) return null;
+  t=data.text;
+ }
  const m = t.match(/\{[\s\S]*\}/);
  return m ? JSON.parse(m[0]) : null;
+}
+/* web8: human-readable description of a parsed op, for the confirm step */
+function aiOpDesc(o){
+ try{
+  switch(o.op){
+   case "out": return `${o.person} is OUT ${fmtDay(o.day??0)} — column grayed`;
+   case "arrive": return `${o.person} arrives ${fmtT((o.startHour||0)*60)}${o.hours?` for ${o.hours}h`:""} ${fmtDay(o.day??0)}`;
+   case "late": return `${o.person} loses ${o.hoursLost||2}h ${fmtDay(o.day??0)}`;
+   case "move": return `move ${o.stepName}${o.run?` (run ${o.run})`:""} → ${o.person||"same person"}, ${fmtDay(o.day??0)}`;
+   case "before": return `"${o.then}" waits for "${o.first}"${o.run?` on run ${o.run}`:""}`;
+   case "customProgress": return `order ${o.order}: ${["sewPct","embPct","hatsSewDone","hatsEmbDone"].filter(k=>o[k]!==undefined).map(k=>k.replace("Pct"," %").replace("hats","hats ")+" → "+o[k]).join(", ")}`;
+   case "scheduleRun": return `schedule run ${o.run}`;
+   case "markDone": return `mark ${(GN&&GN[o.step])||o.stepName||"step"} done${o.run?` on run ${o.run}`:""}`;
+   default: return o.op+(o.note?": "+o.note:"");
+  }
+ }catch(e){ return o.op||"action"; }
 }
 async function handleInstruction(text){
  const btn = document.getElementById("voxbtn");
  btn.textContent = "Thinking…";
  try {
-  const useAI = !!(window.cowork && window.cowork.askClaude);
-  const res = useAI ? await interpret(text) : localInterpret(text);
+  let res=null;
+  try{ res = await interpret(text); }catch(e){ res=null; }   /* web8: AI first… */
+  if(!res || !res.ops || !res.ops.length) res = localInterpret(text); /* …pattern-matcher fallback */
   if(!res || !res.ops || !res.ops.length){ OVR.log.push('Didn\'t catch that — try e.g. "Drea is out Saturday", "top stitching done on Jewels", "WOGO is 40% embroidered"'); save(); render(); btn.textContent="🎙 Tell the schedule"; return; }
+  /* web8: read back the plan & confirm before touching anything */
+  const _desc=res.ops.map(aiOpDesc).join("\n• ");
+  if(!confirm('I heard:\n“'+text+'”\n\nPlan:\n• '+_desc+'\n\nApply this?')){ btn.textContent="🎙 Tell the schedule"; return; }
+  try{ window._aiSnap=JSON.stringify({ovr:OVR, custom:CUSTOM}); }catch(e){ window._aiSnap=null; }
   res.ops.forEach(o=>{
    if(o.op==="out"){ OVR.avail[o.person+"|"+o.day]=0; OVR.log.push(`${o.person} out ${fmtDay(o.day)}`); }
    else if(o.op==="arrive"){
@@ -3086,6 +3138,8 @@ async function handleInstruction(text){
    else if(o.note){ OVR.log.push(`Not sure: ${o.note}`); }
   });
   save(); render();
+  const _au=document.getElementById("aiundo"); if(_au&&window._aiSnap){ _au.style.display=""; } /* web8: offer undo */
+  if(typeof boardToast==="function") boardToast("Applied ✓ — ↶ Undo is in the top bar if that wasn't right");
  } catch(e) {
   OVR.log.push("Couldn't interpret — try rephrasing or use the text box");
   save(); render();
@@ -3098,12 +3152,30 @@ document.getElementById("voxbtn").onclick = ()=>{
  if(!SR){ box.classList.toggle("open"); document.getElementById("typein").focus(); return; }
  const btn = document.getElementById("voxbtn");
  const rec = new SR();
- rec.lang = "en-US"; rec.interimResults = false;
+ rec.lang = "en-US"; rec.interimResults = true; /* web8: live transcript while you talk */
  btn.classList.add("listen"); btn.textContent = "Listening…";
- rec.onresult = e => { btn.classList.remove("listen"); handleInstruction(e.results[0][0].transcript); };
- rec.onerror = () => { btn.classList.remove("listen"); btn.textContent = "🎙 Tell the schedule"; box.classList.add("open"); document.getElementById("typein").focus(); };
+ const ti = document.getElementById("typein");
+ box.classList.add("open"); ti.placeholder = "Listening — your words show here…";
+ rec.onresult = e => {
+  let fin="", inter="";
+  for(let i=0;i<e.results.length;i++){ const r0=e.results[i]; if(r0.isFinal) fin+=r0[0].transcript; else inter+=r0[0].transcript; }
+  ti.value = fin || inter;
+  if(fin){ btn.classList.remove("listen"); try{ rec.stop(); }catch(_e){} ti.value=""; ti.placeholder="Type here — or tap the mic key on your keyboard to dictate"; box.classList.remove("open"); handleInstruction(fin); }
+ };
+ rec.onerror = () => { btn.classList.remove("listen"); btn.textContent = "🎙 Tell the schedule"; ti.placeholder="Type here — or tap the mic key on your keyboard to dictate"; box.classList.add("open"); ti.focus(); };
  rec.onend = () => { btn.classList.remove("listen"); };
  try { rec.start(); } catch(e){ btn.classList.remove("listen"); box.classList.add("open"); }
+};
+/* web8: undo the last voice/typed command (restores board + custom orders snapshot) */
+document.getElementById("aiundo").onclick = ()=>{
+ if(!window._aiSnap) return;
+ try{
+  const p=JSON.parse(window._aiSnap);
+  OVR=p.ovr; CUSTOM=p.custom;
+  save(); if(typeof saveCO==="function") saveCO(); if(typeof pushCustomAll==="function") pushCustomAll(); render();
+  if(typeof boardToast==="function") boardToast("Undone ↶");
+ }catch(e){}
+ window._aiSnap=null; document.getElementById("aiundo").style.display="none";
 };
 document.getElementById("typego").onclick = ()=>{
  const v = document.getElementById("typein").value.trim();

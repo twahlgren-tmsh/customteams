@@ -795,6 +795,8 @@ async function bootCloud(){ try{
 const MS_MAP={"Cut":"cut","Embroidery":"embroidery","Sewing":"sewing","Fold & inspect":"packaged","Shipped":"shipped"};
 /* web7 unified Orders tab state */
 let ALLORD=[], CUSTBY={}, FINBY={}, CO_VIEW="open", CO_Q="", CO_ANA=false, CO_RANGE="all", COSRC=null;
+/* web7 one-click Shopify upload state */
+let rdPostList=[], rdPostRows=[], rdPostTotal=0;
 function orderToCustom(o){
  const m=o.milestones||{}; const dn=k=>!!(m[k]&&m[k].done);
  const types=o.order_type||[];
@@ -1089,12 +1091,21 @@ function render(){
  const items = buildItems();
  const sched = schedule(items);
  document.getElementById("subdate").textContent = new Date().toLocaleDateString("en-US",{weekday:"long", month:"long", day:"numeric"}) + " · live schedule";
- document.getElementById("runpills").innerHTML = RUNS.filter(r=>!r.done && r.sched!==false).map(r=>{
+ document.getElementById("runpills").innerHTML = RUNS.filter(r=>{
+  if(r.done || r.sched===false) return false;
+  const ad=sched.runDone[r.no]; return !(ad!==null && ad<0); /* web7: finished runs drop off the header */
+ }).map(r=>{
   const ri = Object.values(items).filter(i=>i.run===r.no);
   const tot = ri.reduce((s,i)=>s+i.total,0), rem = ri.reduce((s,i)=>s+i.rem,0);
   const pct = tot? Math.round(100*(tot-rem)/tot) : 0;
   return `<div class="pill"><span class="ring" style="background:conic-gradient(${r.hex} ${pct}%, #EDEAE2 0)"><i>${pct}%</i></span><div><b>${r.name}</b><span>run ${r.no}</span></div></div>`;
- }).join("");
+ }).join("") + (function(){ /* web7: custom-orders at-a-glance pill */
+  const pend=(typeof CUSTOM!=="undefined"&&Array.isArray(CUSTOM)?CUSTOM:[]).filter(o=>!shipped(o));
+  const t0=new Date(); t0.setHours(0,0,0,0); const in7=new Date(+t0+7*864e5); let over=0,soon=0;
+  pend.forEach(o=>{ if(!o.due) return; const d=new Date(o.due+"T12:00:00"); if(d<t0) over++; else if(d<=in7) soon++; });
+  return `<div class="pill" id="copill" style="cursor:pointer" title="Open the Orders tab"><span class="ring" style="background:conic-gradient(#00acb2 100%, #EDEAE2 0)"><i>${pend.length}</i></span><div><b>Custom orders</b><span>${pend.length} pending${over?` · ${over} overdue`:(soon?` · ${soon} due this wk`:"")}</span></div></div>`;
+ })();
+ const _cop=document.getElementById("copill"); if(_cop) _cop.onclick=()=>{ const b=document.querySelector('nav button[data-v="custom"]'); if(b) b.click(); };
  LAST = {items, sched};
  persistBoard(sched);
  renderOps(); renderDays(sched); renderBoard(items,sched); renderHome(sched); renderRuns(items,sched); renderTracker(items); renderCustom(); renderFabric(); renderCut();
@@ -2115,7 +2126,7 @@ function renderHome(sched){
 }
 
 function renderRuns(items, sched){
- const list = RUNS.slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0) || String(goLiveOf(a)||"9999").localeCompare(String(goLiveOf(b)||"9999")) || b.no-a.no);
+ const list = RUNS.slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0) || b.no-a.no); /* web7: newest runs on top; completed sink */
  const dfmt = s => s ? new Date(s+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—";
  document.getElementById("runcards").innerHTML = list.map(r=>{
   const done = !!r.done, planned = r.sched===false;
@@ -2142,7 +2153,7 @@ function renderRuns(items, sched){
     .map(i=>`<span style="background:${tint(r.hex,"1C")};color:${r.hex}">${nameOf(i.step,i.seg)} · ${fmtH(i.rem)}</span>`).join("") || `<span style="background:${tint(r.hex,"1C")};color:${r.hex}">All sewing complete</span>`;
    extra = `<div class="nextlbl">Biggest pieces left</div><div class="nxt">${open}</div>`;
   }
-  return `<div class="rc" data-open="${r.no}" style="cursor:pointer;${done?"opacity:.62":""}${planned?"border-style:dashed;border-width:2px":""}">
+  return `<div class="rc" data-open="${r.no}" style="cursor:pointer;${done?"opacity:.45;filter:grayscale(.35)":""}${planned?"border-style:dashed;border-width:2px":""}">
    <div class="rh">
     <span class="donut" style="background:conic-gradient(${done?"#9BB59B":r.hex} ${pct}%, #EDEAE2 0)"><i>${done?"✓":pct+"%"}</i></span>
     <div><h2>${r.name}${r.thread?` <span class="threadchip" style="background:${THREADHEX[r.thread]||"#999"};color:${r.thread==="White"?"#444":"#fff"}">${r.thread} thread</span>`:""}${r.threadNote?` <span class="threadchip" style="background:#2B2A28;color:#fff">+ ${r.threadNote}</span>`:""}</h2>${(OVR.flags&&Object.keys(OVR.flags).filter(function(k){return k.indexOf(r.no+"|")===0;}).length)?`<span style="display:inline-block;background:#FBE3DC;color:#B23A1B;border:1px solid #E7B6A7;border-radius:99px;padding:1px 8px;font-size:10px;font-weight:700;margin:2px 0">⚑ ${Object.keys(OVR.flags).filter(function(k){return k.indexOf(r.no+"|")===0;}).length} count issue${Object.keys(OVR.flags).filter(function(k){return k.indexOf(r.no+"|")===0;}).length>1?"s":""}</span>`:""}<div class="rm">Run ${r.no} · ${hats} hats · ${r.lines.length} patterns${r.mult>1?" · new-material buffer":""}</div></div>
@@ -2511,19 +2522,22 @@ function renderRD(){
   if(!OVR.postedPats) OVR.postedPats={};
   const skip = OVR.postSkip[r.no] || {};
   const ppost = OVR.postedPats[r.no] || {};
+  if(!window._postSty) window._postSty=new Set([0,1,2,3,4,5,6]); /* web7: style filter for uploads */
+  const stySel=window._postSty;
   const rows = r.lines.map(l=>({l, q:lineQ(r.no,l)})).filter(o=>o.q&&o.q.some(x=>x>0)).map(({l,q})=>{
    const tgt=shopTarget(l.p); const prodT=tgt.prod, col=tgt.color;
-   const qty=q.reduce((a,b)=>a+b,0);
-   const variants=q.map((v,i)=>v>0?{variant:col?QVAR[i]+" / "+col:QVAR[i],qty:v}:null).filter(Boolean);
+   const qty=q.reduce((a,b,i)=>a+(stySel.has(i)?b:0),0);
+   const variants=q.map((v,i)=>(v>0&&stySel.has(i))?{variant:col?QVAR[i]+" / "+col:QVAR[i],qty:v}:null).filter(Boolean);
    const excluded=!!skip[l.p];
    const isPosted=!!ppost[l.p];
-   return {p:l.p, prodT, qty, variants, excluded, isPosted, included:(!!prodT && !excluded && !isPosted)};
+   return {p:l.p, prodT, qty, variants, excluded, isPosted, included:(!!prodT && !excluded && !isPosted && qty>0)};
   });
   const postedN=rows.filter(x=>x.isPosted).length;
   const postRows = rows.filter(x=>x.included);
   const list=[]; postRows.forEach(x=>x.variants.forEach(v=>list.push({prod:x.prodT, variant:v.variant, qty:v.qty})));
   rdPostTxt="Post run "+r.no+" ("+r.name+") to Shopify — add finished hats:\n"+list.map(x=>"+"+x.qty+"  "+x.prod+" — "+x.variant).join("\n");
   const totalSel=postRows.reduce((s,x)=>s+x.qty,0);
+  rdPostList=list; rdPostRows=postRows; rdPostTotal=totalSel;
   const unlinkedN=rows.filter(x=>!x.prodT).length;
   const skippedN=rows.filter(x=>x.prodT&&x.excluded).length;
   const rowHtml=rows.map(x=>{
@@ -2541,13 +2555,15 @@ function renderRD(){
      `<div class="fmeta" style="margin-top:4px;font-size:11px;line-height:1.5">${vlist}</div></div></div>`;
   }).join("");
   const flags=[]; if(unlinkedN) flags.push(`<span style="color:#B23A1B">⚠ ${unlinkedN} not linked (tap “pair…”)</span>`); if(skippedN) flags.push(`<span style="color:var(--soft)">${skippedN} unticked</span>`); if(postedN) flags.push(`<span style="color:#0F8A6D">✓ ${postedN} already posted</span>`);
+  const styChips=`<div style="display:flex;gap:5px;flex-wrap:wrap;margin:0 0 8px;align-items:center"><span style="font-size:11px;color:var(--soft);font-weight:600">Styles:</span>${QCOLS.map((c,i)=>`<button class="seg${stySel.has(i)?" on":""}" data-postty="${i}" style="padding:5px 11px;border:1px solid var(--line);border-radius:99px;font-size:11.5px">${c}</button>`).join("")}<button class="lnkbtn" data-postyall="1" style="font-size:10.5px;padding:2px 9px;border:1px solid var(--line);border-radius:99px;background:#fff">${stySel.size===7?"none":"all"}</button></div>`;
   body=`<div class="card"><b style="font-size:15px">Finished goods → Shopify</b>`+
-    `<div class="fmeta" style="margin:5px 0 10px">Tick the patterns to upload, tell Claude “post run ${r.no} to Shopify”, then tap “Mark these posted” — posted patterns gray out so they can’t be sent again.</div>`+
+    `<div class="fmeta" style="margin:5px 0 10px">Tick the patterns, pick the styles, tap <b>⬆ Upload</b> — inventory posts straight to Shopify and the patterns mark themselves posted.</div>`+
+    styChips+
     (flags.length?`<div class="fmeta" style="margin:-4px 0 8px">${flags.join(" &nbsp;·&nbsp; ")}</div>`:"")+
     `<div style="max-height:360px;overflow:auto;border-top:1px solid var(--line)">${rowHtml||'<div class="empty">No finished hats in this run.</div>'}</div>`+
-    `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:9px;border-top:2px solid #23211C"><b>Selected to upload</b><b class="num" style="font-size:15px">${totalSel} hat${totalSel!==1?"s":""}</b></div>`+
-    `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="rdcopy">Copy for Claude</button><button class="btn ${postRows.length?'go':''}" id="rdposted"${postRows.length?'':' disabled'}>✓ Mark these posted${postRows.length?' ('+postRows.length+')':''}</button></div>`+
-    `<div class="rdnote">Only ticked, linked patterns are sent. Your tick choices &amp; pairings are remembered. Fabric used is reduced at cut time.</div></div>`;
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:9px;border-top:2px solid var(--dark)"><b>Selected to upload</b><b class="num" style="font-size:15px">${totalSel} hat${totalSel!==1?"s":""}</b></div>`+
+    `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${isLead?`<button class="btn ${list.length?'go':''}" id="rdupload"${list.length?'':' disabled'}>⬆ Upload to Shopify${list.length?` (${totalSel} hats)`:''}</button>`:''}<button class="btn" id="rdcopy">Copy for Claude</button><button class="btn" id="rdposted"${postRows.length?'':' disabled'}>✓ Mark posted only</button></div>`+
+    `<div class="rdnote">Only ticked, linked patterns with a selected style are sent. Partial-style uploads don’t mark the pattern posted (so the rest can go later). Fabric used is reduced at cut time.</div></div>`;
  } else {
   const head = `<tr><th>Pattern</th>${QCOLS.map(c=>`<th style="text-align:center">${c}</th>`).join("")}<th>Logo</th><th>Satin</th><th>Ribbon</th></tr>`;
   const rows = r.lines.map(l=>{
@@ -2597,6 +2613,25 @@ function renderRD(){
  const _cp=document.getElementById("rdcopy"); if(_cp) _cp.onclick=()=>{ try{navigator.clipboard.writeText(rdPostTxt);_cp.textContent="Copied ✓";setTimeout(()=>_cp.textContent="Copy for Claude",2000);}catch(e){prompt("Copy this for Claude:",rdPostTxt);} };
  const _pp=document.getElementById("rdposted"); if(_pp) _pp.onclick=()=>{ if(!OVR.postedPats) OVR.postedPats={}; if(!OVR.postedPats[r.no]) OVR.postedPats[r.no]={}; let n=0; r.lines.forEach(l=>{ const q=lineQ(r.no,l); if(!q.some(x=>x>0)) return; const t=shopTarget(l.p); const sk=(OVR.postSkip[r.no]||{})[l.p]; if(t.prod && !sk && !OVR.postedPats[r.no][l.p]){ OVR.postedPats[r.no][l.p]=true; n++; } }); save(); renderRD(); if(n && typeof boardToast==="function") boardToast(n+" pattern"+(n>1?"s":"")+" marked posted ✓"); };
  document.querySelectorAll("[data-unpost]").forEach(b=>b.onclick=()=>{ const pat=b.dataset.unpost; if(OVR.postedPats&&OVR.postedPats[r.no]) delete OVR.postedPats[r.no][pat]; save(); renderRD(); });
+ /* web7: style chips + direct Shopify upload */
+ document.querySelectorAll("[data-postty]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.postty; if(window._postSty.has(i)) window._postSty.delete(i); else window._postSty.add(i); renderRD(); });
+ const _pa=document.querySelector("[data-postyall]"); if(_pa) _pa.onclick=()=>{ window._postSty = window._postSty.size===7 ? new Set() : new Set([0,1,2,3,4,5,6]); renderRD(); };
+ const _up=document.getElementById("rdupload"); if(_up) _up.onclick=async()=>{
+  if(!rdPostList.length) return;
+  if(!confirm(`Add ${rdPostTotal} finished hats (${rdPostList.length} variant lines) to Shopify inventory?`)) return;
+  _up.disabled=true; _up.textContent="⬆ Uploading…";
+  try{
+   const {data,error}=await sb.functions.invoke("post-inventory",{body:{lines:rdPostList}});
+   if(error||!data||!data.ok){ alert("Upload failed: "+((data&&data.error)||(error&&error.message)||"unknown error")); renderRD(); return; }
+   const failedProds=new Set((data.failed||[]).map(f=>f.prod));
+   const full=window._postSty.size===7;
+   if(full){ if(!OVR.postedPats) OVR.postedPats={}; if(!OVR.postedPats[r.no]) OVR.postedPats[r.no]={};
+    rdPostRows.forEach(x=>{ if(!failedProds.has(x.prodT)) OVR.postedPats[r.no][x.p]=true; }); save(); }
+   if(typeof boardToast==="function") boardToast(`✓ ${data.postedUnits||rdPostTotal} hats posted to Shopify${full?"":" (partial styles — patterns not marked posted)"}`);
+   if(data.failed&&data.failed.length) alert("Some lines didn't post:\n"+data.failed.map(f=>f.prod+" — "+f.variant+" ("+f.reason+")").join("\n"));
+   renderRD();
+  }catch(e){ alert("Upload failed: "+(e&&e.message||e)); renderRD(); }
+ };
  document.querySelectorAll("[data-pairpat]").forEach(b=>b.onclick=()=>{ const pat=b.dataset.pairpat; openFabricPicker((nm)=>{ if(!OVR.shop) OVR.shop={}; OVR.shop[pat]=nm; save(); renderRD(); }); });
  document.querySelectorAll(".postchk").forEach(c=>{ c.onchange=()=>{ if(!OVR.postSkip) OVR.postSkip={}; if(!OVR.postSkip[r.no]) OVR.postSkip[r.no]={}; if(c.checked) delete OVR.postSkip[r.no][c.dataset.pat]; else OVR.postSkip[r.no][c.dataset.pat]=true; save(); renderRD(); }; });
  document.querySelectorAll(".qcell").forEach(inp=>{ if(!isLead){ inp.disabled=true; return; } inp.onchange=()=>{ const pat=inp.dataset.pat, i=+inp.dataset.i, val=Math.max(0, parseInt(inp.value,10)||0);

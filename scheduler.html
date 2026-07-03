@@ -354,11 +354,10 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 </div>
 <div id="opslog"></div>
 <nav>
-  <a class="navlink" href="/index.html">Orders</a>
   <button class="on" data-v="board">Board</button>
+  <button data-v="custom">Orders</button>
   <button data-v="runs">Runs</button>
   <button data-v="tracker">Tracker</button>
-  <button data-v="custom">Custom orders</button>
   <button data-v="fabric">Fabric</button>
   <button data-v="cut">Cut</button>
 </nav>
@@ -375,6 +374,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 
 <section id="view-custom">
   <div class="card" id="cosummary"></div>
+  <div class="card" id="coana" style="display:none"></div>
   <div class="card" id="colist"></div>
 </section>
 
@@ -392,14 +392,14 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 </section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-07-02 · web6 (Taylor Made brand shell + shared navigation with the order app)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-07-02 · web7 (one tool: unified Orders tab — customers, history, financials for leads; production view for team)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-02-web6";
+const BUILD="2026-07-02-web7";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -793,6 +793,8 @@ async function bootCloud(){ try{
  }catch(e){ CLOUD_READY=true; } }
 /* ---------- custom orders: live from the orders table ---------- */
 const MS_MAP={"Cut":"cut","Embroidery":"embroidery","Sewing":"sewing","Fold & inspect":"packaged","Shipped":"shipped"};
+/* web7 unified Orders tab state */
+let ALLORD=[], CUSTBY={}, FINBY={}, CO_VIEW="open", CO_Q="", CO_ANA=false, CO_RANGE="all", COSRC=null;
 function orderToCustom(o){
  const m=o.milestones||{}; const dn=k=>!!(m[k]&&m[k].done);
  const types=o.order_type||[];
@@ -801,7 +803,7 @@ function orderToCustom(o){
  const shippedRow=dn("shipped")||dn("delivered")||/shipped|delivered/i.test(o.status||"");
  const ms={}; if(dn("cut"))ms.Cut=true; if(dn("embroidery"))ms.Embroidery=true; if(dn("sewing"))ms.Sewing=true; if(dn("packaged"))ms["Fold & inspect"]=true; if(shippedRow)ms.Shipped=true;
  const due=o.internal_deadline||o.deadline||o.est_ship||""; 
- return { id:String(o.order_number||o.id), _db:true, _onum:o.order_number, _ms0:m, _done:(dn("delivered")||/delivered/i.test(o.status||"")),
+ return { id:String(o.order_number||o.id), _db:true, _onum:o.order_number, _ms0:m, _row:o, _done:(dn("delivered")||/delivered/i.test(o.status||"")),
   num:String(o.order_number||"").replace(/^#/,""),
   name:o.internal_name||("Order "+(o.order_number||"")),
   due:due?String(due).slice(0,10):"", styles:o.styles||"",
@@ -813,8 +815,14 @@ function orderToCustom(o){
 async function loadOrders(){ if(typeof sb==="undefined") return; try{
   const {data,error}=await sb.from("orders").select("*");
   if(error||!Array.isArray(data)) return;
+  ALLORD=data;
   const mapped=data.map(orderToCustom).filter(c=>c.num && !c._done);
-  CUSTOM=mapped; try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){} render();
+  CUSTOM=mapped; try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
+  if(isLead){
+   try{ const {data:cs}=await sb.from("customers").select("*"); if(Array.isArray(cs)){ CUSTBY={}; cs.forEach(c=>CUSTBY[c.id]=c); } }catch(e){}
+   try{ const {data:fs}=await sb.from("order_financials").select("*"); if(Array.isArray(fs)){ FINBY={}; fs.forEach(f=>FINBY[f.order_id]=f); } }catch(e){}
+  }
+  render();
  }catch(e){} }
 let _pushT=null;
 const PROD_COL={scrub:"scrub_color",logo:"logo",ribbon:"ribbon",sthread:"sewing_thread",ethread:"embroidery_thread",place:"placement",font:"font_option",pnotes:"notes"};
@@ -2206,6 +2214,88 @@ function stepsFor(o){
 const shipped = o => !!(o.ms && o.ms["Shipped"]);
 function openLightbox(src){ var lb=document.getElementById("lightbox"), im=document.getElementById("lightboximg"); if(!lb||!im) return; im.src=src; lb.style.display="flex"; }
 document.addEventListener("click", function(e){ var z=e.target.closest&&e.target.closest("[data-zoom]"); if(z){ openLightbox(z.getAttribute("data-zoom")); return; } if(e.target.id==="lightbox"||e.target.id==="lightboximg"){ var lb=document.getElementById("lightbox"); if(lb) lb.style.display="none"; } });
+/* ---------- web7: unified Orders tab (lead extras, search, all-orders, analytics) ---------- */
+function coMoney(v){ const n=parseFloat(v); return (v==null||isNaN(n))?"—":"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function coLeadExtras(o){
+ const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; const f=FINBY[r.id]||{};
+ const num=v=>{ const n=parseFloat(v); return isNaN(n)?null:n; };
+ const inv=num(f.invoice_total), lab=num(f.labor_cost)||0, mat=num(f.materials_cost)||0, shc=num(f.shipping_cost)||0;
+ const profit=inv==null?null:inv-lab-mat-shc;
+ const margin=(profit!=null&&inv)?Math.round(profit/inv*100)+"%":"—";
+ const lst='display:flex;flex-direction:column;font-size:10.5px;color:#6f8c8f;font-weight:600;gap:2px';
+ const ist='border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:13px;font-weight:400;color:var(--ink)';
+ const df=(l,col,v)=>`<label style="${lst}">${l}<input type="date" class="codate" data-codate="${o.id}|${col}" value="${(v||"").slice(0,10)}" style="${ist}"></label>`;
+ const ff=(l,col,v)=>`<label style="${lst}">${l}<input type="number" step="0.01" class="cofin" data-cofin="${o.id}|${col}" value="${v==null?"":v}" style="${ist}"></label>`;
+ return `<div class="colead" style="margin-top:10px;border-top:1px dashed var(--line);padding-top:10px">
+  <div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dark);font-weight:700;margin-bottom:6px">Lead only — customer · dates · financials</div>
+  <div style="font-size:13px;margin-bottom:8px"><b>${(c.name||"no customer linked")}</b>${c.contact?" · "+c.contact:""}${c.email?` · <a href="mailto:${c.email}">${c.email}</a>`:""} <button class="btn" style="padding:3px 10px;min-height:0;font-size:11px" data-coecust="${o.id}">edit</button></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;margin-bottom:8px">
+   ${df("Customer deadline","deadline",r.deadline)}${df("Goal completion","internal_deadline",r.internal_deadline)}${df("Est. ship","est_ship",r.est_ship)}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;align-items:end">
+   ${ff("Invoice","invoice_total",f.invoice_total)}${ff("Materials","materials_cost",f.materials_cost)}${ff("Labor","labor_cost",f.labor_cost)}${ff("Ship collected","shipping_charged",f.shipping_charged)}${ff("Ship cost","shipping_cost",f.shipping_cost)}
+   <div style="font-size:12.5px;padding-bottom:4px"><b>Profit ${coMoney(profit)}</b><br><span style="color:var(--soft)">Margin ${margin}</span></div>
+  </div>
+ </div>`;
+}
+function coCtlBar(){
+ return `<div class="coctl" style="gap:8px;flex-wrap:wrap;align-items:center">
+  <b style="font-size:15px">Orders</b>
+  ${isLead?`<div class="segwrap"><button class="seg${CO_VIEW==="open"?" on":""}" data-cov="open">In progress</button><button class="seg${CO_VIEW==="all"?" on":""}" data-cov="all">All orders</button></div>`:""}
+  <input id="cosearch" placeholder="Search orders…" value="${(CO_Q||"").replace(/"/g,"&quot;")}" style="flex:1;min-width:130px;border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;background:var(--card)">
+  ${isLead?`<button class="btn${CO_ANA?" go":""}" id="coana-btn">Analytics</button><button class="btn" id="coadd2">＋ Add order</button><button class="btn go" id="cosync2">↻ Sync Shopify</button>`:""}
+  <button class="btn" id="coexpand">Expand all</button></div>`;
+}
+function renderCoAna(){
+ const el=document.getElementById("coana"); if(!el) return;
+ if(!CO_ANA||!isLead){ el.style.display="none"; return; }
+ el.style.display="";
+ const now=new Date();
+ const start=CO_RANGE==="30"?new Date(now-30*864e5):CO_RANGE==="90"?new Date(now-90*864e5):CO_RANGE==="365"?new Date(now-365*864e5):CO_RANGE==="ytd"?new Date(now.getFullYear(),0,1):null;
+ const inR=d=>!start||(!!d&&new Date(d+"T00:00:00")>=start);
+ const ord=ALLORD.filter(o=>inR(o.order_date));
+ const num=v=>{ const n=parseFloat(v); return isNaN(n)?null:n; };
+ const hats=ord.reduce((s,o)=>s+(num(o.total_hats)||0),0);
+ const custs=new Set(ord.map(o=>o.customer_id).filter(Boolean)).size;
+ const byC={}; ord.forEach(o=>{ if(o.customer_id) byC[o.customer_id]=(byC[o.customer_id]||0)+1; });
+ const rep=Object.values(byC).filter(n=>n>1).length;
+ const td=[],dd=[];
+ ord.forEach(o=>{ if(o.order_date&&o.ship_date){ const a=(new Date(o.ship_date)-new Date(o.order_date))/864e5; if(a>=0&&a<400) td.push(a); } if(o.order_date&&o.delivered_date){ const b=(new Date(o.delivered_date)-new Date(o.order_date))/864e5; if(b>=0&&b<400) dd.push(b); } });
+ const avg=a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;
+ let inv=0,prof=0,invN=0;
+ ord.forEach(o=>{ const f=FINBY[o.id]||{}; const i=num(f.invoice_total); if(i!=null){ inv+=i; invN++; prof+=i-(num(f.labor_cost)||0)-(num(f.materials_cost)||0)-(num(f.shipping_cost)||0); } });
+ const chips=[["30","30 days"],["90","90 days"],["ytd","YTD"],["365","1 year"],["all","All time"]].map(([k,l])=>`<button class="seg${CO_RANGE===k?" on":""}" data-corange="${k}">${l}</button>`).join("");
+ const cs=(l,v)=>`<div class="cs"><b>${v}</b><span>${l}</span></div>`;
+ el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b>Analytics — lead only</b><div class="segwrap">${chips}</div></div>
+  <div class="cosnap">${cs("orders",ord.length)+cs("customers",custs)+cs("repeat",rep)+cs("hats",hats)+cs("avg → shipped",avg(td)==null?"—":avg(td)+"d")+cs("avg → delivered",avg(dd)==null?"—":avg(dd)+"d")+cs("invoiced",coMoney(inv))+cs("profit",coMoney(prof))+cs("avg margin",inv?Math.round(prof/inv*100)+"%":"—")}</div>`;
+ el.querySelectorAll("[data-corange]").forEach(b=>b.onclick=()=>{ CO_RANGE=b.dataset.corange; renderCoAna(); });
+}
+async function coAddOrder(){ if(!isLead) return;
+ const onum=(prompt("Shopify order # (or a unique id):")||"").trim(); if(!onum) return;
+ const iname=(prompt("Internal team name (used in Clockify):")||"").trim();
+ const cname=(prompt("Customer / team name (optional):")||"").trim();
+ try{
+  let customer_id=null;
+  if(cname){ const {data:f}=await sb.from("customers").select("id").eq("name",cname).limit(1).maybeSingle();
+   if(f) customer_id=f.id; else { const {data:nc}=await sb.from("customers").insert({name:cname}).select("id").single(); customer_id=nc?nc.id:null; } }
+  const today=new Date().toISOString().slice(0,10);
+  const {error}=await sb.from("orders").insert({order_number:onum, internal_name:iname||null, customer_id, order_date:today, status:"Ordered", milestones:{placed:{done:true,date:today}}});
+  if(error){ alert("Couldn't add: "+error.message); return; }
+  await loadOrders();
+ }catch(e){ alert("Couldn't add the order."); } }
+async function coSyncShopify(btn){ if(btn){ btn.disabled=true; btn.textContent="↻ Syncing…"; }
+ try{ const {error}=await sb.functions.invoke("sync-orders"); if(error) alert("Sync error — showing saved data"); }catch(e){}
+ await loadOrders(); }
+async function coEditCust(id){ const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o||!o._row) return; const r=o._row; const c=CUSTBY[r.customer_id]||{};
+ const nn=prompt("Customer / team name:", c.name||""); if(nn===null) return;
+ const ct=prompt("Contact:", c.contact||""); if(ct===null) return;
+ const em=prompt("Email:", c.email||""); if(em===null) return;
+ try{
+  if(r.customer_id){ await sb.from("customers").update({name:nn,contact:ct,email:em}).eq("id",r.customer_id); CUSTBY[r.customer_id]=Object.assign({},c,{name:nn,contact:ct,email:em}); }
+  else{ const {data:nc}=await sb.from("customers").insert({name:nn,contact:ct,email:em}).select("id").single(); if(nc){ await sb.from("orders").update({customer_id:nc.id}).eq("id",r.id); r.customer_id=nc.id; CUSTBY[nc.id]={id:nc.id,name:nn,contact:ct,email:em}; } }
+ }catch(e){}
+ renderCustom(); }
+
 function renderCustom(){
  const open = CUSTOM.filter(o=>!shipped(o));
  const sewL = open.reduce((s,o)=>s+coTime(o).sewRem,0);
@@ -2216,7 +2306,13 @@ function renderCustom(){
   <div class="cs"><b>${fmtH(embL)}</b><span>embroidery left</span></div>
  </div>`;
  const today = new Date(); today.setHours(0,0,0,0);
- const rows = CUSTOM.slice().sort((a,b)=>(shipped(a)?1:0)-(shipped(b)?1:0) || (a.due||"9999").localeCompare(b.due||"9999")).map((o,ri)=>{
+ /* web7: source list = open orders (default) or full history (lead), filtered by search */
+ const q=(CO_Q||"").trim().toLowerCase();
+ let src=(isLead && CO_VIEW==="all") ? ALLORD.map(orderToCustom) : CUSTOM.slice();
+ if(q) src=src.filter(o=>{ const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; return ((o.name||"")+" "+(o.num||"")+" "+(o.styles||"")+" "+(c.name||"")+" "+(c.email||"")+" "+(c.contact||"")).toLowerCase().includes(q); });
+ COSRC=src;
+ const openIds=new Set([...document.querySelectorAll("details.cocard[open]")].map(d=>d.dataset.coid));
+ const rows = src.sort((a,b)=> (isLead&&CO_VIEW==="all") ? (((b._row||{}).order_date||"").localeCompare(((a._row||{}).order_date||""))) : ((shipped(a)?1:0)-(shipped(b)?1:0) || (a.due||"9999").localeCompare(b.due||"9999")) ).map((o,ri)=>{
   const t = coTime(o);
   const steps = stepsFor(o);
   o.ms = o.ms || {};
@@ -2267,15 +2363,15 @@ function renderCustom(){
      <textarea class="coprodnote" data-prod="${o.id}|pnotes" rows="3" oninput="this.style.height='auto';this.style.height=Math.max(this.scrollHeight,72)+'px'" onfocus="this.style.minHeight='130px'" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:13px;line-height:1.45;resize:vertical;min-height:64px" placeholder="Add embroidery text, sizing requests, special instructions…">${(o.pnotes||"").replace(/</g,"&lt;")}</textarea>
      <span class="prodsaved" data-saved="${o.id}" style="font-size:11px;color:#3B6D11;opacity:0;transition:opacity .3s">Saved ✓</span>
     </div>
+    ${isLead?coLeadExtras(o):""}
    </div>
   </details>`;
  }).join("");
- const anyOpen = CUSTOM.some(o=>!shipped(o));
- document.getElementById("colist").innerHTML = `<div class="coctl"><b style="font-size:15px">Custom orders</b><button class="btn" id="coexpand" style="margin-left:auto">Expand all</button></div>` + (rows || `<div class="empty">No custom orders yet.</div>`) + `
+ document.getElementById("colist").innerHTML = coCtlBar() + (rows || `<div class="empty">${q?"No orders match your search.":"No custom orders yet."}</div>`) + `
   <div class="coform" style="align-items:center;gap:10px">
-   <span style="font-size:12.5px;color:#7A766B">Custom orders sync automatically from your Orders app.</span>
-   <a class="btn go" href="/index.html" style="text-decoration:none">＋ Add / edit in Orders ↗</a>
+   <span style="font-size:12.5px;color:#6f8c8f">Orders sync automatically from Shopify each morning — a timeline comment “Internal Name: …” names them for you.</span>
   </div>`;
+ openIds.forEach(id=>{ const d=document.querySelector('details.cocard[data-coid="'+id+'"]'); if(d) d.open=true; });
  var _cs=document.getElementById("co-sync"); if(_cs) _cs.onclick = ()=>{
   const code = JSON.stringify(CUSTOM.map(o=>({num:o.num, name:o.name, done:Object.keys(o.ms||{}).filter(k=>o.ms[k])})));
   try { navigator.clipboard.writeText("Sync custom orders: " + code); } catch(e){ prompt("Copy this for Claude:", code); }
@@ -2299,24 +2395,30 @@ function renderCustom(){
   saveCO(); render();
  };
  document.querySelectorAll("[data-cms]").forEach(el=>el.onclick=()=>{
-  const o = CUSTOM.find(x=>x.id===el.dataset.cms);
+  const o = (COSRC||CUSTOM).find(x=>x.id===el.dataset.cms); if(!o) return;
   o.ms = o.ms || {};
   o.ms[el.dataset.step] = !o.ms[el.dataset.step];
   if(el.dataset.step==="Sewing" && o.ms.Sewing && (o.sewPct||0)<100) o.sewPct = 100;
   if(el.dataset.step==="Embroidery" && o.ms.Embroidery && (o.embPct||0)<100) o.embPct = 100;
+  if(o._db && !CUSTOM.some(x=>x.id===o.id)){ /* web7: archived order in All view — write milestones directly */
+   const prev=o._ms0||{}; const base=Object.assign({},prev); const td=new Date().toISOString().slice(0,10);
+   for(const step in MS_MAP){ const mk=MS_MAP[step]; const want=!!(o.ms&&o.ms[step]); const cur=base[mk]||{done:false,date:""}; base[mk]=(want!==!!cur.done)?{done:want,date:want?(cur.date||td):(cur.date||"")}:cur; }
+   o._ms0=base; _selfWrite=Date.now();
+   try{ sb.from("orders").update({milestones:base,updated_at:new Date().toISOString()}).eq("order_number",o._onum).then(()=>{}); }catch(e){}
+  }
   saveCO(); render();
  });
- document.querySelectorAll("[data-coemb]").forEach(i=>i.onchange=()=>{ const o=CUSTOM.find(x=>x.id===i.dataset.coemb); o.emb=+i.value||0; saveCO(); render(); });
- document.querySelectorAll(".coprodf,.coprodnote").forEach(el=>{ el.onchange=()=>{ const parts=el.dataset.prod.split("|"); const id=parts[0], field=parts[1]; const o=CUSTOM.find(x=>x.id===id); if(!o) return; o[field]=el.value; saveOrderField(o,field,el.value); const sv=document.querySelector('[data-saved="'+id+'"]'); if(sv){ sv.style.opacity=1; setTimeout(()=>{sv.style.opacity=0;},1500); } }; });
+ document.querySelectorAll("[data-coemb]").forEach(i=>i.onchange=()=>{ const o=(COSRC||CUSTOM).find(x=>x.id===i.dataset.coemb); if(!o) return; o.emb=+i.value||0; saveCO(); render(); });
+ document.querySelectorAll(".coprodf,.coprodnote").forEach(el=>{ el.onchange=()=>{ const parts=el.dataset.prod.split("|"); const id=parts[0], field=parts[1]; const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o) return; o[field]=el.value; saveOrderField(o,field,el.value); const sv=document.querySelector('[data-saved="'+id+'"]'); if(sv){ sv.style.opacity=1; setTimeout(()=>{sv.style.opacity=0;},1500); } }; });
  document.querySelectorAll("[data-cosched]").forEach(b=>b.onclick=()=>{
   const [id,kind] = b.dataset.cosched.split("|");
-  const o = CUSTOM.find(x=>x.id===id);
+  const o = CUSTOM.find(x=>x.id===id); if(!o) return;
   if(kind==="sew") o.schedSew = !o.schedSew; else o.schedEmb = !o.schedEmb;
   saveCO(); render();
  });
  document.querySelectorAll("[data-cpct]").forEach(el=>el.onclick=()=>{
   const [id,kind] = el.dataset.cpct.split("|");
-  const o = CUSTOM.find(x=>x.id===id);
+  const o = (COSRC||CUSTOM).find(x=>x.id===id); if(!o) return;
   const cur = kind==="sew" ? (o.sewPct||0) : (o.embPct||0);
   const v = prompt((kind==="sew"?"Sewing":"Embroidery")+" % complete for "+o.name+":", cur);
   if(v===null) return;
@@ -2324,6 +2426,17 @@ function renderCustom(){
   if(kind==="sew"){ o.sewPct = n; if(n>=100) o.ms.Sewing = true; } else { o.embPct = n; if(n>=100) o.ms.Embroidery = true; }
   saveCO(); render();
  });
+ /* ---------- web7: unified Orders controls ---------- */
+ renderCoAna();
+ document.querySelectorAll("[data-cov]").forEach(b=>b.onclick=()=>{ CO_VIEW=b.dataset.cov; renderCustom(); });
+ const _cq=document.getElementById("cosearch");
+ if(_cq){ _cq.oninput=()=>{ CO_Q=_cq.value; clearTimeout(window._coqT); window._coqT=setTimeout(()=>{ renderCustom(); const s=document.getElementById("cosearch"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} } },300); }; }
+ const _cab=document.getElementById("coana-btn"); if(_cab) _cab.onclick=()=>{ CO_ANA=!CO_ANA; renderCustom(); };
+ const _cad=document.getElementById("coadd2"); if(_cad) _cad.onclick=coAddOrder;
+ const _csy=document.getElementById("cosync2"); if(_csy) _csy.onclick=()=>coSyncShopify(_csy);
+ document.querySelectorAll("[data-coecust]").forEach(b=>b.onclick=()=>coEditCust(b.dataset.coecust));
+ document.querySelectorAll(".codate").forEach(i=>i.onchange=async()=>{ const [id,col]=i.dataset.codate.split("|"); const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o||!o._row) return; o._row[col]=i.value||null; _selfWrite=Date.now(); try{ await sb.from("orders").update({[col]:i.value||null, updated_at:new Date().toISOString()}).eq("id",o._row.id); }catch(e){} });
+ document.querySelectorAll(".cofin").forEach(i=>i.onchange=async()=>{ const [id,col]=i.dataset.cofin.split("|"); const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o||!o._row) return; const v=i.value===""?null:parseFloat(i.value); FINBY[o._row.id]=Object.assign(FINBY[o._row.id]||{order_id:o._row.id},{[col]:v}); try{ await sb.from("order_financials").upsert(Object.assign({order_id:o._row.id},{[col]:v}), {onConflict:"order_id"}); }catch(e){} renderCustom(); });
 }
 
 function runOrder(){ return RUNS.slice().sort((a,b)=>b.no-a.no).map(r=>r.no); }

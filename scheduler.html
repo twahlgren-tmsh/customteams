@@ -794,6 +794,7 @@ function applyRemote(key,val,skipRender){
  else if(key===OVRKEY){ const inc=Object.keys((val&&val.pins)||{}).length, loc=Object.keys((OVR&&OVR.pins)||{}).length;
   if(inc===0 && loc>0 && USER_TOUCHED){ try{cloudSave(OVRKEY,OVR);}catch(e){} return; }
   OVR=val||{avail:{},pins:{},log:[]}; if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; if(!OVR.extraLines)OVR.extraLines={}; if(!OVR.goLive)OVR.goLive={}; if(!OVR.shop)OVR.shop={}; if(!OVR.flags)OVR.flags={}; try{ if(typeof rebuildRuns==="function") rebuildRuns(); }catch(e){} }
+ else if(key==="tmsh-fablive"){ window.FAB_LIVE=val; try{ applyFabLive(); }catch(e){} } /* web8: morning fabric sync */
  else if(key===PKEY) PAIR=val||{};
  else if(key===RKEY && Array.isArray(val)){ XRUNS=val; try{ if(typeof rebuildRuns==="function") rebuildRuns(); }catch(e){} }
  else return;
@@ -1170,7 +1171,20 @@ const TRENDING_NEW = [
  {p:"Enchanted Flutter",v:16.1},{p:"Pandora Flutterwave",v:15.7},{p:"Turquoise Flutterwave",v:15.4},
  {p:"Sage Sketch Floral",v:14.7},{p:"Blueberry Riptide",v:13.5}
 ];
-const VEL_ASOF = "Jun 22, 2026";
+let VEL_ASOF = "Jun 22, 2026"; /* web8: overwritten by the morning fabric sync (tmsh-fablive) */
+/* web8: apply the morning fabric sync — fresh on-hand + velocity for every print & core color */
+function applyFabLive(){
+ const f=window.FAB_LIVE; if(!f||!Array.isArray(f.products)) return;
+ if(f.asof) VEL_ASOF=f.asof;
+ f.products.forEach(pr=>{
+  try{
+   const c=(typeof CATALOG!=="undefined")&&CATALOG.find(x=>x.p===pr.p);
+   if(c){ c.on=pr.on; if(pr.v!=null) c.v=pr.v; if(pr.ven&&!c.ven) c.ven=pr.ven; }
+   if(typeof CSTYLE!=="undefined"&&CSTYLE[pr.p]&&Array.isArray(pr.styles)) CSTYLE[pr.p].o=pr.styles.slice();
+  }catch(e){}
+ });
+ try{ if(f.core&&typeof CORE_STYLE!=="undefined"){ Object.keys(f.core).forEach(cl=>{ if(CORE_STYLE[cl]&&Array.isArray(f.core[cl].o)) CORE_STYLE[cl].o=f.core[cl].o.slice(); }); } }catch(e){}
+}
 const trendBadge = t => t==="rising" ? '<span class="fbadge" style="background:#E3F3E0;color:#2E6B1E">▲ rising</span>' : t==="fading" ? '<span class="fbadge" style="background:#F1EEE7;color:#A07B45">▾ cooling</span>' : '';
 const stockBadge = s => s==="out" ? '<span class="fbadge" style="background:#FBE3DC;color:#B23A1B">⚠ sold out · restock</span>' : s==="low" ? '<span class="fbadge" style="background:#FAEEDA;color:#854F0B">low stock</span>' : s==="slow" ? '<span class="fbadge" style="background:#ECEAF7;color:#6A5FB0">overstocked · slow</span>' : '';
 const FAST_MO = 12;  // ≥ this many/mo = reorder ahead even while in a queued run
@@ -1908,7 +1922,7 @@ function renderCut(){
    const threadsUsed=new Set(OVR.cut.sess.map(s=>s.thread));
    h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap"><b style="font-size:15px">This cut — ${OVR.cut.sess.length} fabric${OVR.cut.sess.length>1?"s":""}</b>${threadsUsed.size>1?`<span class="fbadge" style="background:#EDE9FB;color:#5B50D6">${threadsUsed.size} thread colors — grouped below</span>`:`${tchip([...threadsUsed][0])}`}<button class="btn" id="cutgochoose" style="margin-left:auto">＋ Add fabric</button></div>`;
    { const _t={}; CUT_SECT.forEach(s=>_t[s.s]=0); OVR.cut.sess.forEach(sp=>{ const hh=cutHats(sp.layers); CUT_SECT.forEach(s=>_t[s.s]+=hh[s.s]); }); const _sum=Object.values(_t).reduce((a,b)=>a+b,0);
-     h+=`<div class="card" style="margin-bottom:12px"><b style="font-size:13.5px">This cut produces — live total</b><div class="cuthats" style="margin-top:6px">${CUT_SECT.map(s=>`<div class="chat"><b>${_t[s.s]}</b><span>${s.s}</span></div>`).join("")}<div class="chat" style="background:#23211C"><b style="color:#fff">${_sum}</b><span style="color:#fff">total</span></div></div><div class="fmeta" style="margin-top:6px">“have” = your on-hand stock by style as of ${typeof VEL_ASOF!=="undefined"?VEL_ASOF:"the last refresh"} (auto-refreshes Mon &amp; Thu). Want it updated now? Ask Claude to “refresh cut inventory”.</div></div>`; }
+     h+=`<div class="card" style="margin-bottom:12px"><b style="font-size:13.5px">This cut produces — live total</b><div class="cuthats" style="margin-top:6px">${CUT_SECT.map(s=>`<div class="chat"><b>${_t[s.s]}</b><span>${s.s}</span></div>`).join("")}<div class="chat" style="background:#23211C"><b style="color:#fff">${_sum}</b><span style="color:#fff">total</span></div></div><div class="fmeta" style="margin-top:6px">“have” = your on-hand stock by style as of ${typeof VEL_ASOF!=="undefined"?VEL_ASOF:"the last refresh"} — refreshes automatically every morning from Shopify.</div></div>`; }
    const _allAcc=OVR.cut.sess.length&&OVR.cut.sess.every(s=>s.accepted);
    if(_allAcc){ h+=cutAuditTable(); }
    { /* web8: group session fabrics by thread color (multi-thread welcome) */
@@ -1928,7 +1942,11 @@ function wireCutAll(){
  document.querySelectorAll("[data-cutview]").forEach(b=>b.onclick=()=>{ OVR.cut.view=b.dataset.cutview; save(); render(); });
  const gc=document.getElementById("cutgochoose"); if(gc) gc.onclick=(e)=>{ e.preventDefault(); OVR.cut.view="choose"; save(); render(); };
  document.querySelectorAll(".cutactcell").forEach(inp=>{ inp.onchange=()=>{ const parts=inp.dataset.cutact.split("|"); const id=parts[0], sn=parts[1]; const sp=OVR.cut.sess.find(x=>x.id===id); if(!sp) return; if(!sp.actual) sp.actual={}; sp.actual[sn]=Math.max(0, parseInt(inp.value,10)||0); save(); render(); }; });
- const rf=document.getElementById("cutrefresh"); if(rf) rf.onclick=()=>pullCutInventory(rf);
+ const rf=document.getElementById("cutrefresh"); if(rf) rf.onclick=async()=>{ /* web8: refresh via sync-fabric */
+  rf.disabled=true; const o=rf.textContent; rf.textContent="↻ Refreshing…";
+  try{ const {data,error}=await sb.functions.invoke("sync-fabric"); if(error||!data||!data.ok){ if(typeof boardToast==="function") boardToast("Refresh failed — try again"); } else if(typeof boardToast==="function") boardToast(`✓ Inventory refreshed (${data.prints} prints, ${data.coreColors} colors)`); }catch(e){}
+  rf.disabled=false; rf.textContent=o;
+ };
  document.querySelectorAll("[data-cadd]").forEach(b=>b.onclick=()=>{ const p=b.dataset.cadd.split("|"); cutAdd(p[0],p[1],p[2],p[3]); OVR.cut.view="choose"; save(); render(); if(typeof boardToast==="function") boardToast("Added to cut ✓ — keep choosing, tap Current cut when ready"); });
  document.querySelectorAll("[data-cutrm]").forEach(b=>b.onclick=()=>cutRemove(b.dataset.cutrm));
  document.querySelectorAll("[data-cutbolt]").forEach(s=>s.onchange=()=>{ const sp=find(s.dataset.cutbolt); if(sp){ const v=+s.value; if(v) sp.boltYd=v; save(); render(); } });

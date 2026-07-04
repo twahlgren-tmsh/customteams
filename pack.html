@@ -144,9 +144,20 @@
   .cExp b{display:block; font-size:15px; color:var(--text);}
   .cDiff{min-width:44px; text-align:center; font-weight:800; font-size:14px;}
   .cDiff.pos{color:var(--ok);} .cDiff.neg{color:var(--coral);} .cDiff.zero{color:var(--dim); font-weight:400;}
-  .secHead{display:flex; align-items:center; gap:10px; margin:18px 0 10px;}
+  .secHead{display:flex; align-items:center; gap:10px; margin:18px 0 10px; flex-wrap:wrap;}
   .secHead h3{font-size:15px; color:var(--teal-dark);}
   .secHead .sp{flex:1;}
+
+  /* stats */
+  .statGrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:16px;}
+  .statCard{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px;}
+  .statCard b{display:block; font-size:26px; color:var(--teal-dark); font-family:Poppins,sans-serif;}
+  .statCard span{font-size:12px; color:var(--dim);}
+  .bars{display:flex; align-items:flex-end; gap:4px; height:110px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:16px;}
+  .bcol{flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:3px; height:100%;}
+  .bcol i{width:100%; background:var(--teal); border-radius:4px 4px 0 0; min-height:2px;}
+  .bcol small{font-size:9px; color:var(--dim);}
+  .bcol em{font-size:10px; font-weight:800; color:var(--teal-dark); font-style:normal;}
   @media (max-width:600px){ .onum{min-width:58px; font-size:15px;} .ocount{display:none;} .prow .sk{display:none;} }
 </style>
 </head>
@@ -172,11 +183,12 @@
       <button class="tab" data-tab="pack">Pack</button>
       <button class="tab" data-tab="print">Print</button>
       <button class="tab" data-tab="count">Count</button>
+      <button class="tab" data-tab="stats">Stats</button>
     </nav>
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms3</span>
+    <span class="build">wms5</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -232,6 +244,7 @@
   <!-- ============ PRINT ============ -->
   <div id="tab-print" class="wrap hidden">
     <div class="secHead"><h3>Print queue</h3><span class="sp"></span>
+      <button class="ghostBtn" id="prodPullBtn">&#8681; From production</button>
       <button class="primaryBtn" id="printPendingBtn">&#128424; Print queue</button>
       <button class="ghostBtn" id="markPrintedBtn">Mark printed</button>
     </div>
@@ -262,6 +275,11 @@
     </div>
     <div id="countIntro" class="empty">Pick a style to start (or resume) an inventory count.<br>Only patterns with stock on hand are listed — scanning anything else pulls it in flagged.</div>
   </div>
+
+  <!-- ============ STATS ============ -->
+  <div id="tab-stats" class="wrap hidden">
+    <div id="statsBody"><div class="empty">Loading&hellip;</div></div>
+  </div>
 </div>
 
 <!-- pick list overlay -->
@@ -273,6 +291,20 @@
     <div class="sheetBar">
       <button class="ghostBtn" id="plCloseBtn">Close</button>
       <button class="primaryBtn" id="plPrintBtn">&#128424; Print pick list</button>
+    </div>
+  </div>
+</div>
+
+<!-- production pull overlay -->
+<div id="ppOverlay" class="overlay hidden">
+  <div class="sheet">
+    <h2>Queue labels from production</h2>
+    <div class="sub">Upcoming runs from the scheduler — quantities follow each run's cut plan (LUXE Original is made-on-demand and never printed).</div>
+    <div id="ppBody"></div>
+    <div class="sheetBar">
+      <span id="ppMsg" style="font-size:13px;font-weight:700;margin-right:auto"></span>
+      <button class="ghostBtn" id="ppCloseBtn">Close</button>
+      <button class="primaryBtn" id="ppQueueBtn">Queue labels</button>
     </div>
   </div>
 </div>
@@ -345,8 +377,9 @@ function binOf(sku){
 }
 const realVariant = (v)=> v.barcode && !FAKE_BINS.has(binOf(v.sku));
 const binLabel = (b)=> STYLE_NAMES[b] ? b+" — "+STYLE_NAMES[b] : (b.startsWith("PLUS")?b+" — Comfort+":(b==="OTHER"?"Other items":b));
-function binSort(a,b){ const oa=a==="OTHER"?2:(a.startsWith("PLUS")?1:0), ob=b==="OTHER"?2:(b.startsWith("PLUS")?1:0);
-  return oa-ob || a.localeCompare(b); }
+const BIN_ORDER = {CP:0,LP:1,CT:2,LT:3,CO:4,LO:5,CS:6,LS:7};  // Taylor's shelf order: CP, LP, CTE, LTE, CO, LO, CS, LS
+function binRank(x){ return (x in BIN_ORDER) ? BIN_ORDER[x] : (x==="OTHER" ? 99 : (x.startsWith("PLUS") ? 50 : 60)); }
+function binSort(a,b){ return binRank(a)-binRank(b) || a.localeCompare(b); }
 const ageOf = (iso)=>{ const h=(Date.now()-new Date(iso).getTime())/36e5; return h<24?Math.max(1,Math.round(h))+"h":Math.round(h/24)+"d"; };
 const esc = (s)=>(s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtDate = (iso)=> new Date(iso).toLocaleDateString();
@@ -410,9 +443,10 @@ document.querySelectorAll(".tab").forEach(b=> b.onclick = ()=> switchTab(b.datas
 function switchTab(t){
   activeTab = t;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on", x.dataset.tab===t));
-  ["pick","pack","print","count"].forEach(x=> $("tab-"+x).classList.toggle("hidden", x!==t));
+  ["pick","pack","print","count","stats"].forEach(x=> $("tab-"+x).classList.toggle("hidden", x!==t));
   if(t==="print"){ renderPrintBins(); loadPrintQueue(); }
   if(t==="count"){ renderCountBins(); }
+  if(t==="stats"){ renderStats(); }
   focusScan();
 }
 
@@ -834,8 +868,7 @@ function renderPrintCatalog(){
   rows = rows.slice(0,300);
   if(!rows.length){ $("printCatalog").innerHTML='<div class="empty">'+((printBinsSel.size||q)?"No matches.":"Pick styles above to browse labels.")+'</div>'; return; }
   $("printCatalog").innerHTML = rows.map(v=>
-    '<div class="vrow"><div class="ti"><div>'+esc(v.product_title)+' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div>'
-    + '<div class="sk">'+esc(v.sku||"—")+' · '+esc(v.barcode)+' · '+esc(binOf(v.sku))+'</div></div>'
+    '<div class="vrow"><div class="ti"><div>'+esc(v.product_title)+' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div></div>'
     + '<div class="stepper"><button onclick="pqAdd(\''+v.variant_id+'\',-1)">−</button>'
     + '<input class="qtyIn" type="number" min="1" id="qv'+v.variant_id+'" value="'+(pqQty[v.variant_id]||1)+'" onchange="pqSet(\''+v.variant_id+'\',this.value)">'
     + '<button onclick="pqAdd(\''+v.variant_id+'\',1)">+</button></div>'
@@ -868,7 +901,6 @@ async function loadPrintQueue(){
       + rows.reduce((s,r)=>s+r.qty,0)+' labels</span></div>';
     html += rows.map(r=>'<div class="prow">'
       + '<input class="qtyIn" type="number" min="1" value="'+r.qty+'" onchange="pqUpdateQty('+r.id+',this.value)" title="Edit label quantity">'
-      + '<span class="sk">'+esc(r.sku||"—")+'</span>'
       + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant_title||"")+'</span>'
       + (r.source!=="manual"?' <span class="vt">('+esc(r.source)+')</span>':"")+'</span>'
       + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="pqRemove('+r.id+')">✕</button></div>').join("");
@@ -905,24 +937,21 @@ function printLabels(labels){
     const el=$(sid);
     const svg=el?el.outerHTML.replace('id="'+sid+'"',""):"";
     html += '<div class="label">'
-      + '<img class="lg" src="'+LOGO+'">'
-      + '<div class="top"><span class="t">'+esc((r.title||"").slice(0,34))+'</span>'
-      + '<span class="b">'+esc(r.bin||"")+'</span></div>'
-      + '<div class="v">'+esc((r.variant_title||"").slice(0,40))+'</div>'
-      + '<div class="bc">'+svg+'</div>'
-      + '<div class="sk">'+esc(r.sku||"")+'</div></div>';
+      + '<div class="top"><div class="tt"><div class="t">'+esc((r.title||"").slice(0,34))+'</div>'
+      + '<div class="v">'+esc((r.variant_title||"").slice(0,40))+'</div></div>'
+      + '<img class="lg" src="'+LOGO+'"></div>'
+      + '<div class="bc">'+svg+'</div></div>';
   });
   work.innerHTML="";
   printDoc(html,
     "@page{size:2in 1in;margin:0} body{margin:0;font-family:Arial,sans-serif}"
-    + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:1px 4px 2px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box}"
-    + ".lg{height:0.10in;object-fit:contain;margin-bottom:1px}"
-    + ".top{display:flex;justify-content:space-between;width:100%;align-items:baseline}"
-    + ".top .t{font-size:7.5px;font-weight:bold;overflow:hidden;white-space:nowrap}"
-    + ".top .b{font-size:11px;font-weight:900;margin-left:4px}"
-    + ".v{font-size:6.5px;width:100%;text-align:left;white-space:nowrap;overflow:hidden}"
-    + ".bc{flex:1;display:flex;align-items:center;min-height:0} .bc svg{max-width:1.85in;height:0.42in}"
-    + ".sk{font-size:6.5px;font-family:monospace}", 900);
+    + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:2px 4px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box}"
+    + ".top{display:flex;width:100%;align-items:center;gap:4px}"
+    + ".tt{flex:1;min-width:0}"
+    + ".t{font-size:7.5px;font-weight:bold;overflow:hidden;white-space:nowrap}"
+    + ".v{font-size:6.5px;white-space:nowrap;overflow:hidden}"
+    + ".lg{height:0.26in;max-width:0.85in;object-fit:contain}"
+    + ".bc{flex:1;display:flex;align-items:center;min-height:0} .bc svg{max-width:1.85in;height:0.52in}", 900);
 }
 
 function printDoc(bodyHtml, css, delay){
@@ -976,8 +1005,7 @@ function renderCountRows(){
     const pulled = exp<=0 && c>0;
     return '<div class="vrow'+(diff!==0?" flagged":"")+'" id="cv'+v.variant_id+'"><div class="ti"><div>'+esc(v.product_title)
       + ' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span>'
-      + (pulled?' <span class="chip new">NEW — not in Shopify stock</span>':"")+'</div>'
-      + '<div class="sk">'+esc(v.sku||"—")+'</div></div>'
+      + (pulled?' <span class="chip new">NEW — not in Shopify stock</span>':"")+'</div></div>'
       + '<div class="cExp"><b>'+exp+'</b>shopify</div>'
       + '<div class="stepper"><button onclick="countAdj(\''+v.variant_id+'\',-1)">−</button>'
       + '<span class="qtyIn" style="border:none">'+c+'</span>'
@@ -1071,6 +1099,133 @@ $("csPushBtn").onclick = async ()=>{
 };
 $("csCloseBtn").onclick = ()=>{ $("csOverlay").classList.add("hidden"); resetCount(); };
 function resetCount(){
+  countBin=null; countSession=null; countRowsCache=[]; countBase=[];
+  $("countArea").classList.add("hidden");
+  $("countIntro").classList.remove("hidden");
+  renderCountBins();
+}
+
+/* ================= PRODUCTION -> PRINT QUEUE ================= */
+const QCOLS = ["CP","LP","CTE","LTE","CO","CS","LS"];   // scheduler run q[] order
+const STYLE_VARIANT = {CP:"Ponytail / Classic Cotton", LP:"Ponytail / LUXE Satin",
+  CTE:"Taylor'ed Euro / Classic Cotton", LTE:"Taylor'ed Euro / LUXE Satin",
+  CO:"The Original / Classic Cotton", CS:"Skull Hat / Classic Cotton", LS:"Skull Hat / LUXE Satin"};
+const normT = (s)=>(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+let ppRuns = [];
+
+$("prodPullBtn").onclick = openProdPull;
+async function openProdPull(){
+  await loadCatalog();
+  $("ppMsg").textContent="";
+  $("ppBody").innerHTML='<div class="empty">Loading runs…</div>';
+  $("ppOverlay").classList.remove("hidden");
+  const {data,error} = await sb.from("sched_state").select("value").eq("key","tmsh-runs-v1").maybeSingle();
+  if(error){ $("ppBody").innerHTML='<div class="empty">Could not read the scheduler: '+esc(error.message)+'</div>'; return; }
+  ppRuns = (data && data.value) || [];
+  if(!ppRuns.length){ $("ppBody").innerHTML='<div class="empty">No runs found in the scheduler.</div>'; return; }
+  $("ppBody").innerHTML = ppRuns.map((r,i)=>{
+    const hats = (r.lines||[]).reduce((a,l)=>a+((l.q||[]).reduce((x,y)=>x+(y||0),0)),0)*(r.mult||1);
+    return '<div class="vrow"><input type="checkbox" id="ppr'+i+'" checked style="width:20px;height:20px;accent-color:var(--teal)">'
+      + '<div class="ti"><b>'+esc(r.name||("Run "+r.no))+'</b> <span style="color:var(--dim);font-size:12px">'
+      + hats+' hats'+(r.goLive?' · go-live '+esc(r.goLive):"")+'</span></div></div>';
+  }).join("");
+}
+function findRunVariant(p, code){
+  const want = normT(STYLE_VARIANT[code]);
+  const m = /^core solids?\s*:\s*(.+)$/i.exec(p||"");
+  if(m){
+    const wantCS = normT(STYLE_VARIANT[code]+" / "+m[1]);
+    return catalog.find(v=> normT(v.product_title).startsWith("core solids") && normT(v.variant_title)===wantCS) || null;
+  }
+  const pn = normT(p);
+  let cand = catalog.filter(v=> normT(v.product_title)===pn+" scrub hat" || normT(v.product_title)===pn);
+  if(!cand.length) cand = catalog.filter(v=> normT(v.product_title).startsWith(pn+" "));
+  return cand.find(v=> normT(v.variant_title)===want) || null;
+}
+$("ppQueueBtn").onclick = async ()=>{
+  const rows=[]; const unmatched=new Set();
+  ppRuns.forEach((r,i)=>{
+    const cb=$("ppr"+i); if(!cb||!cb.checked) return;
+    const mult=r.mult||1;
+    (r.lines||[]).forEach(l=>{
+      QCOLS.forEach((code,ci)=>{
+        const qty=((l.q||[])[ci]||0)*mult;
+        if(qty<=0) return;
+        const v=findRunVariant(l.p, code);
+        if(v) rows.push({ variant_id:v.variant_id, sku:v.sku, barcode:v.barcode, title:v.product_title,
+          variant_title:v.variant_title, bin:binOf(v.sku), qty, source:"run "+(r.no??"") });
+        else unmatched.add((l.p||"?")+" ["+code+"]");
+      });
+    });
+  });
+  if(!rows.length){ $("ppMsg").textContent="Nothing matched — check the runs."; $("ppMsg").style.color="var(--coral)"; return; }
+  const {error} = await sb.from("print_queue").insert(rows);
+  if(error){ $("ppMsg").textContent=error.message; $("ppMsg").style.color="var(--coral)"; return; }
+  const hats=rows.reduce((a,b)=>a+b.qty,0);
+  $("ppMsg").textContent = "✓ Queued "+hats+" labels across "+rows.length+" patterns/styles"
+    + (unmatched.size? " · couldn't match: "+[...unmatched].slice(0,6).join(", ")+(unmatched.size>6?"…":"") : "");
+  $("ppMsg").style.color = unmatched.size ? "var(--warn)" : "var(--ok)";
+  loadPrintQueue();
+};
+$("ppCloseBtn").onclick = ()=> $("ppOverlay").classList.add("hidden");
+
+/* ================= STATS TAB ================= */
+async function renderStats(){
+  $("statsBody").innerHTML = '<div class="empty">Crunching…</div>';
+  try{
+    const since = new Date(Date.now()-30*864e5).toISOString();
+    const [sess, scans, counts] = await Promise.all([
+      sb.from("pack_sessions").select("status,created_at,verified_at,items").gte("created_at",since),
+      sb.from("pack_scans").select("result,created_at").gte("created_at",since).limit(9000),
+      sb.from("inventory_counts").select("bin,finished_at,summary,pushed_at").eq("status","done").order("finished_at",{ascending:false}).limit(12),
+    ]);
+    const real = (sess.data||[]).filter(s=> !(s.items && s.items.backfill));
+    const ver = real.filter(s=> s.status==="verified" && s.verified_at);
+    const dayOf = (iso)=> new Date(iso).toLocaleDateString();
+    const today = dayOf(new Date().toISOString());
+    const itemsOf = (s)=> ((s.items && s.items.lines)||[]).reduce((a,l)=>a+(l.need||0),0);
+    const vToday = ver.filter(s=> dayOf(s.verified_at)===today);
+    const vWeek = ver.filter(s=> new Date(s.verified_at).getTime() >= Date.now()-7*864e5);
+    const durs = ver.map(s=> (new Date(s.verified_at)-new Date(s.created_at))/60000).filter(m=> m>=0.08 && m<=30);
+    const avgMin = durs.length ? durs.reduce((a,b)=>a+b,0)/durs.length : null;
+    const sc = {}; (scans.data||[]).forEach(x=> sc[x.result]=(sc[x.result]||0)+1);
+    let bars = "";
+    let mx = 1;
+    const days = [];
+    for(let i=13;i>=0;i--){
+      const d = new Date(Date.now()-i*864e5);
+      const n = ver.filter(s=> dayOf(s.verified_at)===d.toLocaleDateString()).length;
+      mx = Math.max(mx,n);
+      days.push({ n, lbl: d.toLocaleDateString(undefined,{day:"numeric"}) });
+    }
+    bars = days.map(d=> '<div class="bcol">'+(d.n?'<em>'+d.n+'</em>':"")
+      +'<i style="height:'+Math.round(d.n/mx*100)+'%"></i><small>'+d.lbl+'</small></div>').join("");
+    const card = (n,l)=> '<div class="statCard"><b>'+n+'</b><span>'+l+'</span></div>';
+    let html = '<div class="statGrid">'
+      + card(vToday.length, "orders packed today ("+vToday.reduce((a,s)=>a+itemsOf(s),0)+" items)")
+      + card(vWeek.length, "orders packed last 7 days ("+vWeek.reduce((a,s)=>a+itemsOf(s),0)+" items)")
+      + card(avgMin!=null ? avgMin.toFixed(1)+"m" : "—", "average pack time")
+      + card(sc.wrong_item||0, "wrong-item catches (30d) — mistakes the scanner saved")
+      + card((sc.overscan||0), "extra-scan warnings (30d)")
+      + card((sc.manual_confirm||0), "manual checks (30d)")
+      + '</div>'
+      + '<div class="secHead"><h3>Orders packed — last 14 days</h3></div>'
+      + '<div class="bars">'+bars+'</div>'
+      + '<div class="secHead"><h3>Recent inventory counts</h3></div>';
+    const cs = counts.data||[];
+    html += cs.length ? cs.map(c=> '<div class="prow"><span class="q" style="color:'
+        + ((c.summary||[]).length? "var(--coral)":"var(--ok)")+'">'+(c.summary||[]).length+'</span>'
+        + '<span class="ti">'+esc(binLabel(c.bin))+' <span class="vt">'+esc(new Date(c.finished_at).toLocaleDateString())+'</span></span>'
+        + '<span class="vt">'+((c.summary||[]).length? (c.summary.length+" discrepancies") : "clean")
+        + (c.pushed_at? " · pushed ✓":"")+'</span></div>').join("")
+      : '<div class="empty">No finished counts yet.</div>';
+    $("statsBody").innerHTML = html;
+  }catch(e){
+    $("statsBody").innerHTML = '<div class="empty">Could not load stats: '+esc(e.message||e)+'</div>';
+  }
+}
+
+function resetCountUnused(){
   countBin=null; countSession=null; countRowsCache=[]; countBase=[];
   $("countArea").classList.add("hidden");
   $("countIntro").classList.remove("hidden");

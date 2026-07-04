@@ -188,7 +188,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms5</span>
+    <span class="build">wms6</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -219,6 +219,7 @@
         <input type="search" id="packSearch" placeholder="Search fulfilled orders…">
       </div>
       <div class="selbar">
+        <label><input type="checkbox" id="packSelAll"> Select all to pack</label>
         <span id="cycleCount" style="font-size:13px;color:var(--dim)"></span>
         <span style="flex:1"></span>
         <button class="primaryBtn" id="cycleBtn" disabled>Start pack cycle</button>
@@ -595,6 +596,12 @@ $("plPrintBtn").onclick = ()=>{
 /* ================= PACK TAB ================= */
 $("packSearch").addEventListener("input", renderPack);
 $("cycleBtn").onclick = startCycle;
+$("packSelAll").onchange = ()=>{
+  const { unv } = packSorted();          // only NOT-verified orders are selectable
+  if($("packSelAll").checked) unv.forEach(o=>cycleSel.add(o.orderId));
+  else cycleSel.clear();
+  renderPack();
+};
 
 function packSorted(){
   const q = $("packSearch").value.trim().toLowerCase();
@@ -625,6 +632,7 @@ function packCard(o, greyed){
 function renderPack(){
   const { unv, ver } = packSorted();
   cycleSel = new Set([...cycleSel].filter(id=> unv.some(o=>o.orderId===id)));
+  $("packSelAll").checked = unv.length>0 && unv.every(o=>cycleSel.has(o.orderId));
   $("cycleBtn").disabled = !cycleSel.size;
   $("cycleBtn").textContent = cycleSel.size ? "Start pack cycle ("+cycleSel.size+")" : "Start pack cycle";
   $("cycleCount").textContent = unv.length+" to pack · "+ver.length+" verified";

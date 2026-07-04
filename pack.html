@@ -23,12 +23,14 @@
   button{font-family:inherit; cursor:pointer; border:none; border-radius:10px;}
   input,select{font-family:inherit;}
   .hidden{display:none !important;}
+  .qtyIn{width:54px; padding:6px 4px; text-align:center; font-weight:800; border:1.5px solid var(--line); border-radius:8px; font-size:14px;}
 
   /* login */
   #loginView{display:flex; align-items:center; justify-content:center; min-height:100vh;
     background:linear-gradient(150deg, var(--teal-soft), var(--bg) 55%, var(--coral-soft));}
-  .loginBox{background:var(--card); padding:36px; border-radius:18px; width:min(400px,92vw); border:1px solid var(--line); box-shadow:0 12px 40px rgba(0,140,145,.14);}
-  .loginBox h1{font-size:22px; color:var(--teal-dark);}
+  .loginBox{background:var(--card); padding:36px; border-radius:18px; width:min(400px,92vw); border:1px solid var(--line); box-shadow:0 12px 40px rgba(0,140,145,.14); text-align:center;}
+  .loginBox img{height:54px; margin-bottom:10px;}
+  .loginBox h1{font-size:20px; color:var(--teal-dark);}
   .loginBox p{color:var(--dim); font-size:14px; margin:6px 0 22px;}
   .loginBox input{width:100%; padding:13px; margin-bottom:12px; border-radius:10px; border:1px solid var(--line); font-size:16px;}
   .loginBox button{width:100%; padding:14px; background:var(--teal); color:#fff; font-size:16px; font-weight:700;}
@@ -36,7 +38,7 @@
 
   /* header + tabs */
   header{display:flex; align-items:center; gap:10px; padding:10px 16px; background:var(--card); border-bottom:2px solid var(--teal); position:sticky; top:0; z-index:10; flex-wrap:wrap;}
-  header h1{font-size:17px; color:var(--teal-dark); margin-right:6px;}
+  header img{height:30px;}
   .tabs{display:flex; gap:4px; flex:1;}
   .tab{padding:9px 16px; border-radius:10px; background:transparent; color:var(--dim); font-size:14px; font-weight:700;}
   .tab.on{background:var(--teal); color:#fff;}
@@ -58,6 +60,7 @@
   /* order cards */
   .ocard{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:10px; display:flex; gap:12px; align-items:center; box-shadow:0 1px 3px rgba(23,40,43,.05);}
   .ocard.clickable{cursor:pointer;} .ocard.clickable:hover{border-color:var(--teal);}
+  .ocard.greyed{opacity:.5; background:#f0f3f4;}
   .ocard input[type=checkbox]{width:20px; height:20px; accent-color:var(--teal);}
   .onum{font-size:18px; font-weight:800; min-width:74px; color:var(--teal-dark);}
   .oinfo{flex:1; min-width:0;}
@@ -69,6 +72,7 @@
   .chip{font-size:11px; padding:3px 9px; border-radius:99px; background:var(--bg); color:var(--dim); border:1px solid var(--line); font-weight:600;}
   .chip.flag{background:var(--teal-soft); color:var(--teal-dark); border-color:var(--teal);}
   .chip.note{background:var(--warn-soft); color:var(--warn); border-color:var(--warn);}
+  .chip.new{background:var(--coral-soft); color:var(--coral); border-color:var(--coral);}
   .badge{font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:99px; letter-spacing:.4px;}
   .badge.verified{background:var(--ok-soft); color:var(--ok); border:1px solid var(--ok);}
   .badge.progress{background:var(--warn-soft); color:var(--warn); border:1px solid var(--warn);}
@@ -76,6 +80,7 @@
   .ocount{text-align:right; color:var(--dim); font-size:12px; min-width:56px;}
   .ocount b{display:block; font-size:20px; color:var(--text);}
   .empty{color:var(--dim); text-align:center; padding:50px 0; font-size:15px;}
+  .secLabel{font-size:12px; font-weight:800; letter-spacing:.8px; color:var(--dim); margin:18px 2px 8px;}
 
   /* pack scan */
   #scanBox{position:sticky; top:58px; z-index:5; background:var(--card); border:2.5px solid var(--teal); border-radius:14px; padding:12px 16px; margin-bottom:14px; box-shadow:0 4px 16px rgba(0,172,178,.15);}
@@ -95,9 +100,10 @@
   .ititle .s{color:var(--dim); font-size:11.5px; font-family:ui-monospace,monospace; margin-top:1px;}
   .bin{font-size:13px; font-weight:800; background:var(--teal-soft); color:var(--teal-dark); border-radius:8px; padding:6px 10px;}
   .manualBtn{background:var(--card); color:var(--teal-dark); padding:9px 13px; font-size:12.5px; border:1.5px solid var(--teal);}
-  .pbar{display:flex; gap:10px; margin-top:14px;}
-  .pbar button{flex:1; padding:13px; font-size:14px; font-weight:700;}
+  .pbar{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+  .pbar button{flex:1; padding:13px; font-size:14px; font-weight:700; min-width:130px;}
   #undoBtn{background:var(--card); color:var(--text); border:1.5px solid var(--line);}
+  #skipBtn{background:var(--warn-soft); color:var(--warn); border:1.5px solid var(--warn);}
   #cancelBtn{background:transparent; color:var(--dim); border:1.5px solid var(--line);}
   .pnote{background:var(--warn-soft); border:1.5px solid var(--warn); color:var(--warn); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:13.5px; font-weight:600;}
 
@@ -106,7 +112,8 @@
   .sheet{background:var(--card); border-radius:16px; width:min(760px,96vw); padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.25);}
   .sheet h2{color:var(--teal-dark); font-size:19px; margin-bottom:2px;}
   .sheet .sub{color:var(--dim); font-size:13px; margin-bottom:14px;}
-  .sheetBar{display:flex; gap:10px; margin-top:16px; justify-content:flex-end; flex-wrap:wrap;}
+  .sheetBar{display:flex; gap:10px; margin-top:16px; justify-content:flex-end; flex-wrap:wrap; align-items:center;}
+  #csPushMsg{font-size:13px; font-weight:700; margin-right:auto;}
   .groupHead{display:flex; align-items:center; gap:10px; margin:16px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--teal);}
   .groupHead .b{font-size:16px; font-weight:800; color:var(--teal-dark);}
   .groupHead .n{color:var(--dim); font-size:12.5px;}
@@ -128,11 +135,11 @@
   .binChip.on{background:var(--teal); border-color:var(--teal); color:#fff;}
   .vrow{display:flex; gap:10px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:9px 12px; margin-bottom:6px; font-size:13.5px;}
   .vrow.flash{background:#baf1d3;}
+  .vrow.flagged{border-left:4px solid var(--coral); background:#fff8f6;}
   .vrow .ti{flex:1; min-width:0;}
   .vrow .sk{font-family:ui-monospace,monospace; color:var(--dim); font-size:11.5px;}
   .stepper{display:flex; align-items:center; gap:6px;}
   .stepper button{width:30px; height:30px; border-radius:8px; background:var(--teal-soft); color:var(--teal-dark); font-size:16px; font-weight:800;}
-  .stepper .qv{min-width:26px; text-align:center; font-weight:800;}
   .cExp{min-width:50px; text-align:center; color:var(--dim); font-size:12px;}
   .cExp b{display:block; font-size:15px; color:var(--text);}
   .cDiff{min-width:44px; text-align:center; font-weight:800; font-size:14px;}
@@ -147,7 +154,8 @@
 
 <div id="loginView" class="hidden">
   <div class="loginBox">
-    <h1>TMSH Warehouse</h1>
+    <img id="loginLogo" alt="Taylor Made Scrub Hats">
+    <h1>Warehouse</h1>
     <p>Pick &middot; Pack &middot; Print &middot; Count &mdash; sign in with your Taylor Made account.</p>
     <input id="email" type="email" placeholder="Email" autocomplete="username">
     <input id="password" type="password" placeholder="Password" autocomplete="current-password">
@@ -158,7 +166,7 @@
 
 <div id="appView" class="hidden">
   <header>
-    <h1>TMSH</h1>
+    <img id="hdrLogo" alt="TMSH">
     <nav class="tabs">
       <button class="tab on" data-tab="pick">Pick</button>
       <button class="tab" data-tab="pack">Pack</button>
@@ -168,7 +176,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms2</span>
+    <span class="build">wms3</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -197,7 +205,11 @@
     <div id="packQueue">
       <div class="toolbar">
         <input type="search" id="packSearch" placeholder="Search fulfilled orders…">
-        <label style="font-size:13px;color:var(--dim)"><input type="checkbox" id="showVerified"> show verified</label>
+      </div>
+      <div class="selbar">
+        <span id="cycleCount" style="font-size:13px;color:var(--dim)"></span>
+        <span style="flex:1"></span>
+        <button class="primaryBtn" id="cycleBtn" disabled>Start pack cycle</button>
       </div>
       <div id="packListEl"><div class="empty">Loading&hellip;</div></div>
     </div>
@@ -211,6 +223,7 @@
       <div id="iList"></div>
       <div class="pbar">
         <button id="undoBtn">&#8630; Undo last</button>
+        <button id="skipBtn">&#9197; Skip — come back later</button>
         <button id="cancelBtn">Cancel session</button>
       </div>
     </div>
@@ -223,11 +236,11 @@
       <button class="ghostBtn" id="markPrintedBtn">Mark printed</button>
     </div>
     <div id="pqList"><div class="empty">Nothing queued.</div></div>
-    <div class="secHead"><h3>Add labels</h3><span class="sp"></span>
+    <div class="secHead"><h3>Add labels — pick one or more styles</h3><span class="sp"></span>
       <input type="search" id="printSearch" placeholder="Search catalog…" style="padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;">
     </div>
     <div class="binChips" id="printBins"></div>
-    <div id="printCatalog"><div class="empty">Pick a style above to browse its labels.</div></div>
+    <div id="printCatalog"><div class="empty">Pick styles above to browse labels.</div></div>
   </div>
 
   <!-- ============ COUNT ============ -->
@@ -235,7 +248,7 @@
     <div class="binChips" id="countBins"></div>
     <div id="countArea" class="hidden">
       <div id="countBox" style="background:var(--card);border:2.5px solid var(--teal);border-radius:14px;padding:12px 16px;margin-bottom:6px;">
-        <label style="font-size:11px;color:var(--teal-dark);letter-spacing:.6px;font-weight:700;">SCAN TO COUNT — each scan adds 1</label>
+        <label style="font-size:11px;color:var(--teal-dark);letter-spacing:.6px;font-weight:700;">SCAN TO COUNT — each scan adds 1 · unstocked scans get pulled in &amp; flagged</label>
         <input id="countInput" autocomplete="off" spellcheck="false">
         <div id="countMsg" class="scanMsg"></div>
       </div>
@@ -247,7 +260,7 @@
       </div>
       <div id="countRows"></div>
     </div>
-    <div id="countIntro" class="empty">Pick a style to start (or resume) an inventory count.<br>Shelves are alphabetical — the list below matches.</div>
+    <div id="countIntro" class="empty">Pick a style to start (or resume) an inventory count.<br>Only patterns with stock on hand are listed — scanning anything else pulls it in flagged.</div>
   </div>
 </div>
 
@@ -271,7 +284,9 @@
     <div class="sub" id="csSub"></div>
     <div id="csBody"></div>
     <div class="sheetBar">
-      <button class="primaryBtn" id="csCloseBtn">Done</button>
+      <span id="csPushMsg"></span>
+      <button class="ghostBtn" id="csCloseBtn">Done</button>
+      <button class="primaryBtn" id="csPushBtn">&#8593; Push corrections to Shopify</button>
     </div>
   </div>
 </div>
@@ -280,7 +295,7 @@
   <div class="big">&#9989;</div>
   <h2 id="doneTitle">Order verified</h2>
   <p id="doneSub"></p>
-  <button id="doneBtn">Back to queue</button>
+  <button id="doneBtn">Continue</button>
 </div>
 
 <div id="svgWork" class="hidden"></div>
@@ -288,16 +303,22 @@
 <script>
 const SUPA_URL = "https://mvspfxwiuipswvjwvlsv.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc";
+const LOGO = "https://cdn.shopify.com/s/files/1/0576/3307/9460/files/TMSH_Logo_Black.webp?v=1678896466&width=300";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const $ = (id) => document.getElementById(id);
+$("hdrLogo").src = LOGO; $("loginLogo").src = LOGO;
 
 let toPick = [], toPack = [], sessionsByOrder = {}, catalog = null;
-let cur = null;                 // active pack session
-let selected = new Set();       // pick multi-select (orderId)
+let cur = null;                  // active pack session
+let selected = new Set();        // pick multi-select
+let cycleSel = new Set();        // pack cycle selection
+let cycle = [];                  // active pack cycle (order ids)
 let activeTab = "pick";
-let pickFlags = new Set();      // content filters
-let printBin = null, countBin = null, countSession = null, countRowsCache = [];
+let pickFlags = new Set();
+let printBinsSel = new Set(), countBin = null, countSession = null;
+let countRowsCache = [], countBase = [], lastCountId = null;
 let pqRows = [];
+const FAKE_BINS = new Set(["PLUS-CO","PLUS-CP","PLUS-CT","PLUS-CS"]);
 
 /* ---------- sounds ---------- */
 let AC = null;
@@ -306,7 +327,7 @@ function tone(f,d,w=0,t="sine",g=.25){ AC=AC||new (window.AudioContext||window.w
   n.gain.setValueAtTime(g,AC.currentTime+w); n.gain.exponentialRampToValueAtTime(.001,AC.currentTime+w+d);
   o.start(AC.currentTime+w); o.stop(AC.currentTime+w+d+.05); }
 const sndOk   = ()=>tone(880,.1);
-const sndMulti= ()=>{ tone(660,.08); tone(990,.09,.1); };                 // distinct "more to go" beep
+const sndMulti= ()=>{ tone(660,.08); tone(990,.09,.1); };
 const sndBad  = ()=>{ tone(180,.25,0,"square",.3); tone(140,.3,.18,"square",.3); };
 const sndDone = ()=>{ [523,659,784,1047].forEach((f,i)=>tone(f,.16,i*.11)); };
 
@@ -322,6 +343,7 @@ function binOf(sku){
   const b = s.split("-")[0];
   return KNOWN.includes(b) ? b : "OTHER";
 }
+const realVariant = (v)=> v.barcode && !FAKE_BINS.has(binOf(v.sku));
 const binLabel = (b)=> STYLE_NAMES[b] ? b+" — "+STYLE_NAMES[b] : (b.startsWith("PLUS")?b+" — Comfort+":(b==="OTHER"?"Other items":b));
 function binSort(a,b){ const oa=a==="OTHER"?2:(a.startsWith("PLUS")?1:0), ob=b==="OTHER"?2:(b.startsWith("PLUS")?1:0);
   return oa-ob || a.localeCompare(b); }
@@ -345,10 +367,10 @@ const FLAG_LABELS = {buttons:"Buttons", embroidery:"Embroidery", magnets:"Mask M
 function starsOf(o){
   const n = o.ordersCount ?? 1;
   const d = (o.orderDates||[]).map(x=>new Date(x).getTime()).sort((a,b)=>b-a);
-  const gap = d.length>1 ? (d[0]-d[1]) : null;                    // current vs previous order
-  const quarterly = n>=4 && d[3] && (Date.now()-d[3]) < 380*864e5; // 4 most recent within ~a year
+  const gap = d.length>1 ? (d[0]-d[1]) : null;
+  const quarterly = n>=4 && d[3] && (Date.now()-d[3]) < 380*864e5;
   if(n>=10 || quarterly) return 5;
-  if(n>=2 && gap!==null && gap > 365*864e5) return 3;             // repeat but lapsed >1yr
+  if(n>=2 && gap!==null && gap > 365*864e5) return 3;
   if(n>=4) return 4;
   if(n>=2) return 2;
   return 1;
@@ -538,34 +560,61 @@ $("plPrintBtn").onclick = ()=>{
 
 /* ================= PACK TAB ================= */
 $("packSearch").addEventListener("input", renderPack);
-$("showVerified").onchange = renderPack;
+$("cycleBtn").onclick = startCycle;
 
-function renderPack(){
+function packSorted(){
   const q = $("packSearch").value.trim().toLowerCase();
-  const showV = $("showVerified").checked;
-  const list = toPack.filter(o=>{
-    const s = sessionsByOrder[o.orderId];
-    if(!showV && s?.status==="verified") return false;
-    if(q && !hayOf(o).includes(q)) return false;
-    return true;
-  });
-  const el = $("packListEl");
-  if(!list.length){ el.innerHTML='<div class="empty">Nothing waiting to pack — fulfilled orders appear here. 🎉</div>'; return; }
-  el.innerHTML = list.map(o=>{
-    const i = toPack.indexOf(o);
-    const units = o.items.filter(x=>x.requiresShipping).reduce((a,b)=>a+b.qty,0);
-    const s = sessionsByOrder[o.orderId];
-    let badge = "";
-    if(s?.status==="verified") badge='<span class="badge verified">✓ VERIFIED</span>';
-    else if(s?.status==="in_progress") badge='<span class="badge progress">IN PROGRESS</span>';
-    return '<div class="ocard clickable" onclick="openOrder('+i+')">'
-      + '<div class="onum">'+esc(o.number)+'</div>'
-      + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+' '+badge+'</div>'
-      + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+'</div>'
-      + '<div class="chips">'+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
-      + (o.note?'<span class="chip note">✎ note</span>':"")+'</div></div>'
-      + '<div class="ocount"><b>'+units+'</b>items</div></div>';
-  }).join("");
+  const match = (o)=> !q || hayOf(o).includes(q);
+  const unv = toPack.filter(o=> sessionsByOrder[o.orderId]?.status!=="verified" && match(o))
+    .sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));   // oldest first, pack in order
+  const ver = toPack.filter(o=> sessionsByOrder[o.orderId]?.status==="verified" && match(o))
+    .sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+  return { unv, ver };
+}
+function packCard(o, greyed){
+  const units = o.items.filter(x=>x.requiresShipping).reduce((a,b)=>a+b.qty,0);
+  const s = sessionsByOrder[o.orderId];
+  let badge = "";
+  if(s?.status==="verified") badge='<span class="badge verified">✓ VERIFIED</span>';
+  else if(s?.status==="in_progress") badge='<span class="badge progress">IN PROGRESS</span>';
+  const cb = greyed ? "" :
+    '<input type="checkbox" '+(cycleSel.has(o.orderId)?"checked":"")+' onclick="event.stopPropagation()" onchange="toggleCycle(\''+o.orderId+'\')">';
+  return '<div class="ocard clickable'+(greyed?" greyed":"")+'" onclick="openOrderById(\''+o.orderId+'\')">'
+    + cb
+    + '<div class="onum">'+esc(o.number)+'</div>'
+    + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+' '+badge+'</div>'
+    + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+'</div>'
+    + '<div class="chips">'+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
+    + (o.note?'<span class="chip note">✎ note</span>':"")+'</div></div>'
+    + '<div class="ocount"><b>'+units+'</b>items</div></div>';
+}
+function renderPack(){
+  const { unv, ver } = packSorted();
+  cycleSel = new Set([...cycleSel].filter(id=> unv.some(o=>o.orderId===id)));
+  $("cycleBtn").disabled = !cycleSel.size;
+  $("cycleBtn").textContent = cycleSel.size ? "Start pack cycle ("+cycleSel.size+")" : "Start pack cycle";
+  $("cycleCount").textContent = unv.length+" to pack · "+ver.length+" verified";
+  let html = "";
+  if(!unv.length) html += '<div class="empty">Nothing waiting to pack — newly fulfilled orders appear here at the top. 🎉</div>';
+  else html += unv.map(o=>packCard(o,false)).join("");
+  if(ver.length) html += '<div class="secLabel">VERIFIED / DONE</div>' + ver.map(o=>packCard(o,true)).join("");
+  $("packListEl").innerHTML = html;
+}
+function toggleCycle(id){ cycleSel.has(id)?cycleSel.delete(id):cycleSel.add(id); renderPack(); }
+function startCycle(){
+  const { unv } = packSorted();
+  cycle = unv.filter(o=>cycleSel.has(o.orderId)).map(o=>o.orderId);
+  if(cycle.length) openOrderById(cycle[0]);
+}
+function nextInCycle(){
+  const next = cycle.find(id=> sessionsByOrder[id]?.status!=="verified" && (!cur || id!==cur.order.orderId));
+  if(next){ openOrderById(next); return true; }
+  cycle = []; cycleSel = new Set();
+  return false;
+}
+function openOrderById(id){
+  const i = toPack.findIndex(o=>o.orderId===id);
+  if(i>=0) openOrder(i);
 }
 
 async function openOrder(i){
@@ -599,7 +648,8 @@ async function openOrder(i){
   cur = { order:o, session, items, log:[] };
   $("packQueue").classList.add("hidden");
   $("packSession").classList.remove("hidden");
-  $("scanTitle").textContent = "ORDER "+o.number+" · "+o.customer+" — SCAN ITEMS";
+  const pos = cycle.length ? " · cycle "+(cycle.indexOf(o.orderId)+1)+"/"+cycle.length : "";
+  $("scanTitle").textContent = "ORDER "+o.number+" · "+o.customer+pos+" — SCAN ITEMS";
   if(o.note){ $("pNote").textContent="Order note: "+o.note; $("pNote").classList.remove("hidden"); }
   else $("pNote").classList.add("hidden");
   setMsg("scanMsg","","");
@@ -616,7 +666,7 @@ function renderItems(){
       + (it.variant?'<div class="v">'+esc(it.variant)+'</div>':"")
       + '<div class="s">'+esc(it.sku||"no SKU")+(it.archived?' · <span style="color:var(--warn)">archived</span>':"")+'</div></div>'
       + (it.bin!=="OTHER"?'<div class="bin">'+esc(it.bin)+'</div>':"")
-      + ((it.manual && !done)?'<button class="manualBtn" onclick="manualConfirm('+idx+')">Confirm 1 ✓</button>':"")
+      + (!done?'<button class="manualBtn" title="Mark 1 checked without scanning" onclick="manualConfirm('+idx+')">✓ Check 1</button>':"")
       + '</div>';
   }).join("");
 }
@@ -655,7 +705,7 @@ async function handleScan(raw){
     const it=cur.items[idx];
     it.got++;
     cur.log.push(idx);
-    if(it.need>1 && it.got<it.need){        // multi-quantity: distinct beep + stays open
+    if(it.need>1 && it.got<it.need){
       sndMulti(); flashRow(idx,"flash");
       setMsg("scanMsg","◔ "+it.got+" of "+it.need+" — "+it.title+(it.variant?" — "+it.variant:""),"multi");
     } else {
@@ -687,7 +737,7 @@ async function manualConfirm(idx){
   it.got++; cur.log.push(idx);
   (it.need>1 && it.got<it.need) ? sndMulti() : sndOk();
   renderItems();
-  setMsg("scanMsg","✓ Confirmed: "+it.title+(it.need>1?" ("+it.got+"/"+it.need+")":""),"ok");
+  setMsg("scanMsg","✓ Checked without scan: "+it.title+(it.need>1?" ("+it.got+"/"+it.need+")":""),"ok");
   await logScan(null,it,"manual_confirm");
   await saveProgress();
   checkComplete();
@@ -704,13 +754,24 @@ $("undoBtn").onclick = async ()=>{
   await saveProgress();
   focusScan();
 };
+$("skipBtn").onclick = ()=>{           // progress stays saved (session in_progress)
+  const skipped = cur ? cur.order.orderId : null;
+  cur = null;
+  if(cycle.length){
+    // move skipped order to the end of the cycle, open next
+    if(skipped){ cycle = cycle.filter(id=>id!==skipped); cycle.push(skipped); }
+    const next = cycle.find(id=> id!==skipped && sessionsByOrder[id]?.status!=="verified");
+    if(next){ openOrderById(next); return; }
+  }
+  exitPack();
+};
 $("cancelBtn").onclick = async ()=>{
   if(!cur) return;
   if(!confirm("Cancel this pack session? Progress will be discarded.")) return;
   await sb.from("pack_sessions").update({status:"cancelled"}).eq("id",cur.session.id);
   exitPack();
 };
-$("doneBtn").onclick = ()=>{ $("doneOverlay").classList.add("hidden"); exitPack(); };
+$("doneBtn").onclick = ()=> advanceAfterVerify();
 
 async function logScan(barcode,it,result){
   const { data:{ user } } = await sb.auth.getUser();
@@ -727,11 +788,20 @@ async function saveProgress(){
 async function checkComplete(){
   if(!cur.items.every(it=>it.got>=it.need)) return;
   await sb.from("pack_sessions").update({status:"verified",verified_at:new Date().toISOString()}).eq("id",cur.session.id);
+  sessionsByOrder[cur.order.orderId] = {shopify_order_id:cur.order.orderId, status:"verified"};
   sndDone();
   $("doneTitle").textContent="Order "+cur.order.number+" verified";
-  $("doneSub").textContent=cur.items.reduce((a,b)=>a+b.need,0)+" items checked against the order.";
+  const remaining = cycle.filter(id=> sessionsByOrder[id]?.status!=="verified").length;
+  $("doneSub").textContent=cur.items.reduce((a,b)=>a+b.need,0)+" items checked."
+    + (cycle.length ? (remaining? " Next order in cycle coming up… ("+remaining+" left)" : " Cycle complete! 🎉") : "");
   $("doneOverlay").classList.remove("hidden");
-  setTimeout(()=>{ if(!$("doneOverlay").classList.contains("hidden")){ $("doneOverlay").classList.add("hidden"); exitPack(); } },4000);
+  setTimeout(()=>{ if(!$("doneOverlay").classList.contains("hidden")) advanceAfterVerify(); },3000);
+}
+function advanceAfterVerify(){
+  $("doneOverlay").classList.add("hidden");
+  cur = null;
+  if(cycle.length && nextInCycle()) return;
+  exitPack();
 }
 function exitPack(){
   cur=null;
@@ -743,46 +813,51 @@ function exitPack(){
 /* ================= PRINT TAB ================= */
 async function renderPrintBins(){
   await loadCatalog();
-  const bins = [...new Set(catalog.filter(v=>v.barcode).map(v=>binOf(v.sku)))].sort(binSort);
-  $("printBins").innerHTML = bins.map(b=>'<button class="binChip'+(printBin===b?" on":"")+'" onclick="setPrintBin(\''+b+'\')">'+esc(b)+'</button>').join("");
+  const bins = [...new Set(catalog.filter(realVariant).map(v=>binOf(v.sku)))].sort(binSort);
+  $("printBins").innerHTML = bins.map(b=>'<button class="binChip'+(printBinsSel.has(b)?" on":"")+'" onclick="togglePrintBin(\''+b+'\')">'+esc(b)+'</button>').join("");
   renderPrintCatalog();
 }
-function setPrintBin(b){ printBin = printBin===b?null:b; renderPrintBins(); }
+function togglePrintBin(b){
+  printBinsSel.has(b)?printBinsSel.delete(b):printBinsSel.add(b);
+  renderPrintBins();
+}
 $("printSearch").addEventListener("input", renderPrintCatalog);
 
 function renderPrintCatalog(){
   if(!catalog) return;
   const q = $("printSearch").value.trim().toLowerCase();
   const qn = skuNorm(q).toLowerCase();
-  let rows = catalog.filter(v=> v.barcode && (printBin ? binOf(v.sku)===printBin : q));
+  let rows = catalog.filter(v=> realVariant(v) && (printBinsSel.size ? printBinsSel.has(binOf(v.sku)) : q));
   if(q) rows = rows.filter(v=> ((v.sku||"")+" "+(v.product_title||"")+" "+(v.variant_title||"")).toLowerCase().includes(q)
     || skuNorm(v.sku||"").toLowerCase().includes(qn));
-  rows = rows.slice(0,200);
-  if(!rows.length){ $("printCatalog").innerHTML='<div class="empty">'+((printBin||q)?"No matches.":"Pick a style above to browse its labels.")+'</div>'; return; }
+  rows = rows.sort((a,b)=> binSort(binOf(a.sku),binOf(b.sku)) || ((a.product_title||"")+(a.variant_title||"")).localeCompare((b.product_title||"")+(b.variant_title||"")));
+  rows = rows.slice(0,300);
+  if(!rows.length){ $("printCatalog").innerHTML='<div class="empty">'+((printBinsSel.size||q)?"No matches.":"Pick styles above to browse labels.")+'</div>'; return; }
   $("printCatalog").innerHTML = rows.map(v=>
     '<div class="vrow"><div class="ti"><div>'+esc(v.product_title)+' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div>'
-    + '<div class="sk">'+esc(v.sku||"—")+' · '+esc(v.barcode)+'</div></div>'
+    + '<div class="sk">'+esc(v.sku||"—")+' · '+esc(v.barcode)+' · '+esc(binOf(v.sku))+'</div></div>'
     + '<div class="stepper"><button onclick="pqAdd(\''+v.variant_id+'\',-1)">−</button>'
-    + '<span class="qv" id="qv'+v.variant_id+'">'+(pqQty[v.variant_id]||1)+'</span>'
+    + '<input class="qtyIn" type="number" min="1" id="qv'+v.variant_id+'" value="'+(pqQty[v.variant_id]||1)+'" onchange="pqSet(\''+v.variant_id+'\',this.value)">'
     + '<button onclick="pqAdd(\''+v.variant_id+'\',1)">+</button></div>'
     + '<button class="primaryBtn" style="padding:8px 14px;font-size:12.5px" onclick="pqQueue(\''+v.variant_id+'\')">Add</button></div>'
   ).join("");
 }
 const pqQty = {};
-function pqAdd(id,d){ pqQty[id]=Math.max(1,(pqQty[id]||1)+d); const el=$("qv"+id); if(el) el.textContent=pqQty[id]; }
+function pqSet(id,val){ pqQty[id]=Math.max(1,Math.round(Number(val))||1); const el=$("qv"+id); if(el) el.value=pqQty[id]; }
+function pqAdd(id,d){ pqSet(id,(pqQty[id]||1)+d); }
 async function pqQueue(id){
   const v = catalog.find(x=>x.variant_id===id);
   if(!v) return;
   const {error} = await sb.from("print_queue").insert({ variant_id:v.variant_id, sku:v.sku, barcode:v.barcode,
     title:v.product_title, variant_title:v.variant_title, bin:binOf(v.sku), qty:pqQty[id]||1, source:"manual" });
   if(error){ alert(error.message); return; }
-  pqQty[id]=1; const el=$("qv"+id); if(el) el.textContent="1";
+  pqQty[id]=1; const el=$("qv"+id); if(el) el.value=1;
   loadPrintQueue();
 }
 
 async function loadPrintQueue(){
   const {data} = await sb.from("print_queue").select("*").eq("status","pending").order("created_at");
-  pqRows = data||[];
+  pqRows = (data||[]).filter(r=> !FAKE_BINS.has(r.bin||""));
   if(!pqRows.length){ $("pqList").innerHTML='<div class="empty">Nothing queued. Add labels below — your production tool will also drop upcoming runs here.</div>'; return; }
   const groups={};
   pqRows.forEach(r=>{ (groups[r.bin||"OTHER"]=groups[r.bin||"OTHER"]||[]).push(r); });
@@ -791,12 +866,20 @@ async function loadPrintQueue(){
     const rows=groups[b].sort((x,y)=>((x.title||"")+(x.variant_title||"")).localeCompare((y.title||"")+(y.variant_title||"")));
     html += '<div class="groupHead"><span class="b">'+esc(binLabel(b))+'</span><span class="n">'
       + rows.reduce((s,r)=>s+r.qty,0)+' labels</span></div>';
-    html += rows.map(r=>'<div class="prow"><span class="q">'+r.qty+'×</span><span class="sk">'+esc(r.sku||"—")+'</span>'
+    html += rows.map(r=>'<div class="prow">'
+      + '<input class="qtyIn" type="number" min="1" value="'+r.qty+'" onchange="pqUpdateQty('+r.id+',this.value)" title="Edit label quantity">'
+      + '<span class="sk">'+esc(r.sku||"—")+'</span>'
       + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant_title||"")+'</span>'
       + (r.source!=="manual"?' <span class="vt">('+esc(r.source)+')</span>':"")+'</span>'
       + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="pqRemove('+r.id+')">✕</button></div>').join("");
   }
   $("pqList").innerHTML = html;
+}
+async function pqUpdateQty(id,val){
+  const qty = Math.max(1,Math.round(Number(val))||1);
+  await sb.from("print_queue").update({qty}).eq("id",id);
+  const r = pqRows.find(x=>x.id===id); if(r) r.qty=qty;
+  loadPrintQueue();
 }
 async function pqRemove(id){ await sb.from("print_queue").update({status:"removed"}).eq("id",id); loadPrintQueue(); }
 $("markPrintedBtn").onclick = async ()=>{
@@ -818,10 +901,12 @@ function printLabels(labels){
   labels.forEach((r,i)=>{
     const sid="bc"+i;
     work.insertAdjacentHTML("beforeend",'<svg id="'+sid+'"></svg>');
-    try{ JsBarcode("#"+sid, r.barcode, {format:"CODE128", displayValue:false, height:44, width:1.2, margin:0}); }catch(_e){}
+    try{ JsBarcode("#"+sid, r.barcode, {format:"CODE128", displayValue:false, height:40, width:1.2, margin:0}); }catch(_e){}
     const el=$(sid);
     const svg=el?el.outerHTML.replace('id="'+sid+'"',""):"";
-    html += '<div class="label"><div class="top"><span class="t">'+esc((r.title||"").slice(0,34))+'</span>'
+    html += '<div class="label">'
+      + '<img class="lg" src="'+LOGO+'">'
+      + '<div class="top"><span class="t">'+esc((r.title||"").slice(0,34))+'</span>'
       + '<span class="b">'+esc(r.bin||"")+'</span></div>'
       + '<div class="v">'+esc((r.variant_title||"").slice(0,40))+'</div>'
       + '<div class="bc">'+svg+'</div>'
@@ -830,27 +915,28 @@ function printLabels(labels){
   work.innerHTML="";
   printDoc(html,
     "@page{size:2in 1in;margin:0} body{margin:0;font-family:Arial,sans-serif}"
-    + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:2px 4px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box}"
+    + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:1px 4px 2px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box}"
+    + ".lg{height:0.10in;object-fit:contain;margin-bottom:1px}"
     + ".top{display:flex;justify-content:space-between;width:100%;align-items:baseline}"
     + ".top .t{font-size:7.5px;font-weight:bold;overflow:hidden;white-space:nowrap}"
     + ".top .b{font-size:11px;font-weight:900;margin-left:4px}"
     + ".v{font-size:6.5px;width:100%;text-align:left;white-space:nowrap;overflow:hidden}"
-    + ".bc{flex:1;display:flex;align-items:center} .bc svg{max-width:1.85in;height:0.5in}"
-    + ".sk{font-size:6.5px;font-family:monospace}");
+    + ".bc{flex:1;display:flex;align-items:center;min-height:0} .bc svg{max-width:1.85in;height:0.42in}"
+    + ".sk{font-size:6.5px;font-family:monospace}", 900);
 }
 
-function printDoc(bodyHtml, css){
+function printDoc(bodyHtml, css, delay){
   const w = window.open("","_blank","width=900,height=700");
   if(!w){ alert("Popup blocked — allow popups for this site to print."); return; }
   w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><style>"+css+"</style></head><body>"+bodyHtml+"</body></html>");
   w.document.close();
-  setTimeout(()=>{ w.focus(); w.print(); }, 400);
+  setTimeout(()=>{ w.focus(); w.print(); }, delay||400);
 }
 
 /* ================= COUNT TAB ================= */
 async function renderCountBins(){
   await loadCatalog();
-  const bins=[...new Set(catalog.filter(v=>v.barcode && binOf(v.sku)!=="OTHER").map(v=>binOf(v.sku)))].sort(binSort);
+  const bins=[...new Set(catalog.filter(v=> realVariant(v) && binOf(v.sku)!=="OTHER").map(v=>binOf(v.sku)))].sort(binSort);
   $("countBins").innerHTML = bins.map(b=>'<button class="binChip'+(countBin===b?" on":"")+'" onclick="startCount(\''+b+'\')">'+esc(b)+'</button>').join("");
 }
 async function startCount(b){
@@ -866,8 +952,10 @@ async function startCount(b){
     if(error){ alert(error.message); return; }
     countSession=created;
   }
-  countRowsCache = catalog.filter(v=> v.barcode && binOf(v.sku)===b)
+  countBase = catalog.filter(v=> realVariant(v) && binOf(v.sku)===b)
     .sort((x,y)=> ((x.product_title||"")+(x.variant_title||"")).localeCompare((y.product_title||"")+(y.variant_title||"")));
+  const counts = countSession.counts||{};
+  countRowsCache = countBase.filter(v=> (v.inventory_quantity||0)>0 || counts[v.variant_id]!=null);
   $("countIntro").classList.add("hidden");
   $("countArea").classList.remove("hidden");
   setMsg("countMsg","","");
@@ -877,18 +965,22 @@ async function startCount(b){
 function renderCountRows(){
   const counts = countSession.counts||{};
   const counted = Object.values(counts).reduce((a,b)=>a+b,0);
-  $("countMeta").textContent = binLabel(countBin)+" · "+countRowsCache.length+" variants · "+counted+" hats counted";
+  const flagged = countRowsCache.filter(v=> (counts[v.variant_id]||0)-(v.inventory_quantity||0) !== 0).length;
+  $("countMeta").textContent = binLabel(countBin)+" · "+countRowsCache.length+" stocked patterns · "+counted+" counted"
+    + (flagged? " · "+flagged+" flagged":"");
   $("countRows").innerHTML = countRowsCache.map(v=>{
     const c = counts[v.variant_id]||0;
-    const exp = v.inventory_quantity??0;
+    const exp = v.inventory_quantity||0;
     const diff = c-exp;
     const cls = diff===0 ? "zero" : (diff>0?"pos":"neg");
-    return '<div class="vrow" id="cv'+v.variant_id+'"><div class="ti"><div>'+esc(v.product_title)
-      + ' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div>'
+    const pulled = exp<=0 && c>0;
+    return '<div class="vrow'+(diff!==0?" flagged":"")+'" id="cv'+v.variant_id+'"><div class="ti"><div>'+esc(v.product_title)
+      + ' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span>'
+      + (pulled?' <span class="chip new">NEW — not in Shopify stock</span>':"")+'</div>'
       + '<div class="sk">'+esc(v.sku||"—")+'</div></div>'
       + '<div class="cExp"><b>'+exp+'</b>shopify</div>'
       + '<div class="stepper"><button onclick="countAdj(\''+v.variant_id+'\',-1)">−</button>'
-      + '<span class="qv">'+c+'</span>'
+      + '<span class="qtyIn" style="border:none">'+c+'</span>'
       + '<button onclick="countAdj(\''+v.variant_id+'\',1)">+</button></div>'
       + '<div class="cDiff '+cls+'">'+(diff>0?"+":"")+diff+'</div></div>';
   }).join("");
@@ -910,12 +1002,17 @@ $("countInput").addEventListener("keydown", async e=>{
   if(e.key!=="Enter") return;
   const raw=e.target.value.trim(); e.target.value="";
   if(!raw||!countSession) return;
-  let v = countRowsCache.find(x=>x.barcode===raw);
-  if(!v){ const n=skuNorm(raw); v = countRowsCache.find(x=>x.sku && skuNorm(x.sku)===n); }
+  let v = countBase.find(x=>x.barcode===raw);
+  if(!v){ const n=skuNorm(raw); v = countBase.find(x=>x.sku && skuNorm(x.sku)===n); }
   if(v){
+    const wasListed = countRowsCache.includes(v);
+    if(!wasListed){    // zero-stock pattern scanned — pull it in, flagged
+      countRowsCache.push(v);
+      countRowsCache.sort((x,y)=> ((x.product_title||"")+(x.variant_title||"")).localeCompare((y.product_title||"")+(y.variant_title||"")));
+    }
     countAdj(v.variant_id,1);
-    sndOk();
-    setMsg("countMsg","✓ "+v.product_title+" — "+(v.variant_title||"")+" → "+(countSession.counts[v.variant_id]),"ok");
+    if(wasListed){ sndOk(); setMsg("countMsg","✓ "+v.product_title+" — "+(v.variant_title||"")+" → "+(countSession.counts[v.variant_id]),"ok"); }
+    else { sndMulti(); setMsg("countMsg","⚑ "+v.product_title+" — "+(v.variant_title||"")+" wasn't in Shopify stock — pulled in & flagged.","warn"); }
     const row=$("cv"+v.variant_id); if(row){ row.scrollIntoView({block:"center"}); row.classList.add("flash"); setTimeout(()=>row.classList.remove("flash"),450); }
     return;
   }
@@ -933,25 +1030,48 @@ $("countCancelBtn").onclick = async ()=>{
 $("countFinishBtn").onclick = async ()=>{
   const counts=countSession.counts||{};
   const summary = countRowsCache.map(v=>({ variant_id:v.variant_id, sku:v.sku,
-      title:v.product_title+" — "+(v.variant_title||""), expected:v.inventory_quantity??0, counted:counts[v.variant_id]||0 }))
+      title:v.product_title+" — "+(v.variant_title||""), expected:v.inventory_quantity||0, counted:counts[v.variant_id]||0 }))
     .map(r=>({...r, diff:r.counted-r.expected}))
     .filter(r=>r.diff!==0);
   await sb.from("inventory_counts").update({status:"done",finished_at:new Date().toISOString(),
     counts, summary}).eq("id",countSession.id);
+  lastCountId = countSession.id;
   sndDone();
   $("csSub").textContent = binLabel(countBin)+" — "
-    + (summary.length? summary.length+" discrepancies found (fix in Shopify admin)" : "everything matches Shopify 🎉");
+    + (summary.length? summary.length+" discrepancies flagged" : "everything matches Shopify 🎉");
   $("csBody").innerHTML = summary.length ? summary.map(r=>
     '<div class="prow"><span class="q" style="color:'+(r.diff>0?"var(--ok)":"var(--coral)")+'">'
     + (r.diff>0?"+":"")+r.diff+'</span><span class="sk">'+esc(r.sku||"—")+'</span>'
     + '<span class="ti">'+esc(r.title)+'</span>'
     + '<span class="vt">shelf '+r.counted+' vs shopify '+r.expected+'</span></div>').join("")
     : '<div class="empty">No differences.</div>';
+  $("csPushMsg").textContent = "";
+  $("csPushBtn").disabled = !summary.length;
+  $("csPushBtn").classList.toggle("hidden", !summary.length);
   $("csOverlay").classList.remove("hidden");
+};
+$("csPushBtn").onclick = async ()=>{
+  if(!lastCountId) return;
+  if(!confirm("Set these counted quantities as the new inventory in Shopify?")) return;
+  $("csPushBtn").disabled = true;
+  $("csPushMsg").textContent = "Pushing…"; $("csPushMsg").style.color = "var(--dim)";
+  try{
+    const {data,error} = await sb.functions.invoke("push-count",{ body:{ count_id:lastCountId } });
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    $("csPushMsg").textContent = "✓ "+data.set+" quantities updated in Shopify"
+      + ((data.failed||[]).length? " · "+data.failed.length+" failed":"");
+    $("csPushMsg").style.color = "var(--ok)";
+    catalog = null;  // refresh cached quantities next time
+  }catch(e){
+    $("csPushMsg").textContent = "✖ "+(e.message||e);
+    $("csPushMsg").style.color = "var(--coral)";
+    $("csPushBtn").disabled = false;
+  }
 };
 $("csCloseBtn").onclick = ()=>{ $("csOverlay").classList.add("hidden"); resetCount(); };
 function resetCount(){
-  countBin=null; countSession=null; countRowsCache=[];
+  countBin=null; countSession=null; countRowsCache=[]; countBase=[];
   $("countArea").classList.add("hidden");
   $("countIntro").classList.remove("hidden");
   renderCountBins();

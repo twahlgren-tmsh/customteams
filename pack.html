@@ -3,98 +3,152 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMSH Pack Station</title>
+<title>TMSH Warehouse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <style>
   :root{
-    --bg:#12141a; --card:#1c1f28; --card2:#242836; --line:#333a4d;
-    --text:#eef0f6; --dim:#8b93a7; --acc:#4da3ff; --ok:#2ecc71; --bad:#ff4d4d;
-    --warn:#ffb020; --purple:#b48cff;
+    --teal:#00acb2; --teal-dark:#008a8f; --teal-soft:#e0f6f7;
+    --coral:#ff4f33; --coral-soft:#ffece8;
+    --gold:#f5a623;
+    --bg:#f4f8f9; --card:#ffffff; --line:#dfe8ea;
+    --text:#17282b; --dim:#5f7378;
+    --ok:#18a05e; --ok-soft:#e3f6ec; --warn:#b97f0a; --warn-soft:#fdf3dd;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh;}
+  body{background:var(--bg); color:var(--text); font-family:Montserrat,system-ui,sans-serif; min-height:100vh;}
+  h1,h2,h3,.onum,.tab{font-family:Poppins,Montserrat,sans-serif;}
   button{font-family:inherit; cursor:pointer; border:none; border-radius:10px;}
-  input{font-family:inherit;}
+  input,select{font-family:inherit;}
   .hidden{display:none !important;}
 
-  /* ---------- login ---------- */
-  #loginView{display:flex; align-items:center; justify-content:center; min-height:100vh;}
-  .loginBox{background:var(--card); padding:36px; border-radius:16px; width:min(400px,92vw); border:1px solid var(--line);}
-  .loginBox h1{font-size:22px; margin-bottom:4px;}
-  .loginBox p{color:var(--dim); font-size:14px; margin-bottom:22px;}
-  .loginBox input{width:100%; padding:14px; margin-bottom:12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); font-size:16px;}
-  .loginBox button{width:100%; padding:14px; background:var(--acc); color:#08131f; font-size:16px; font-weight:700;}
-  #loginErr{color:var(--bad); font-size:14px; margin-top:10px; min-height:18px;}
+  /* login */
+  #loginView{display:flex; align-items:center; justify-content:center; min-height:100vh;
+    background:linear-gradient(150deg, var(--teal-soft), var(--bg) 55%, var(--coral-soft));}
+  .loginBox{background:var(--card); padding:36px; border-radius:18px; width:min(400px,92vw); border:1px solid var(--line); box-shadow:0 12px 40px rgba(0,140,145,.14);}
+  .loginBox h1{font-size:22px; color:var(--teal-dark);}
+  .loginBox p{color:var(--dim); font-size:14px; margin:6px 0 22px;}
+  .loginBox input{width:100%; padding:13px; margin-bottom:12px; border-radius:10px; border:1px solid var(--line); font-size:16px;}
+  .loginBox button{width:100%; padding:14px; background:var(--teal); color:#fff; font-size:16px; font-weight:700;}
+  #loginErr{color:var(--coral); font-size:14px; margin-top:10px; min-height:18px;}
 
-  /* ---------- header ---------- */
-  header{display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:5;}
-  header h1{font-size:18px; flex:1;}
-  header .sub{color:var(--dim); font-size:13px;}
-  .hbtn{background:var(--card2); color:var(--text); padding:10px 14px; font-size:14px;}
+  /* header + tabs */
+  header{display:flex; align-items:center; gap:10px; padding:10px 16px; background:var(--card); border-bottom:2px solid var(--teal); position:sticky; top:0; z-index:10; flex-wrap:wrap;}
+  header h1{font-size:17px; color:var(--teal-dark); margin-right:6px;}
+  .tabs{display:flex; gap:4px; flex:1;}
+  .tab{padding:9px 16px; border-radius:10px; background:transparent; color:var(--dim); font-size:14px; font-weight:700;}
+  .tab.on{background:var(--teal); color:#fff;}
+  .hbtn{background:var(--teal-soft); color:var(--teal-dark); padding:9px 13px; font-size:13px; font-weight:600;}
+  .build{font-size:10px; color:var(--dim);}
 
-  /* ---------- queue ---------- */
-  #queueView{max-width:860px; margin:0 auto; padding:16px;}
-  .qhead{display:flex; align-items:baseline; gap:10px; margin:8px 2px 14px;}
-  .qhead h2{font-size:16px;} .qhead span{color:var(--dim); font-size:13px;}
-  .ocard{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; display:flex; gap:14px; align-items:center; cursor:pointer;}
-  .ocard:hover{border-color:var(--acc);}
-  .onum{font-size:20px; font-weight:800; min-width:86px;}
+  .wrap{max-width:920px; margin:0 auto; padding:16px;}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
+  .toolbar input[type=search]{flex:1; min-width:180px; padding:11px 14px; border-radius:10px; border:1px solid var(--line); font-size:14px; background:var(--card);}
+  .toolbar input[type=date]{padding:9px; border-radius:10px; border:1px solid var(--line); font-size:13px; background:var(--card); color:var(--dim);}
+  .fchip{padding:8px 14px; border-radius:99px; border:1.5px solid var(--line); background:var(--card); color:var(--dim); font-size:13px; font-weight:600;}
+  .fchip.on{background:var(--coral); border-color:var(--coral); color:#fff;}
+  .selbar{display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
+  .selbar label{font-size:13px; color:var(--dim); display:flex; gap:6px; align-items:center;}
+  .primaryBtn{background:var(--teal); color:#fff; padding:11px 18px; font-size:14px; font-weight:700;}
+  .primaryBtn:disabled{opacity:.4; cursor:default;}
+  .ghostBtn{background:var(--card); border:1.5px solid var(--line); color:var(--dim); padding:10px 14px; font-size:13px; font-weight:600;}
+
+  /* order cards */
+  .ocard{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:10px; display:flex; gap:12px; align-items:center; box-shadow:0 1px 3px rgba(23,40,43,.05);}
+  .ocard.clickable{cursor:pointer;} .ocard.clickable:hover{border-color:var(--teal);}
+  .ocard input[type=checkbox]{width:20px; height:20px; accent-color:var(--teal);}
+  .onum{font-size:18px; font-weight:800; min-width:74px; color:var(--teal-dark);}
   .oinfo{flex:1; min-width:0;}
-  .oinfo .cust{font-weight:600;}
-  .oinfo .meta{color:var(--dim); font-size:13px; margin-top:2px;}
-  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
-  .chip{font-size:11px; padding:3px 8px; border-radius:99px; background:var(--card2); color:var(--dim); border:1px solid var(--line);}
-  .chip.note{color:var(--warn); border-color:var(--warn);}
-  .ocount{font-size:15px; color:var(--dim); text-align:right; min-width:70px;}
-  .ocount b{display:block; font-size:22px; color:var(--text);}
-  .badge{font-size:11px; font-weight:800; padding:4px 9px; border-radius:99px; letter-spacing:.4px;}
-  .badge.verified{background:rgba(46,204,113,.15); color:var(--ok); border:1px solid var(--ok);}
-  .badge.progress{background:rgba(255,176,32,.12); color:var(--warn); border:1px solid var(--warn);}
-  .badge.unpaid{background:rgba(255,77,77,.12); color:var(--bad); border:1px solid var(--bad);}
-  #qEmpty{color:var(--dim); text-align:center; padding:60px 0; font-size:15px;}
+  .cust{font-weight:700; font-size:14px;}
+  .stars{color:var(--gold); font-size:13px; letter-spacing:1px; cursor:help;}
+  .stars .off{color:#d8dfe1;}
+  .meta{color:var(--dim); font-size:12.5px; margin-top:2px;}
+  .chips{display:flex; gap:5px; flex-wrap:wrap; margin-top:6px;}
+  .chip{font-size:11px; padding:3px 9px; border-radius:99px; background:var(--bg); color:var(--dim); border:1px solid var(--line); font-weight:600;}
+  .chip.flag{background:var(--teal-soft); color:var(--teal-dark); border-color:var(--teal);}
+  .chip.note{background:var(--warn-soft); color:var(--warn); border-color:var(--warn);}
+  .badge{font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:99px; letter-spacing:.4px;}
+  .badge.verified{background:var(--ok-soft); color:var(--ok); border:1px solid var(--ok);}
+  .badge.progress{background:var(--warn-soft); color:var(--warn); border:1px solid var(--warn);}
+  .badge.unpaid{background:var(--coral-soft); color:var(--coral); border:1px solid var(--coral);}
+  .ocount{text-align:right; color:var(--dim); font-size:12px; min-width:56px;}
+  .ocount b{display:block; font-size:20px; color:var(--text);}
+  .empty{color:var(--dim); text-align:center; padding:50px 0; font-size:15px;}
 
-  /* ---------- pack ---------- */
-  #packView{max-width:860px; margin:0 auto; padding:16px;}
-  .pnote{background:rgba(255,176,32,.1); border:1px solid var(--warn); color:var(--warn); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:14px;}
-  #scanBox{position:sticky; top:64px; z-index:4; background:var(--card); border:2px solid var(--acc); border-radius:14px; padding:14px 16px; margin-bottom:14px;}
-  #scanBox label{font-size:12px; color:var(--dim); letter-spacing:.5px;}
-  #scanInput{width:100%; background:transparent; border:none; outline:none; color:var(--text); font-size:26px; font-weight:700; padding:6px 0 2px;}
-  #scanMsg{min-height:24px; font-size:15px; font-weight:600;}
-  #scanMsg.ok{color:var(--ok);} #scanMsg.bad{color:var(--bad);} #scanMsg.warn{color:var(--warn);}
-  .irow{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; gap:14px; transition:background .15s;}
-  .irow.done{border-color:var(--ok); background:rgba(46,204,113,.07);}
-  .irow.flash{background:rgba(46,204,113,.25);}
-  .irow.flashbad{background:rgba(255,77,77,.25);}
-  .iqty{font-size:20px; font-weight:800; min-width:64px;}
+  /* pack scan */
+  #scanBox{position:sticky; top:58px; z-index:5; background:var(--card); border:2.5px solid var(--teal); border-radius:14px; padding:12px 16px; margin-bottom:14px; box-shadow:0 4px 16px rgba(0,172,178,.15);}
+  #scanBox label{font-size:11px; color:var(--teal-dark); letter-spacing:.6px; font-weight:700;}
+  #scanInput,#countInput{width:100%; background:transparent; border:none; outline:none; color:var(--text); font-size:24px; font-weight:700; padding:4px 0 2px;}
+  .scanMsg{min-height:22px; font-size:14px; font-weight:700;}
+  .scanMsg.ok{color:var(--ok);} .scanMsg.bad{color:var(--coral);} .scanMsg.warn{color:var(--warn);} .scanMsg.multi{color:var(--teal-dark);}
+  .irow{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; display:flex; align-items:center; gap:12px; transition:background .15s;}
+  .irow.done{border-color:var(--ok); background:var(--ok-soft);}
+  .irow.flash{background:#baf1d3;}
+  .irow.flashbad{background:#ffd2c9;}
+  .iqty{font-size:18px; font-weight:800; min-width:56px; color:var(--teal-dark);}
   .iqty small{color:var(--dim); font-weight:400;}
   .ititle{flex:1; min-width:0;}
-  .ititle .t{font-weight:600;}
-  .ititle .v{color:var(--dim); font-size:13px; margin-top:1px;}
-  .ititle .s{color:var(--dim); font-size:12px; font-family:ui-monospace,monospace; margin-top:2px;}
-  .bin{font-size:13px; font-weight:800; background:var(--card2); border:1px solid var(--line); color:var(--purple); border-radius:8px; padding:6px 10px;}
-  .manualBtn{background:var(--card2); color:var(--text); padding:10px 14px; font-size:13px; border:1px solid var(--line);}
-  .pbar{display:flex; gap:10px; margin-top:16px;}
-  .pbar button{flex:1; padding:14px; font-size:15px; font-weight:600;}
-  #undoBtn{background:var(--card2); color:var(--text); border:1px solid var(--line);}
-  #cancelBtn{background:transparent; color:var(--dim); border:1px solid var(--line);}
+  .ititle .t{font-weight:700; font-size:14px;}
+  .ititle .v{color:var(--dim); font-size:12.5px;}
+  .ititle .s{color:var(--dim); font-size:11.5px; font-family:ui-monospace,monospace; margin-top:1px;}
+  .bin{font-size:13px; font-weight:800; background:var(--teal-soft); color:var(--teal-dark); border-radius:8px; padding:6px 10px;}
+  .manualBtn{background:var(--card); color:var(--teal-dark); padding:9px 13px; font-size:12.5px; border:1.5px solid var(--teal);}
+  .pbar{display:flex; gap:10px; margin-top:14px;}
+  .pbar button{flex:1; padding:13px; font-size:14px; font-weight:700;}
+  #undoBtn{background:var(--card); color:var(--text); border:1.5px solid var(--line);}
+  #cancelBtn{background:transparent; color:var(--dim); border:1.5px solid var(--line);}
+  .pnote{background:var(--warn-soft); border:1.5px solid var(--warn); color:var(--warn); border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:13.5px; font-weight:600;}
 
-  /* ---------- done overlay ---------- */
-  #doneOverlay{position:fixed; inset:0; background:rgba(18,20,26,.96); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50;}
-  #doneOverlay .big{font-size:88px;}
-  #doneOverlay h2{font-size:30px; color:var(--ok); margin:12px 0 4px;}
-  #doneOverlay p{color:var(--dim); font-size:16px;}
-  #doneOverlay button{margin-top:26px; padding:14px 30px; background:var(--ok); color:#06170d; font-size:16px; font-weight:800;}
+  /* overlays */
+  .overlay{position:fixed; inset:0; background:rgba(23,40,43,.45); display:flex; align-items:flex-start; justify-content:center; z-index:60; padding:24px 12px; overflow:auto;}
+  .sheet{background:var(--card); border-radius:16px; width:min(760px,96vw); padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .sheet h2{color:var(--teal-dark); font-size:19px; margin-bottom:2px;}
+  .sheet .sub{color:var(--dim); font-size:13px; margin-bottom:14px;}
+  .sheetBar{display:flex; gap:10px; margin-top:16px; justify-content:flex-end; flex-wrap:wrap;}
+  .groupHead{display:flex; align-items:center; gap:10px; margin:16px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--teal);}
+  .groupHead .b{font-size:16px; font-weight:800; color:var(--teal-dark);}
+  .groupHead .n{color:var(--dim); font-size:12.5px;}
+  .prow{display:flex; gap:10px; padding:7px 4px; border-bottom:1px dashed var(--line); font-size:13.5px; align-items:center;}
+  .prow .q{font-weight:800; min-width:44px; color:var(--coral); font-size:15px;}
+  .prow .sk{font-family:ui-monospace,monospace; min-width:120px; color:var(--dim); font-size:12px;}
+  .prow .ti{flex:1;}
+  .prow .vt{color:var(--dim); font-size:12px;}
 
-  .spin{color:var(--dim); text-align:center; padding:50px 0;}
-  @media (max-width:560px){ .onum{min-width:64px; font-size:17px;} .ocount{display:none;} }
+  #doneOverlay{position:fixed; inset:0; background:rgba(224,246,247,.97); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:70;}
+  #doneOverlay .big{font-size:84px;}
+  #doneOverlay h2{font-size:28px; color:var(--ok); margin:10px 0 4px;}
+  #doneOverlay p{color:var(--dim); font-size:15px;}
+  #doneOverlay button{margin-top:24px; padding:14px 30px; background:var(--ok); color:#fff; font-size:16px; font-weight:800;}
+
+  /* print & count tabs */
+  .binChips{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:14px;}
+  .binChip{padding:10px 15px; border-radius:12px; border:1.5px solid var(--line); background:var(--card); font-weight:800; font-size:14px; color:var(--dim);}
+  .binChip.on{background:var(--teal); border-color:var(--teal); color:#fff;}
+  .vrow{display:flex; gap:10px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:9px 12px; margin-bottom:6px; font-size:13.5px;}
+  .vrow.flash{background:#baf1d3;}
+  .vrow .ti{flex:1; min-width:0;}
+  .vrow .sk{font-family:ui-monospace,monospace; color:var(--dim); font-size:11.5px;}
+  .stepper{display:flex; align-items:center; gap:6px;}
+  .stepper button{width:30px; height:30px; border-radius:8px; background:var(--teal-soft); color:var(--teal-dark); font-size:16px; font-weight:800;}
+  .stepper .qv{min-width:26px; text-align:center; font-weight:800;}
+  .cExp{min-width:50px; text-align:center; color:var(--dim); font-size:12px;}
+  .cExp b{display:block; font-size:15px; color:var(--text);}
+  .cDiff{min-width:44px; text-align:center; font-weight:800; font-size:14px;}
+  .cDiff.pos{color:var(--ok);} .cDiff.neg{color:var(--coral);} .cDiff.zero{color:var(--dim); font-weight:400;}
+  .secHead{display:flex; align-items:center; gap:10px; margin:18px 0 10px;}
+  .secHead h3{font-size:15px; color:var(--teal-dark);}
+  .secHead .sp{flex:1;}
+  @media (max-width:600px){ .onum{min-width:58px; font-size:15px;} .ocount{display:none;} .prow .sk{display:none;} }
 </style>
 </head>
 <body>
 
-<div id="loginView">
+<div id="loginView" class="hidden">
   <div class="loginBox">
-    <h1>TMSH Pack Station</h1>
-    <p>Sign in with your Taylor Made account (same login as the custom-orders tool).</p>
+    <h1>TMSH Warehouse</h1>
+    <p>Pick &middot; Pack &middot; Print &middot; Count &mdash; sign in with your Taylor Made account.</p>
     <input id="email" type="email" placeholder="Email" autocomplete="username">
     <input id="password" type="password" placeholder="Password" autocomplete="current-password">
     <button id="loginBtn">Sign in</button>
@@ -104,31 +158,120 @@
 
 <div id="appView" class="hidden">
   <header>
-    <h1 id="hTitle">Pack Station</h1>
-    <span class="sub" id="hSub"></span>
-    <button class="hbtn" id="backBtn" style="display:none">&larr; Queue</button>
-    <button class="hbtn" id="refreshBtn">&#8635; Refresh</button>
-    <button class="hbtn" id="syncBtn" title="Re-pull the product catalog from Shopify">Sync catalog</button>
+    <h1>TMSH</h1>
+    <nav class="tabs">
+      <button class="tab on" data-tab="pick">Pick</button>
+      <button class="tab" data-tab="pack">Pack</button>
+      <button class="tab" data-tab="print">Print</button>
+      <button class="tab" data-tab="count">Count</button>
+    </nav>
+    <button class="hbtn" id="refreshBtn">&#8635;</button>
+    <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
+    <span class="build">wms2</span>
   </header>
 
-  <div id="queueView">
-    <div class="qhead"><h2>Orders to pack</h2><span id="qMeta"></span></div>
-    <div id="qList"><div class="spin">Loading orders&hellip;</div></div>
-    <div id="qEmpty" class="hidden">Queue is clear &mdash; nothing waiting to pack. &#127881;</div>
+  <!-- ============ PICK ============ -->
+  <div id="tab-pick" class="wrap">
+    <div class="toolbar">
+      <input type="search" id="pickSearch" placeholder="Search orders — name, #, SKU, item, city…">
+      <input type="date" id="dateFrom" title="From date">
+      <input type="date" id="dateTo" title="To date">
+    </div>
+    <div class="toolbar">
+      <button class="fchip" data-flag="buttons">Buttons</button>
+      <button class="fchip" data-flag="embroidery">Embroidery</button>
+      <button class="fchip" data-flag="magnets">Mask Magnets</button>
+    </div>
+    <div class="selbar">
+      <label><input type="checkbox" id="selAll"> Select all shown</label>
+      <span id="selCount" style="font-size:13px;color:var(--dim)"></span>
+      <span style="flex:1"></span>
+      <button class="primaryBtn" id="pickListBtn" disabled>Create pick list</button>
+    </div>
+    <div id="pickList"><div class="empty">Loading orders&hellip;</div></div>
   </div>
 
-  <div id="packView" class="hidden">
-    <div id="pNote" class="pnote hidden"></div>
-    <div id="scanBox">
-      <label>SCAN ITEM &mdash; scanner or type SKU + Enter</label>
-      <input id="scanInput" autocomplete="off" spellcheck="false">
-      <div id="scanMsg"></div>
+  <!-- ============ PACK ============ -->
+  <div id="tab-pack" class="wrap hidden">
+    <div id="packQueue">
+      <div class="toolbar">
+        <input type="search" id="packSearch" placeholder="Search fulfilled orders…">
+        <label style="font-size:13px;color:var(--dim)"><input type="checkbox" id="showVerified"> show verified</label>
+      </div>
+      <div id="packListEl"><div class="empty">Loading&hellip;</div></div>
     </div>
-    <div id="iList"></div>
-    <div class="pbar">
-      <button id="undoBtn">&#8630; Undo last</button>
-      <button id="cancelBtn">Cancel session</button>
+    <div id="packSession" class="hidden">
+      <div id="pNote" class="pnote hidden"></div>
+      <div id="scanBox">
+        <label id="scanTitle">SCAN ITEM — scanner or type SKU + Enter</label>
+        <input id="scanInput" autocomplete="off" spellcheck="false">
+        <div id="scanMsg" class="scanMsg"></div>
+      </div>
+      <div id="iList"></div>
+      <div class="pbar">
+        <button id="undoBtn">&#8630; Undo last</button>
+        <button id="cancelBtn">Cancel session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PRINT ============ -->
+  <div id="tab-print" class="wrap hidden">
+    <div class="secHead"><h3>Print queue</h3><span class="sp"></span>
+      <button class="primaryBtn" id="printPendingBtn">&#128424; Print queue</button>
+      <button class="ghostBtn" id="markPrintedBtn">Mark printed</button>
+    </div>
+    <div id="pqList"><div class="empty">Nothing queued.</div></div>
+    <div class="secHead"><h3>Add labels</h3><span class="sp"></span>
+      <input type="search" id="printSearch" placeholder="Search catalog…" style="padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;">
+    </div>
+    <div class="binChips" id="printBins"></div>
+    <div id="printCatalog"><div class="empty">Pick a style above to browse its labels.</div></div>
+  </div>
+
+  <!-- ============ COUNT ============ -->
+  <div id="tab-count" class="wrap hidden">
+    <div class="binChips" id="countBins"></div>
+    <div id="countArea" class="hidden">
+      <div id="countBox" style="background:var(--card);border:2.5px solid var(--teal);border-radius:14px;padding:12px 16px;margin-bottom:6px;">
+        <label style="font-size:11px;color:var(--teal-dark);letter-spacing:.6px;font-weight:700;">SCAN TO COUNT — each scan adds 1</label>
+        <input id="countInput" autocomplete="off" spellcheck="false">
+        <div id="countMsg" class="scanMsg"></div>
+      </div>
+      <div class="selbar" style="margin-top:10px;">
+        <span id="countMeta" style="font-size:13px;color:var(--dim)"></span>
+        <span style="flex:1"></span>
+        <button class="ghostBtn" id="countCancelBtn">Cancel</button>
+        <button class="primaryBtn" id="countFinishBtn">Finish count</button>
+      </div>
+      <div id="countRows"></div>
+    </div>
+    <div id="countIntro" class="empty">Pick a style to start (or resume) an inventory count.<br>Shelves are alphabetical — the list below matches.</div>
+  </div>
+</div>
+
+<!-- pick list overlay -->
+<div id="plOverlay" class="overlay hidden">
+  <div class="sheet">
+    <h2>Pick list</h2>
+    <div class="sub" id="plSub"></div>
+    <div id="plBody"></div>
+    <div class="sheetBar">
+      <button class="ghostBtn" id="plCloseBtn">Close</button>
+      <button class="primaryBtn" id="plPrintBtn">&#128424; Print pick list</button>
+    </div>
+  </div>
+</div>
+
+<!-- count summary overlay -->
+<div id="csOverlay" class="overlay hidden">
+  <div class="sheet">
+    <h2>Count finished</h2>
+    <div class="sub" id="csSub"></div>
+    <div id="csBody"></div>
+    <div class="sheetBar">
+      <button class="primaryBtn" id="csCloseBtn">Done</button>
     </div>
   </div>
 </div>
@@ -140,55 +283,95 @@
   <button id="doneBtn">Back to queue</button>
 </div>
 
+<div id="svgWork" class="hidden"></div>
+
 <script>
 const SUPA_URL = "https://mvspfxwiuipswvjwvlsv.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-
 const $ = (id) => document.getElementById(id);
-let orders = [];            // queue from pack-orders
-let sessionsByOrder = {};   // shopify_order_id -> {status, verified_at}
-let cur = null;             // {order, session, items:[{key,title,variant,sku,bin,barcode,need,got,manual}], log:[]}
 
-/* ---------------- audio ---------------- */
+let toPick = [], toPack = [], sessionsByOrder = {}, catalog = null;
+let cur = null;                 // active pack session
+let selected = new Set();       // pick multi-select (orderId)
+let activeTab = "pick";
+let pickFlags = new Set();      // content filters
+let printBin = null, countBin = null, countSession = null, countRowsCache = [];
+let pqRows = [];
+
+/* ---------- sounds ---------- */
 let AC = null;
-function tone(freq, dur, when=0, type="sine", gain=0.25){
-  AC = AC || new (window.AudioContext||window.webkitAudioContext)();
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = type; o.frequency.value = freq; o.connect(g); g.connect(AC.destination);
-  g.gain.setValueAtTime(gain, AC.currentTime + when);
-  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + when + dur);
-  o.start(AC.currentTime + when); o.stop(AC.currentTime + when + dur + .05);
-}
-const sndOk = () => tone(880, .1);
-const sndBad = () => { tone(180, .25, 0, "square", .3); tone(140, .3, .18, "square", .3); };
-const sndDone = () => { [523,659,784,1047].forEach((f,i)=>tone(f,.16,i*.11)); };
+function tone(f,d,w=0,t="sine",g=.25){ AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+  const o=AC.createOscillator(),n=AC.createGain(); o.type=t; o.frequency.value=f; o.connect(n); n.connect(AC.destination);
+  n.gain.setValueAtTime(g,AC.currentTime+w); n.gain.exponentialRampToValueAtTime(.001,AC.currentTime+w+d);
+  o.start(AC.currentTime+w); o.stop(AC.currentTime+w+d+.05); }
+const sndOk   = ()=>tone(880,.1);
+const sndMulti= ()=>{ tone(660,.08); tone(990,.09,.1); };                 // distinct "more to go" beep
+const sndBad  = ()=>{ tone(180,.25,0,"square",.3); tone(140,.3,.18,"square",.3); };
+const sndDone = ()=>{ [523,659,784,1047].forEach((f,i)=>tone(f,.16,i*.11)); };
 
-/* ---------------- helpers ---------------- */
-const skuNorm = (s) => (s||"").toUpperCase().replace(/[.·]/g, "-").trim(); // treat . and - as the same
-const binOf = (sku) => {
-  if(!sku) return "";
+/* ---------- helpers ---------- */
+const skuNorm = (s)=>(s||"").toUpperCase().replace(/[.·]/g,"-").trim();
+const KNOWN = ["CO","CP","CS","CT","LO","LP","LS","LT"];
+const STYLE_NAMES = {CO:"Classic Original",CP:"Classic Ponytail",CS:"Classic Skull",CT:"Classic Euro",
+  LO:"LUXE Original",LP:"LUXE Ponytail",LS:"LUXE Skull",LT:"LUXE Euro"};
+function binOf(sku){
+  if(!sku) return "OTHER";
   const s = skuNorm(sku);
-  if(s.startsWith("PLUS")) { const p = s.split("-"); return p.length>1 ? p[0]+"-"+p[1] : p[0]; }
-  return s.split("-")[0];
-};
-const ageOf = (iso) => {
-  const h = (Date.now() - new Date(iso).getTime())/36e5;
-  return h < 24 ? Math.max(1,Math.round(h)) + "h" : Math.round(h/24) + "d";
-};
-const esc = (s) => (s??"").toString().replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  if(s.startsWith("PLUS")){ const p=s.split("-"); return p.length>1?p[0]+"-"+p[1]:p[0]; }
+  const b = s.split("-")[0];
+  return KNOWN.includes(b) ? b : "OTHER";
+}
+const binLabel = (b)=> STYLE_NAMES[b] ? b+" — "+STYLE_NAMES[b] : (b.startsWith("PLUS")?b+" — Comfort+":(b==="OTHER"?"Other items":b));
+function binSort(a,b){ const oa=a==="OTHER"?2:(a.startsWith("PLUS")?1:0), ob=b==="OTHER"?2:(b.startsWith("PLUS")?1:0);
+  return oa-ob || a.localeCompare(b); }
+const ageOf = (iso)=>{ const h=(Date.now()-new Date(iso).getTime())/36e5; return h<24?Math.max(1,Math.round(h))+"h":Math.round(h/24)+"d"; };
+const esc = (s)=>(s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtDate = (iso)=> new Date(iso).toLocaleDateString();
 
-/* ---------------- auth ---------------- */
+function contentFlags(o){
+  const f = new Set();
+  for(const it of o.items){
+    const t = (it.title||"").toLowerCase();
+    if(t.includes("button")) f.add("buttons");
+    if(t.includes("embroider")) f.add("embroidery");
+    if(t.includes("magnet")) f.add("magnets");
+  }
+  return f;
+}
+const FLAG_LABELS = {buttons:"Buttons", embroidery:"Embroidery", magnets:"Mask Magnets"};
+
+/* ---------- stars ---------- */
+function starsOf(o){
+  const n = o.ordersCount ?? 1;
+  const d = (o.orderDates||[]).map(x=>new Date(x).getTime()).sort((a,b)=>b-a);
+  const gap = d.length>1 ? (d[0]-d[1]) : null;                    // current vs previous order
+  const quarterly = n>=4 && d[3] && (Date.now()-d[3]) < 380*864e5; // 4 most recent within ~a year
+  if(n>=10 || quarterly) return 5;
+  if(n>=2 && gap!==null && gap > 365*864e5) return 3;             // repeat but lapsed >1yr
+  if(n>=4) return 4;
+  if(n>=2) return 2;
+  return 1;
+}
+const STAR_TIPS = {1:"First-time customer",2:"2nd–3rd order",3:"Repeat customer, but over a year since last order",
+  4:"4–9 orders — regular",5:"10+ orders or orders quarterly — VIP"};
+function starsHtml(o){
+  const s = starsOf(o);
+  return '<span class="stars" title="'+esc(STAR_TIPS[s])+' ('+(o.ordersCount??"?")+' orders)">'
+    + "★".repeat(s) + '<span class="off">'+"★".repeat(5-s)+'</span></span>';
+}
+
+/* ---------- auth ---------- */
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
   if(session){ showApp(); } else { $("loginView").classList.remove("hidden"); }
 }
 $("loginBtn").onclick = doLogin;
-$("password").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+$("password").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
 async function doLogin(){
-  $("loginErr").textContent = "";
+  $("loginErr").textContent="";
   const { error } = await sb.auth.signInWithPassword({ email:$("email").value.trim(), password:$("password").value });
-  if(error){ $("loginErr").textContent = error.message; return; }
+  if(error){ $("loginErr").textContent=error.message; return; }
   showApp();
 }
 $("logoutBtn").onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
@@ -197,78 +380,206 @@ function showApp(){
   $("loginView").classList.add("hidden");
   $("appView").classList.remove("hidden");
   loadQueue();
-  setInterval(()=>{ if(!cur) loadQueue(true); }, 90000); // auto-refresh queue
+  setInterval(()=>{ if(!cur && activeTab!=="count") loadQueue(true); }, 120000);
 }
 
-/* ---------------- queue ---------------- */
-$("refreshBtn").onclick = ()=> cur ? null : loadQueue();
+/* ---------- tabs ---------- */
+document.querySelectorAll(".tab").forEach(b=> b.onclick = ()=> switchTab(b.dataset.tab));
+function switchTab(t){
+  activeTab = t;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on", x.dataset.tab===t));
+  ["pick","pack","print","count"].forEach(x=> $("tab-"+x).classList.toggle("hidden", x!==t));
+  if(t==="print"){ renderPrintBins(); loadPrintQueue(); }
+  if(t==="count"){ renderCountBins(); }
+  focusScan();
+}
+
+/* ---------- data ---------- */
+$("refreshBtn").onclick = ()=> loadQueue();
 $("syncBtn").onclick = async ()=>{
-  $("syncBtn").textContent = "Syncing…";
-  try{ const { data, error } = await sb.functions.invoke("sync-catalog");
-    $("syncBtn").textContent = error ? "Sync failed" : ("Synced " + (data?.variants ?? "") + " ✓");
-  }catch(_e){ $("syncBtn").textContent = "Sync failed"; }
-  setTimeout(()=> $("syncBtn").textContent = "Sync catalog", 4000);
+  $("syncBtn").textContent="Syncing…";
+  try{ const {data,error} = await sb.functions.invoke("sync-catalog");
+    $("syncBtn").textContent = error?"Failed":("✓ "+(data?.variants??"")); catalog=null;
+  }catch(_e){ $("syncBtn").textContent="Failed"; }
+  setTimeout(()=> $("syncBtn").textContent="Sync", 4000);
 };
 
 async function loadQueue(silent){
-  if(!silent) $("qList").innerHTML = '<div class="spin">Loading orders&hellip;</div>';
+  if(!silent){ $("pickList").innerHTML='<div class="empty">Loading orders…</div>'; }
   try{
-    const [{ data, error }, sess] = await Promise.all([
+    const [{data,error}, sess] = await Promise.all([
       sb.functions.invoke("pack-orders"),
       sb.from("pack_sessions").select("shopify_order_id,status,verified_at").order("created_at",{ascending:false}),
     ]);
     if(error) throw error;
     if(data?.error) throw new Error(data.error);
-    orders = data.orders || [];
+    toPick = data.toPick||[]; toPack = data.toPack||[];
     sessionsByOrder = {};
-    (sess.data||[]).forEach(s=>{ if(!sessionsByOrder[s.shopify_order_id]) sessionsByOrder[s.shopify_order_id] = s; });
-    renderQueue();
+    (sess.data||[]).forEach(s=>{ if(!sessionsByOrder[s.shopify_order_id]) sessionsByOrder[s.shopify_order_id]=s; });
+    renderPick(); renderPack();
   }catch(e){
-    $("qList").innerHTML = '<div class="spin">Could not load orders: '+esc(e.message||e)+'</div>';
+    $("pickList").innerHTML = '<div class="empty">Could not load: '+esc(e.message||e)+'</div>';
   }
 }
 
-function renderQueue(){
-  $("hTitle").textContent = "Pack Station";
-  $("hSub").textContent = "";
-  const list = $("qList");
-  $("qMeta").textContent = orders.length + " open · oldest first · updated " + new Date().toLocaleTimeString();
-  if(!orders.length){ list.innerHTML=""; $("qEmpty").classList.remove("hidden"); return; }
-  $("qEmpty").classList.add("hidden");
-  list.innerHTML = orders.map((o,i)=>{
-    const units = o.items.filter(it=>it.requiresShipping).reduce((a,b)=>a+b.unfulfilledQty,0);
+async function loadCatalog(){
+  if(catalog) return catalog;
+  catalog = [];
+  for(let i=0;;i+=1000){
+    const {data,error} = await sb.from("catalog_variants")
+      .select("variant_id,sku,barcode,variant_title,product_title,product_status,inventory_quantity")
+      .neq("product_status","ARCHIVED").order("product_title").order("variant_title").range(i,i+999);
+    if(error) throw error;
+    catalog.push(...data);
+    if(data.length<1000) break;
+  }
+  return catalog;
+}
+
+/* ================= PICK TAB ================= */
+["pickSearch","dateFrom","dateTo"].forEach(id=> $(id).addEventListener("input", renderPick));
+document.querySelectorAll(".fchip").forEach(c=> c.onclick = ()=>{
+  const f=c.dataset.flag;
+  pickFlags.has(f)?pickFlags.delete(f):pickFlags.add(f);
+  c.classList.toggle("on"); renderPick();
+});
+$("selAll").onchange = ()=>{
+  const shown = filteredPick();
+  if($("selAll").checked) shown.forEach(o=>selected.add(o.orderId));
+  else shown.forEach(o=>selected.delete(o.orderId));
+  renderPick();
+};
+
+function hayOf(o){
+  return [o.number,o.customer,o.destination,o.note,(o.tags||[]).join(" "),
+    ...o.items.map(i=>[i.sku,i.title,i.variantTitle].join(" "))].join(" ").toLowerCase();
+}
+function filteredPick(){
+  const q = $("pickSearch").value.trim().toLowerCase();
+  const qn = skuNorm(q).toLowerCase();
+  const from = $("dateFrom").value ? new Date($("dateFrom").value+"T00:00:00") : null;
+  const to = $("dateTo").value ? new Date($("dateTo").value+"T23:59:59") : null;
+  return toPick.filter(o=>{
+    if(q && !(hayOf(o).includes(q) || hayOf(o).includes(qn))) return false;
+    const d = new Date(o.createdAt);
+    if(from && d<from) return false;
+    if(to && d>to) return false;
+    if(pickFlags.size){ const f=contentFlags(o); if(![...pickFlags].some(x=>f.has(x))) return false; }
+    return true;
+  });
+}
+function renderPick(){
+  const shown = filteredPick();
+  const el = $("pickList");
+  const selShown = shown.filter(o=>selected.has(o.orderId)).length;
+  $("selAll").checked = shown.length>0 && selShown===shown.length;
+  $("selCount").textContent = selected.size ? selected.size+" selected" : "";
+  $("pickListBtn").disabled = !selected.size;
+  $("pickListBtn").textContent = selected.size ? "Create pick list ("+selected.size+")" : "Create pick list";
+  if(!shown.length){ el.innerHTML = '<div class="empty">No unfulfilled orders match. 🎉</div>'; return; }
+  el.innerHTML = shown.map(o=>{
+    const units = o.items.filter(i=>i.requiresShipping).reduce((a,b)=>a+b.unfulfilledQty,0);
+    const flags = [...contentFlags(o)].map(f=>'<span class="chip flag">'+FLAG_LABELS[f]+'</span>').join("");
+    const tags = (o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("");
+    const pay = o.financial!=="PAID" ? ' <span class="badge unpaid">'+esc(o.financial)+'</span>' : "";
+    return '<div class="ocard">'
+      + '<input type="checkbox" '+(selected.has(o.orderId)?"checked":"")+' onchange="toggleSel(\''+o.orderId+'\')">'
+      + '<div class="onum">'+esc(o.number)+'</div>'
+      + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+pay+'</div>'
+      + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+' ('+ageOf(o.createdAt)+')</div>'
+      + '<div class="chips">'+flags+tags+(o.note?'<span class="chip note">✎ note</span>':"")+'</div></div>'
+      + '<div class="ocount"><b>'+units+'</b>items</div></div>';
+  }).join("");
+}
+function toggleSel(id){ selected.has(id)?selected.delete(id):selected.add(id); renderPick(); }
+
+/* pick list build */
+$("pickListBtn").onclick = ()=>{
+  const orders = toPick.filter(o=>selected.has(o.orderId));
+  if(!orders.length) return;
+  const agg = new Map();
+  for(const o of orders){
+    for(const it of o.items){
+      if(!it.requiresShipping || it.unfulfilledQty<=0) continue;
+      const key = it.variantId || it.sku || it.title;
+      if(!agg.has(key)) agg.set(key,{ sku:it.sku, title:it.title, variant:it.variantTitle,
+        bin:binOf(it.sku), qty:0, orders:new Set() });
+      const a = agg.get(key); a.qty += it.unfulfilledQty; a.orders.add(o.number);
+    }
+  }
+  const groups = {};
+  [...agg.values()].forEach(a=>{ (groups[a.bin]=groups[a.bin]||[]).push(a); });
+  const bins = Object.keys(groups).sort(binSort);
+  let html = "";
+  for(const b of bins){
+    const rows = groups[b].sort((x,y)=> (x.title+(x.variant||"")).localeCompare(y.title+(y.variant||"")));
+    const n = rows.reduce((s,r)=>s+r.qty,0);
+    html += '<div class="groupHead"><span class="b">'+esc(binLabel(b))+'</span><span class="n">'+n+' items</span></div>';
+    html += rows.map(r=>'<div class="prow"><span class="q">'+r.qty+'×</span><span class="sk">'+esc(r.sku||"—")+'</span>'
+      + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant||"")+'</span></span>'
+      + (r.orders.size>1?'<span class="vt">'+r.orders.size+' orders</span>':"")+'</div>').join("");
+  }
+  $("plSub").textContent = orders.length+" orders · "+[...agg.values()].reduce((s,a)=>s+a.qty,0)
+    +" items · "+orders.map(o=>o.number).join(", ");
+  $("plBody").innerHTML = html;
+  $("plOverlay").classList.remove("hidden");
+};
+$("plCloseBtn").onclick = ()=> $("plOverlay").classList.add("hidden");
+$("plPrintBtn").onclick = ()=>{
+  printDoc("<h2>TMSH Pick List — "+new Date().toLocaleString()+"</h2><div style='font-size:12px;color:#555;margin-bottom:8px'>"
+    + esc($("plSub").textContent)+"</div>"+$("plBody").innerHTML,
+    "@page{size:auto;margin:12mm} body{font-family:Arial,sans-serif;color:#111}"
+    + ".groupHead{display:flex;gap:10px;align-items:baseline;margin:14px 0 6px;border-bottom:2px solid #00acb2;padding-bottom:3px}"
+    + ".groupHead .b{font-size:15px;font-weight:800}.groupHead .n{font-size:11px;color:#666}"
+    + ".prow{display:flex;gap:10px;padding:5px 2px;border-bottom:1px dashed #ccc;font-size:12.5px;align-items:center}"
+    + ".prow .q{font-weight:800;min-width:38px}.prow .sk{font-family:monospace;min-width:110px;font-size:11px;color:#555}"
+    + ".prow .ti{flex:1}.prow .vt{color:#666;font-size:11px}");
+};
+
+/* ================= PACK TAB ================= */
+$("packSearch").addEventListener("input", renderPack);
+$("showVerified").onchange = renderPack;
+
+function renderPack(){
+  const q = $("packSearch").value.trim().toLowerCase();
+  const showV = $("showVerified").checked;
+  const list = toPack.filter(o=>{
+    const s = sessionsByOrder[o.orderId];
+    if(!showV && s?.status==="verified") return false;
+    if(q && !hayOf(o).includes(q)) return false;
+    return true;
+  });
+  const el = $("packListEl");
+  if(!list.length){ el.innerHTML='<div class="empty">Nothing waiting to pack — fulfilled orders appear here. 🎉</div>'; return; }
+  el.innerHTML = list.map(o=>{
+    const i = toPack.indexOf(o);
+    const units = o.items.filter(x=>x.requiresShipping).reduce((a,b)=>a+b.qty,0);
     const s = sessionsByOrder[o.orderId];
     let badge = "";
-    if(s?.status==="verified") badge = '<span class="badge verified">&#10003; VERIFIED</span>';
-    else if(s?.status==="in_progress") badge = '<span class="badge progress">IN PROGRESS</span>';
-    if(o.financial!=="PAID") badge += ' <span class="badge unpaid">'+esc(o.financial)+'</span>';
-    const chips = (o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
-      + (o.note ? '<span class="chip note">&#9998; note</span>' : "");
-    return '<div class="ocard" onclick="openOrder('+i+')">'
+    if(s?.status==="verified") badge='<span class="badge verified">✓ VERIFIED</span>';
+    else if(s?.status==="in_progress") badge='<span class="badge progress">IN PROGRESS</span>';
+    return '<div class="ocard clickable" onclick="openOrder('+i+')">'
       + '<div class="onum">'+esc(o.number)+'</div>'
-      + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+badge+'</div>'
-      + '<div class="meta">'+esc(o.destination||"")+' · '+ageOf(o.createdAt)+' old</div>'
-      + '<div class="chips">'+chips+'</div></div>'
+      + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+' '+badge+'</div>'
+      + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+'</div>'
+      + '<div class="chips">'+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
+      + (o.note?'<span class="chip note">✎ note</span>':"")+'</div></div>'
       + '<div class="ocount"><b>'+units+'</b>items</div></div>';
   }).join("");
 }
 
-/* ---------------- pack session ---------------- */
 async function openOrder(i){
-  const o = orders[i];
-  // aggregate lines by barcode (falls back to line id)
+  const o = toPack[i];
   const map = new Map();
   for(const it of o.items){
     if(!it.requiresShipping) continue;
     const key = it.barcode || ("line:"+it.lineId);
-    if(!map.has(key)) map.set(key, { key, barcode: it.barcode, title: it.title,
-      variant: it.variantTitle, sku: it.sku, bin: binOf(it.sku), need: 0, got: 0,
-      manual: !it.barcode, archived: it.productStatus==="ARCHIVED" });
-    map.get(key).need += it.unfulfilledQty;
+    if(!map.has(key)) map.set(key,{ key, barcode:it.barcode, title:it.title, variant:it.variantTitle,
+      sku:it.sku, bin:binOf(it.sku), need:0, got:0, manual:!it.barcode, archived:it.productStatus==="ARCHIVED" });
+    map.get(key).need += it.qty;
   }
-  const items = [...map.values()];
+  const items = [...map.values()].sort((a,b)=> binSort(a.bin,b.bin) || (a.title+(a.variant||"")).localeCompare(b.title+(b.variant||"")));
 
-  // resume or create session
   let session = null;
   const { data: existing } = await sb.from("pack_sessions").select("*")
     .eq("shopify_order_id", o.orderId).eq("status","in_progress").maybeSingle();
@@ -279,167 +590,373 @@ async function openOrder(i){
   } else {
     const { data:{ user } } = await sb.auth.getUser();
     const { data: created, error } = await sb.from("pack_sessions").insert({
-      shopify_order_id: o.orderId, order_number: o.number, user_id: user?.id,
-      items: { progress:{}, lines: items.map(({key,title,sku,need})=>({key,title,sku,need})) },
+      shopify_order_id:o.orderId, order_number:o.number, user_id:user?.id,
+      items:{ progress:{}, lines: items.map(({key,title,sku,need})=>({key,title,sku,need})) },
     }).select().single();
     if(error){ alert("Could not start session: "+error.message); return; }
     session = created;
   }
-
   cur = { order:o, session, items, log:[] };
-  $("queueView").classList.add("hidden");
-  $("packView").classList.remove("hidden");
-  $("backBtn").style.display = "";
-  $("hTitle").textContent = "Order " + o.number;
-  $("hSub").textContent = o.customer;
-  if(o.note){ $("pNote").textContent = "Order note: " + o.note; $("pNote").classList.remove("hidden"); }
+  $("packQueue").classList.add("hidden");
+  $("packSession").classList.remove("hidden");
+  $("scanTitle").textContent = "ORDER "+o.number+" · "+o.customer+" — SCAN ITEMS";
+  if(o.note){ $("pNote").textContent="Order note: "+o.note; $("pNote").classList.remove("hidden"); }
   else $("pNote").classList.add("hidden");
-  setMsg("","");
+  setMsg("scanMsg","","");
   renderItems();
   focusScan();
 }
 
 function renderItems(){
   $("iList").innerHTML = cur.items.map((it,idx)=>{
-    const done = it.got >= it.need;
+    const done = it.got>=it.need;
     return '<div class="irow'+(done?" done":"")+'" id="row'+idx+'">'
       + '<div class="iqty">'+it.got+'<small>/'+it.need+'</small></div>'
       + '<div class="ititle"><div class="t">'+esc(it.title)+'</div>'
       + (it.variant?'<div class="v">'+esc(it.variant)+'</div>':"")
-      + '<div class="s">'+esc(it.sku||"no SKU")+(it.archived?' · <span style="color:var(--warn)">archived product</span>':"")+'</div></div>'
-      + (it.bin?'<div class="bin">'+esc(it.bin)+'</div>':"")
-      + ((it.manual && !done)?'<button class="manualBtn" onclick="manualConfirm('+idx+')">Confirm 1 &#10003;</button>':"")
+      + '<div class="s">'+esc(it.sku||"no SKU")+(it.archived?' · <span style="color:var(--warn)">archived</span>':"")+'</div></div>'
+      + (it.bin!=="OTHER"?'<div class="bin">'+esc(it.bin)+'</div>':"")
+      + ((it.manual && !done)?'<button class="manualBtn" onclick="manualConfirm('+idx+')">Confirm 1 ✓</button>':"")
       + '</div>';
   }).join("");
 }
+function setMsg(id,txt,cls){ const m=$(id); m.textContent=txt; m.className="scanMsg "+(cls||""); }
+function flashRow(idx,cls){ const r=$("row"+idx); if(!r) return; r.classList.add(cls); setTimeout(()=>r.classList.remove(cls),450); }
 
-function setMsg(txt, cls){ const m=$("scanMsg"); m.textContent=txt; m.className=cls||""; }
-function flashRow(idx, cls){
-  const r=$("row"+idx); if(!r) return;
-  r.classList.add(cls); setTimeout(()=>r.classList.remove(cls), 450);
+function focusScan(){
+  if(cur && activeTab==="pack") $("scanInput").focus();
+  else if(activeTab==="count" && countBin) $("countInput").focus();
 }
-
-/* scan handling */
-function focusScan(){ const s=$("scanInput"); if(s && !$("packView").classList.contains("hidden")) s.focus(); }
-document.addEventListener("click", e=>{ if(!e.target.closest("button,input")) focusScan(); });
-setInterval(focusScan, 2500);
+document.addEventListener("click", e=>{ if(!e.target.closest("button,input,select,a")) focusScan(); });
+setInterval(focusScan, 3000);
 
 $("scanInput").addEventListener("keydown", async e=>{
   if(e.key!=="Enter") return;
-  const raw = e.target.value.trim(); e.target.value="";
-  if(!raw || !cur) return;
+  const raw=e.target.value.trim(); e.target.value="";
+  if(!raw||!cur) return;
   await handleScan(raw);
 });
 
 async function handleScan(raw){
-  // 1) barcode match
   let idx = cur.items.findIndex(it=> it.barcode && it.barcode===raw && it.got<it.need);
-  let how = "scan";
-  if(idx<0 && cur.items.some(it=> it.barcode===raw)){ // barcode belongs here but line already full
+  let how="scan";
+  if(idx<0 && cur.items.some(it=> it.barcode===raw)){
     const full = cur.items.findIndex(it=> it.barcode===raw);
     sndBad(); flashRow(full,"flashbad");
-    setMsg("Already have all "+cur.items[full].need+" of that item — extra scan not counted.","warn");
-    await logScan(raw, cur.items[full], "overscan");
-    return;
+    setMsg("scanMsg","Already have all "+cur.items[full].need+" of that item — extra scan not counted.","warn");
+    await logScan(raw, cur.items[full], "overscan"); return;
   }
-  // 2) SKU typed match (separator-insensitive)
   if(idx<0){
-    const n = skuNorm(raw);
+    const n=skuNorm(raw);
     idx = cur.items.findIndex(it=> it.sku && skuNorm(it.sku)===n && it.got<it.need);
-    if(idx>=0) how = "sku";
+    if(idx>=0) how="sku";
   }
   if(idx>=0){
-    const it = cur.items[idx];
+    const it=cur.items[idx];
     it.got++;
     cur.log.push(idx);
-    sndOk(); flashRow(idx,"flash");
-    setMsg("✓ "+it.title+(it.variant?" — "+it.variant:""),"ok");
+    if(it.need>1 && it.got<it.need){        // multi-quantity: distinct beep + stays open
+      sndMulti(); flashRow(idx,"flash");
+      setMsg("scanMsg","◔ "+it.got+" of "+it.need+" — "+it.title+(it.variant?" — "+it.variant:""),"multi");
+    } else {
+      sndOk(); flashRow(idx,"flash");
+      setMsg("scanMsg","✓ "+it.title+(it.variant?" — "+it.variant:"")+(it.need>1?" — all "+it.need+" ✓":""),"ok");
+    }
     renderItems();
-    await logScan(raw, it, how==="sku" ? "manual_confirm" : "ok");
+    await logScan(raw,it, how==="sku"?"manual_confirm":"ok");
     await saveProgress();
     checkComplete();
     return;
   }
-  // 3) wrong item: identify it from the catalog (non-archived only)
   sndBad();
-  let what = null;
+  let what=null;
   if(/^\d{8,}$/.test(raw)){
-    const { data } = await sb.from("catalog_variants")
-      .select("sku,product_title,variant_title,product_status")
-      .eq("barcode", raw).neq("product_status","ARCHIVED").limit(1).maybeSingle();
-    what = data;
+    const {data} = await sb.from("catalog_variants")
+      .select("sku,product_title,variant_title")
+      .eq("barcode",raw).neq("product_status","ARCHIVED").limit(1).maybeSingle();
+    what=data;
   }
-  if(what) setMsg("✖ WRONG ITEM — that's "+(what.sku||"")+" ("+what.product_title+" — "+(what.variant_title||"")+") — not in this order.","bad");
-  else setMsg("✖ Not recognized: "+raw,"bad");
-  await logScan(raw, null, what ? "wrong_item" : "unknown");
+  if(what) setMsg("scanMsg","✖ WRONG ITEM — that's "+(what.sku||"")+" ("+what.product_title+" — "+(what.variant_title||"")+") — not in this order.","bad");
+  else setMsg("scanMsg","✖ Not recognized: "+raw,"bad");
+  await logScan(raw,null, what?"wrong_item":"unknown");
 }
 
 async function manualConfirm(idx){
-  const it = cur.items[idx];
+  const it=cur.items[idx];
   if(it.got>=it.need) return;
   it.got++; cur.log.push(idx);
-  sndOk(); renderItems();
-  setMsg("✓ Confirmed: "+it.title,"ok");
-  await logScan(null, it, "manual_confirm");
+  (it.need>1 && it.got<it.need) ? sndMulti() : sndOk();
+  renderItems();
+  setMsg("scanMsg","✓ Confirmed: "+it.title+(it.need>1?" ("+it.got+"/"+it.need+")":""),"ok");
+  await logScan(null,it,"manual_confirm");
   await saveProgress();
   checkComplete();
   focusScan();
 }
 
 $("undoBtn").onclick = async ()=>{
-  if(!cur || !cur.log.length){ setMsg("Nothing to undo.","warn"); return; }
-  const idx = cur.log.pop();
-  const it = cur.items[idx];
+  if(!cur||!cur.log.length){ setMsg("scanMsg","Nothing to undo.","warn"); return; }
+  const idx=cur.log.pop(); const it=cur.items[idx];
   if(it.got>0) it.got--;
   renderItems();
-  setMsg("↶ Removed one "+it.title,"warn");
-  await logScan(null, it, "undo");
+  setMsg("scanMsg","↶ Removed one "+it.title,"warn");
+  await logScan(null,it,"undo");
   await saveProgress();
   focusScan();
 };
-
 $("cancelBtn").onclick = async ()=>{
   if(!cur) return;
   if(!confirm("Cancel this pack session? Progress will be discarded.")) return;
-  await sb.from("pack_sessions").update({ status:"cancelled" }).eq("id", cur.session.id);
+  await sb.from("pack_sessions").update({status:"cancelled"}).eq("id",cur.session.id);
   exitPack();
 };
-$("backBtn").onclick = ()=> exitPack();   // keeps in_progress session to resume later
-$("doneBtn").onclick = ()=> { $("doneOverlay").classList.add("hidden"); exitPack(); };
+$("doneBtn").onclick = ()=>{ $("doneOverlay").classList.add("hidden"); exitPack(); };
 
-async function logScan(barcode, it, result){
+async function logScan(barcode,it,result){
   const { data:{ user } } = await sb.auth.getUser();
-  await sb.from("pack_scans").insert({
-    session_id: cur.session.id, barcode,
-    matched_variant_id: null, matched_sku: it?.sku||null,
-    result, user_id: user?.id,
-  });
+  await sb.from("pack_scans").insert({ session_id:cur.session.id, barcode,
+    matched_variant_id:null, matched_sku:it?.sku||null, result, user_id:user?.id });
 }
 async function saveProgress(){
-  const progress = {};
-  cur.items.forEach(it=> progress[it.key]=it.got);
+  const progress={};
+  cur.items.forEach(it=>progress[it.key]=it.got);
   await sb.from("pack_sessions").update({
-    items: { progress, lines: cur.items.map(({key,title,sku,need,got})=>({key,title,sku,need,got})) },
-  }).eq("id", cur.session.id);
+    items:{ progress, lines:cur.items.map(({key,title,sku,need,got})=>({key,title,sku,need,got})) },
+  }).eq("id",cur.session.id);
 }
-
 async function checkComplete(){
-  if(!cur.items.every(it=> it.got>=it.need)) return;
-  await sb.from("pack_sessions").update({ status:"verified", verified_at: new Date().toISOString() }).eq("id", cur.session.id);
+  if(!cur.items.every(it=>it.got>=it.need)) return;
+  await sb.from("pack_sessions").update({status:"verified",verified_at:new Date().toISOString()}).eq("id",cur.session.id);
   sndDone();
-  $("doneTitle").textContent = "Order "+cur.order.number+" verified";
-  $("doneSub").textContent = cur.items.reduce((a,b)=>a+b.need,0)+" items checked — buy the shipping label in Shopify to fulfill.";
+  $("doneTitle").textContent="Order "+cur.order.number+" verified";
+  $("doneSub").textContent=cur.items.reduce((a,b)=>a+b.need,0)+" items checked against the order.";
   $("doneOverlay").classList.remove("hidden");
-  setTimeout(()=>{ if(!$("doneOverlay").classList.contains("hidden")){ $("doneOverlay").classList.add("hidden"); exitPack(); } }, 4000);
+  setTimeout(()=>{ if(!$("doneOverlay").classList.contains("hidden")){ $("doneOverlay").classList.add("hidden"); exitPack(); } },4000);
+}
+function exitPack(){
+  cur=null;
+  $("packSession").classList.add("hidden");
+  $("packQueue").classList.remove("hidden");
+  loadQueue(true);
 }
 
-function exitPack(){
-  cur = null;
-  $("packView").classList.add("hidden");
-  $("queueView").classList.remove("hidden");
-  $("backBtn").style.display = "none";
-  loadQueue();
+/* ================= PRINT TAB ================= */
+async function renderPrintBins(){
+  await loadCatalog();
+  const bins = [...new Set(catalog.filter(v=>v.barcode).map(v=>binOf(v.sku)))].sort(binSort);
+  $("printBins").innerHTML = bins.map(b=>'<button class="binChip'+(printBin===b?" on":"")+'" onclick="setPrintBin(\''+b+'\')">'+esc(b)+'</button>').join("");
+  renderPrintCatalog();
 }
+function setPrintBin(b){ printBin = printBin===b?null:b; renderPrintBins(); }
+$("printSearch").addEventListener("input", renderPrintCatalog);
+
+function renderPrintCatalog(){
+  if(!catalog) return;
+  const q = $("printSearch").value.trim().toLowerCase();
+  const qn = skuNorm(q).toLowerCase();
+  let rows = catalog.filter(v=> v.barcode && (printBin ? binOf(v.sku)===printBin : q));
+  if(q) rows = rows.filter(v=> ((v.sku||"")+" "+(v.product_title||"")+" "+(v.variant_title||"")).toLowerCase().includes(q)
+    || skuNorm(v.sku||"").toLowerCase().includes(qn));
+  rows = rows.slice(0,200);
+  if(!rows.length){ $("printCatalog").innerHTML='<div class="empty">'+((printBin||q)?"No matches.":"Pick a style above to browse its labels.")+'</div>'; return; }
+  $("printCatalog").innerHTML = rows.map(v=>
+    '<div class="vrow"><div class="ti"><div>'+esc(v.product_title)+' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div>'
+    + '<div class="sk">'+esc(v.sku||"—")+' · '+esc(v.barcode)+'</div></div>'
+    + '<div class="stepper"><button onclick="pqAdd(\''+v.variant_id+'\',-1)">−</button>'
+    + '<span class="qv" id="qv'+v.variant_id+'">'+(pqQty[v.variant_id]||1)+'</span>'
+    + '<button onclick="pqAdd(\''+v.variant_id+'\',1)">+</button></div>'
+    + '<button class="primaryBtn" style="padding:8px 14px;font-size:12.5px" onclick="pqQueue(\''+v.variant_id+'\')">Add</button></div>'
+  ).join("");
+}
+const pqQty = {};
+function pqAdd(id,d){ pqQty[id]=Math.max(1,(pqQty[id]||1)+d); const el=$("qv"+id); if(el) el.textContent=pqQty[id]; }
+async function pqQueue(id){
+  const v = catalog.find(x=>x.variant_id===id);
+  if(!v) return;
+  const {error} = await sb.from("print_queue").insert({ variant_id:v.variant_id, sku:v.sku, barcode:v.barcode,
+    title:v.product_title, variant_title:v.variant_title, bin:binOf(v.sku), qty:pqQty[id]||1, source:"manual" });
+  if(error){ alert(error.message); return; }
+  pqQty[id]=1; const el=$("qv"+id); if(el) el.textContent="1";
+  loadPrintQueue();
+}
+
+async function loadPrintQueue(){
+  const {data} = await sb.from("print_queue").select("*").eq("status","pending").order("created_at");
+  pqRows = data||[];
+  if(!pqRows.length){ $("pqList").innerHTML='<div class="empty">Nothing queued. Add labels below — your production tool will also drop upcoming runs here.</div>'; return; }
+  const groups={};
+  pqRows.forEach(r=>{ (groups[r.bin||"OTHER"]=groups[r.bin||"OTHER"]||[]).push(r); });
+  let html="";
+  for(const b of Object.keys(groups).sort(binSort)){
+    const rows=groups[b].sort((x,y)=>((x.title||"")+(x.variant_title||"")).localeCompare((y.title||"")+(y.variant_title||"")));
+    html += '<div class="groupHead"><span class="b">'+esc(binLabel(b))+'</span><span class="n">'
+      + rows.reduce((s,r)=>s+r.qty,0)+' labels</span></div>';
+    html += rows.map(r=>'<div class="prow"><span class="q">'+r.qty+'×</span><span class="sk">'+esc(r.sku||"—")+'</span>'
+      + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant_title||"")+'</span>'
+      + (r.source!=="manual"?' <span class="vt">('+esc(r.source)+')</span>':"")+'</span>'
+      + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="pqRemove('+r.id+')">✕</button></div>').join("");
+  }
+  $("pqList").innerHTML = html;
+}
+async function pqRemove(id){ await sb.from("print_queue").update({status:"removed"}).eq("id",id); loadPrintQueue(); }
+$("markPrintedBtn").onclick = async ()=>{
+  if(!pqRows.length) return;
+  await sb.from("print_queue").update({status:"printed"}).in("id", pqRows.map(r=>r.id));
+  loadPrintQueue();
+};
+$("printPendingBtn").onclick = ()=>{
+  if(!pqRows.length){ alert("Print queue is empty."); return; }
+  const labels=[];
+  const sorted=[...pqRows].sort((a,b)=> binSort(a.bin||"OTHER",b.bin||"OTHER") || ((a.title||"")+(a.variant_title||"")).localeCompare((b.title||"")+(b.variant_title||"")));
+  sorted.forEach(r=>{ for(let i=0;i<r.qty;i++) labels.push(r); });
+  printLabels(labels);
+};
+
+function printLabels(labels){
+  const work=$("svgWork");
+  let html="";
+  labels.forEach((r,i)=>{
+    const sid="bc"+i;
+    work.insertAdjacentHTML("beforeend",'<svg id="'+sid+'"></svg>');
+    try{ JsBarcode("#"+sid, r.barcode, {format:"CODE128", displayValue:false, height:44, width:1.2, margin:0}); }catch(_e){}
+    const el=$(sid);
+    const svg=el?el.outerHTML.replace('id="'+sid+'"',""):"";
+    html += '<div class="label"><div class="top"><span class="t">'+esc((r.title||"").slice(0,34))+'</span>'
+      + '<span class="b">'+esc(r.bin||"")+'</span></div>'
+      + '<div class="v">'+esc((r.variant_title||"").slice(0,40))+'</div>'
+      + '<div class="bc">'+svg+'</div>'
+      + '<div class="sk">'+esc(r.sku||"")+'</div></div>';
+  });
+  work.innerHTML="";
+  printDoc(html,
+    "@page{size:2in 1in;margin:0} body{margin:0;font-family:Arial,sans-serif}"
+    + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:2px 4px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box}"
+    + ".top{display:flex;justify-content:space-between;width:100%;align-items:baseline}"
+    + ".top .t{font-size:7.5px;font-weight:bold;overflow:hidden;white-space:nowrap}"
+    + ".top .b{font-size:11px;font-weight:900;margin-left:4px}"
+    + ".v{font-size:6.5px;width:100%;text-align:left;white-space:nowrap;overflow:hidden}"
+    + ".bc{flex:1;display:flex;align-items:center} .bc svg{max-width:1.85in;height:0.5in}"
+    + ".sk{font-size:6.5px;font-family:monospace}");
+}
+
+function printDoc(bodyHtml, css){
+  const w = window.open("","_blank","width=900,height=700");
+  if(!w){ alert("Popup blocked — allow popups for this site to print."); return; }
+  w.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><style>"+css+"</style></head><body>"+bodyHtml+"</body></html>");
+  w.document.close();
+  setTimeout(()=>{ w.focus(); w.print(); }, 400);
+}
+
+/* ================= COUNT TAB ================= */
+async function renderCountBins(){
+  await loadCatalog();
+  const bins=[...new Set(catalog.filter(v=>v.barcode && binOf(v.sku)!=="OTHER").map(v=>binOf(v.sku)))].sort(binSort);
+  $("countBins").innerHTML = bins.map(b=>'<button class="binChip'+(countBin===b?" on":"")+'" onclick="startCount(\''+b+'\')">'+esc(b)+'</button>').join("");
+}
+async function startCount(b){
+  if(countBin===b) return;
+  countBin=b; renderCountBins();
+  const {data:existing} = await sb.from("inventory_counts").select("*")
+    .eq("bin",b).eq("status","in_progress").maybeSingle();
+  if(existing) countSession=existing;
+  else{
+    const { data:{ user } } = await sb.auth.getUser();
+    const {data:created,error} = await sb.from("inventory_counts")
+      .insert({bin:b,user_id:user?.id}).select().single();
+    if(error){ alert(error.message); return; }
+    countSession=created;
+  }
+  countRowsCache = catalog.filter(v=> v.barcode && binOf(v.sku)===b)
+    .sort((x,y)=> ((x.product_title||"")+(x.variant_title||"")).localeCompare((y.product_title||"")+(y.variant_title||"")));
+  $("countIntro").classList.add("hidden");
+  $("countArea").classList.remove("hidden");
+  setMsg("countMsg","","");
+  renderCountRows();
+  focusScan();
+}
+function renderCountRows(){
+  const counts = countSession.counts||{};
+  const counted = Object.values(counts).reduce((a,b)=>a+b,0);
+  $("countMeta").textContent = binLabel(countBin)+" · "+countRowsCache.length+" variants · "+counted+" hats counted";
+  $("countRows").innerHTML = countRowsCache.map(v=>{
+    const c = counts[v.variant_id]||0;
+    const exp = v.inventory_quantity??0;
+    const diff = c-exp;
+    const cls = diff===0 ? "zero" : (diff>0?"pos":"neg");
+    return '<div class="vrow" id="cv'+v.variant_id+'"><div class="ti"><div>'+esc(v.product_title)
+      + ' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div>'
+      + '<div class="sk">'+esc(v.sku||"—")+'</div></div>'
+      + '<div class="cExp"><b>'+exp+'</b>shopify</div>'
+      + '<div class="stepper"><button onclick="countAdj(\''+v.variant_id+'\',-1)">−</button>'
+      + '<span class="qv">'+c+'</span>'
+      + '<button onclick="countAdj(\''+v.variant_id+'\',1)">+</button></div>'
+      + '<div class="cDiff '+cls+'">'+(diff>0?"+":"")+diff+'</div></div>';
+  }).join("");
+}
+let countSaveTimer=null;
+function saveCounts(){
+  clearTimeout(countSaveTimer);
+  countSaveTimer=setTimeout(async ()=>{
+    await sb.from("inventory_counts").update({counts:countSession.counts}).eq("id",countSession.id);
+  },600);
+}
+function countAdj(id,d){
+  const c=countSession.counts||{};
+  c[id]=Math.max(0,(c[id]||0)+d);
+  countSession.counts=c;
+  renderCountRows(); saveCounts();
+}
+$("countInput").addEventListener("keydown", async e=>{
+  if(e.key!=="Enter") return;
+  const raw=e.target.value.trim(); e.target.value="";
+  if(!raw||!countSession) return;
+  let v = countRowsCache.find(x=>x.barcode===raw);
+  if(!v){ const n=skuNorm(raw); v = countRowsCache.find(x=>x.sku && skuNorm(x.sku)===n); }
+  if(v){
+    countAdj(v.variant_id,1);
+    sndOk();
+    setMsg("countMsg","✓ "+v.product_title+" — "+(v.variant_title||"")+" → "+(countSession.counts[v.variant_id]),"ok");
+    const row=$("cv"+v.variant_id); if(row){ row.scrollIntoView({block:"center"}); row.classList.add("flash"); setTimeout(()=>row.classList.remove("flash"),450); }
+    return;
+  }
+  const other = catalog.find(x=>x.barcode===raw);
+  sndBad();
+  if(other) setMsg("countMsg","✖ That's "+(other.sku||other.product_title)+" — belongs in "+binOf(other.sku)+", not "+countBin+".","bad");
+  else setMsg("countMsg","✖ Not recognized: "+raw,"bad");
+});
+$("countCancelBtn").onclick = async ()=>{
+  if(!countSession) return;
+  if(!confirm("Cancel this count? Tallies will be discarded.")) return;
+  await sb.from("inventory_counts").update({status:"cancelled"}).eq("id",countSession.id);
+  resetCount();
+};
+$("countFinishBtn").onclick = async ()=>{
+  const counts=countSession.counts||{};
+  const summary = countRowsCache.map(v=>({ variant_id:v.variant_id, sku:v.sku,
+      title:v.product_title+" — "+(v.variant_title||""), expected:v.inventory_quantity??0, counted:counts[v.variant_id]||0 }))
+    .map(r=>({...r, diff:r.counted-r.expected}))
+    .filter(r=>r.diff!==0);
+  await sb.from("inventory_counts").update({status:"done",finished_at:new Date().toISOString(),
+    counts, summary}).eq("id",countSession.id);
+  sndDone();
+  $("csSub").textContent = binLabel(countBin)+" — "
+    + (summary.length? summary.length+" discrepancies found (fix in Shopify admin)" : "everything matches Shopify 🎉");
+  $("csBody").innerHTML = summary.length ? summary.map(r=>
+    '<div class="prow"><span class="q" style="color:'+(r.diff>0?"var(--ok)":"var(--coral)")+'">'
+    + (r.diff>0?"+":"")+r.diff+'</span><span class="sk">'+esc(r.sku||"—")+'</span>'
+    + '<span class="ti">'+esc(r.title)+'</span>'
+    + '<span class="vt">shelf '+r.counted+' vs shopify '+r.expected+'</span></div>').join("")
+    : '<div class="empty">No differences.</div>';
+  $("csOverlay").classList.remove("hidden");
+};
+$("csCloseBtn").onclick = ()=>{ $("csOverlay").classList.add("hidden"); resetCount(); };
+function resetCount(){
+  countBin=null; countSession=null; countRowsCache=[];
+  $("countArea").classList.add("hidden");
+  $("countIntro").classList.remove("hidden");
+  renderCountBins();
+}
+
 init();
 </script>
 </body>

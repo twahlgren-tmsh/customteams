@@ -188,7 +188,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms6</span>
+    <span class="build">wms7</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -255,6 +255,24 @@
     </div>
     <div class="binChips" id="printBins"></div>
     <div id="printCatalog"><div class="empty">Pick styles above to browse labels.</div></div>
+
+    <div class="secHead"><h3>Custom / wholesale label</h3><span class="sp"></span></div>
+    <div class="toolbar">
+      <input type="search" id="clSearch" placeholder="Search catalog for a real product/SKU…">
+    </div>
+    <div id="clCatalog"></div>
+    <div class="toolbar">
+      <input type="text" id="clTitle" placeholder="Product title" style="flex:2;min-width:160px;padding:11px 14px;border-radius:10px;border:1px solid var(--line);font-size:14px;background:var(--card);">
+      <input type="text" id="clVariant" placeholder="Variant / style" style="flex:1;min-width:120px;padding:11px 14px;border-radius:10px;border:1px solid var(--line);font-size:14px;background:var(--card);">
+      <input class="qtyIn" type="number" min="1" value="1" id="clQty">
+      <button class="ghostBtn" id="clAddManual">Add</button>
+    </div>
+    <div class="sub" style="color:var(--dim);font-size:12.5px;margin:-8px 0 12px;">Search above for a real Shopify item, or type a title/variant by hand for a one-off custom print — a placeholder barcode is generated for those.</div>
+    <div id="clQueue"><div class="empty">No custom labels queued.</div></div>
+    <div class="sheetBar" style="justify-content:flex-start;">
+      <button class="primaryBtn" id="clPrintBtn" disabled>&#128424; Print custom labels</button>
+      <button class="ghostBtn" id="clClearBtn">Clear</button>
+    </div>
   </div>
 
   <!-- ============ COUNT ============ -->
@@ -837,7 +855,22 @@ async function checkComplete(){
   $("doneSub").textContent=cur.items.reduce((a,b)=>a+b.need,0)+" items checked."
     + (cycle.length ? (remaining? " Next order in cycle coming up… ("+remaining+" left)" : " Cycle complete! 🎉") : "");
   $("doneOverlay").classList.remove("hidden");
+  const orderIdForTag = cur.order.orderId;
+  tagVerified(orderIdForTag).then(ok=>{
+    if(!ok && $("doneOverlay").dataset.forOrder!=="closed"){
+      const p = $("doneSub"); p.textContent += " · Shopify tag not applied yet (ask Claude to check)";
+    }
+  });
   setTimeout(()=>{ if(!$("doneOverlay").classList.contains("hidden")) advanceAfterVerify(); },3000);
+}
+// Best-effort: tags the order "Verified" in Shopify. Never blocks packing —
+// a failure here (e.g. the WMS app not yet granted write_orders) is just noted quietly.
+async function tagVerified(orderId){
+  try{
+    const { data, error } = await sb.functions.invoke("tag-verified", { body:{ order_id: orderId } });
+    if(error) return false;
+    return !!(data && data.ok);
+  }catch(_e){ return false; }
 }
 function advanceAfterVerify(){
   $("doneOverlay").classList.add("hidden");
@@ -1176,6 +1209,84 @@ $("ppQueueBtn").onclick = async ()=>{
   loadPrintQueue();
 };
 $("ppCloseBtn").onclick = ()=> $("ppOverlay").classList.add("hidden");
+
+/* ================= CUSTOM / WHOLESALE LABEL ================= */
+let clQueue = [];   // {title, variant, barcode, qty}
+function clGenCode(){ return "CUST"+Date.now().toString().slice(-9)+Math.floor(Math.random()*10); }
+
+$("clSearch").addEventListener("input", renderClCatalog);
+async function renderClCatalog(){
+  await loadCatalog();
+  const q = $("clSearch").value.trim().toLowerCase();
+  const qn = skuNorm(q).toLowerCase();
+  if(!q){ $("clCatalog").innerHTML = ""; return; }
+  const rows = catalog.filter(v=> ((v.sku||"")+" "+(v.product_title||"")+" "+(v.variant_title||"")).toLowerCase().includes(q)
+    || skuNorm(v.sku||"").toLowerCase().includes(qn)).slice(0,40);
+  if(!rows.length){ $("clCatalog").innerHTML='<div class="empty">No matches.</div>'; return; }
+  $("clCatalog").innerHTML = rows.map(v=>
+    '<div class="vrow"><div class="ti">'+esc(v.product_title)+' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div>'
+    + '<button class="ghostBtn" style="padding:7px 12px;font-size:12.5px" onclick="clAddCatalog(\''+v.variant_id+'\')">Add</button></div>'
+  ).join("");
+}
+function clAddCatalog(variantId){
+  const v = catalog.find(x=>String(x.variant_id)===String(variantId));
+  if(!v) return;
+  clQueue.push({ title:v.product_title, variant:v.variant_title||"", barcode:v.barcode||clGenCode(), qty:1 });
+  renderClQueue();
+}
+$("clAddManual").onclick = ()=>{
+  const title = $("clTitle").value.trim();
+  const variant = $("clVariant").value.trim();
+  const qty = Math.max(1, Math.round(Number($("clQty").value))||1);
+  if(!title){ alert("Enter a product title."); return; }
+  clQueue.push({ title, variant, barcode:clGenCode(), qty });
+  $("clTitle").value=""; $("clVariant").value=""; $("clQty").value=1;
+  renderClQueue();
+};
+function clSetQty(i,val){ clQueue[i].qty = Math.max(1,Math.round(Number(val))||1); }
+function clRemove(i){ clQueue.splice(i,1); renderClQueue(); }
+$("clClearBtn").onclick = ()=>{ clQueue=[]; renderClQueue(); };
+function renderClQueue(){
+  $("clPrintBtn").disabled = !clQueue.length;
+  if(!clQueue.length){ $("clQueue").innerHTML='<div class="empty">No custom labels queued.</div>'; return; }
+  $("clQueue").innerHTML = clQueue.map((r,i)=>'<div class="prow">'
+    + '<input class="qtyIn" type="number" min="1" value="'+r.qty+'" onchange="clSetQty('+i+',this.value)">'
+    + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant||"")+'</span></span>'
+    + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="clRemove('+i+')">✕</button></div>').join("");
+}
+$("clPrintBtn").onclick = ()=>{
+  if(!clQueue.length) return;
+  const labels=[];
+  clQueue.forEach(r=>{ for(let i=0;i<r.qty;i++) labels.push(r); });
+  printCustomLabels(labels);
+};
+function printCustomLabels(labels){
+  const work=$("svgWork");
+  let html="";
+  labels.forEach((r,i)=>{
+    const sid="ccb"+i;
+    work.insertAdjacentHTML("beforeend",'<svg id="'+sid+'"></svg>');
+    try{ JsBarcode("#"+sid, r.barcode, {format:"CODE128", displayValue:false, height:70, width:1.7, margin:0}); }catch(_e){}
+    const el=$(sid);
+    const svg=el?el.outerHTML.replace('id="'+sid+'"',""):"";
+    html += '<div class="clabel">'
+      + '<div class="ctop"><div class="ctt"><div class="t">'+esc((r.title||"").slice(0,36))+'</div>'
+      + (r.variant?'<div class="v">'+esc(r.variant.slice(0,40))+'</div>':"")+'</div>'
+      + '<img class="clg" src="'+LOGO+'"></div>'
+      + '<div class="cbc">'+svg+'</div></div>';
+  });
+  work.innerHTML="";
+  printDoc(html,
+    "@page{size:2in 1in;margin:0} body{margin:0;font-family:Arial,sans-serif}"
+    + ".clabel{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:4px 6px;box-sizing:border-box;display:flex;flex-direction:column}"
+    + ".ctop{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}"
+    + ".ctt{flex:1;min-width:0}"
+    + ".ctt .t{font-size:10.5px;font-weight:bold;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}"
+    + ".ctt .v{font-size:8.5px;color:#333;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:1px}"
+    + ".clg{height:0.22in;max-width:0.5in;object-fit:contain;flex-shrink:0}"
+    + ".cbc{flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0;margin-top:2px}"
+    + ".cbc svg{width:1.88in;height:0.62in}", 900);
+}
 
 /* ================= STATS TAB ================= */
 async function renderStats(){

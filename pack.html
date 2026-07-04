@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --teal:#00acb2; --teal-dark:#008a8f; --teal-soft:#e0f6f7;
@@ -188,7 +189,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms7</span>
+    <span class="build">wms8</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -262,8 +263,14 @@
     <textarea id="ciText" rows="3" placeholder="e.g. Butterfly Flying and Cows Running with classic ponytail, classic skull hats, classic originals, two of each" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--line);font-size:14px;background:var(--card);font-family:inherit;resize:vertical;"></textarea>
     <div class="sheetBar" style="justify-content:flex-start;">
       <button class="primaryBtn" id="ciParseBtn">Parse list</button>
+      <span style="font-size:12.5px;color:var(--dim);">or</span>
+      <label class="ghostBtn" style="display:inline-flex;align-items:center;cursor:pointer;">
+        &#8679; Upload spreadsheet
+        <input type="file" id="ciFile" accept=".csv,.xlsx,.xls" style="display:none;">
+      </label>
     </div>
-    <div id="ciPreview"><div class="empty">Paste or type a list above, then Parse.</div></div>
+    <div class="sub" style="color:var(--dim);font-size:12px;margin:-8px 0 10px;">Spreadsheet columns: Pattern, Style ("Classic Ponytail" or "CP" both work), Qty (optional, defaults to 1).</div>
+    <div id="ciPreview"><div class="empty">Paste/type a list, or upload a spreadsheet, then review below.</div></div>
 
     <div class="secHead"><h3>Add one at a time</h3><span class="sp"></span></div>
     <div class="toolbar">
@@ -1268,6 +1275,62 @@ function parseCustomImport(text){
   });
   return rows;
 }
+
+/* ---- spreadsheet upload: same vocabulary matching, applied to columns instead of prose ---- */
+/* A table already carries the structure prose has to be guessed at, so this is actually more */
+/* reliable than the text parser above — still funnels into the same editable preview though. */
+function matchStyleCell(raw){
+  const s = (raw||"").toString().trim();
+  if(!s) return null;
+  const up = s.toUpperCase().replace(/\s+/g,"");
+  if(STYLE_OPTS.includes(up)) return up;
+  const m = /(classic|luxe)?\s*(ponytail|skull|original|euro)/i.exec(s.toLowerCase());
+  if(!m) return null;
+  const lining = (m[1]||"classic").toLowerCase();
+  const base = m[2].startsWith("pony")?"P": m[2].startsWith("skull")?"S": m[2].startsWith("orig")?"O":"E";
+  return STYLE_LINING_CODE[lining][base];
+}
+function parseSpreadsheetRows(grid){
+  if(!grid.length) return { rows:[], skipped:0, total:0 };
+  const hdr = grid[0].map(c=>(c||"").toString().toLowerCase().trim());
+  let patCol=-1, styCol=-1, qtyCol=-1;
+  hdr.forEach((c,i)=>{
+    if(patCol<0 && /pattern|design|print/.test(c)) patCol=i;
+    if(styCol<0 && /style|variant/.test(c)) styCol=i;
+    if(qtyCol<0 && /qty|quantity|count/.test(c)) qtyCol=i;
+  });
+  let dataRows = grid.slice(1);
+  if(patCol<0 || styCol<0){ patCol=0; styCol=1; qtyCol=2; dataRows=grid; }   // no header row recognized — assume column order
+  const rows=[]; let skipped=0, total=0;
+  dataRows.forEach(r=>{
+    const patRaw = (r[patCol]||"").toString().trim();
+    if(!patRaw) return;
+    total++;
+    const code = matchStyleCell(r[styCol]);
+    if(!code){ skipped++; return; }
+    const qtyRaw = qtyCol>=0 ? Number(r[qtyCol]) : 1;
+    const qty = Math.max(1, Math.round(qtyRaw)||1);
+    rows.push({ title: patRaw.replace(/\b\w/g,c=>c.toUpperCase()), code, qty });
+  });
+  return { rows, skipped, total };
+}
+$("ciFile").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";   // allow re-uploading the same filename later
+  if(!file) return;
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:"array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const grid = XLSX.utils.sheet_to_json(sheet, { header:1, defval:"" });
+    const { rows, skipped, total } = parseSpreadsheetRows(grid);
+    ciRows = rows;
+    renderCiPreview();
+    if(skipped) alert("Read "+total+" rows — "+skipped+" skipped (couldn't match a style), "+rows.length+" ready to review below.");
+  }catch(err){
+    alert("Could not read that file: "+(err.message||err));
+  }
+});
 
 let ciRows = [];
 $("ciParseBtn").onclick = ()=>{

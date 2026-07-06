@@ -161,6 +161,17 @@
   .bcol small{font-size:9px; color:var(--dim);}
   .bcol em{font-size:10px; font-weight:800; color:var(--teal-dark); font-style:normal;}
   @media (max-width:600px){ .onum{min-width:58px; font-size:15px;} .ocount{display:none;} .prow .sk{display:none;} }
+
+  /* note indicator chips (feature: customer note vs internal timeline note) */
+  .chip.note.cust{background:var(--warn-soft); color:var(--warn); border-color:var(--warn); cursor:help;}
+  .chip.note.tl{background:var(--teal-soft); color:var(--teal-dark); border-color:var(--teal); cursor:help;}
+
+  /* embroidery color swatch */
+  .embSwatch{display:inline-block; width:13px; height:13px; border-radius:3px; border:1px solid rgba(0,0,0,.28); vertical-align:middle; margin-left:6px; cursor:help;}
+
+  /* Gifts tab */
+  .giftCard{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px;}
+  .giftNote{width:100%; min-height:88px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:13.5px; font-family:inherit; resize:vertical; background:var(--bg);}
 </style>
 </head>
 <body>
@@ -187,11 +198,12 @@
       <button class="tab" data-tab="print">Print</button>
       <button class="tab" data-tab="count">Count</button>
       <button class="tab" data-tab="stats">Stats</button>
+      <button class="tab" data-tab="gifts">Gifts</button>
     </nav>
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms10</span>
+    <span class="build">wms11</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -317,6 +329,28 @@
   <div id="tab-stats" class="wrap hidden">
     <div id="statsBody"><div class="empty">Loading&hellip;</div></div>
   </div>
+
+  <!-- ============ GIFTS ============ -->
+  <div id="tab-gifts" class="wrap hidden">
+    <div class="secHead"><h3>VIP thank-you candidates</h3><span class="sp"></span>
+      <button class="primaryBtn" id="giftsFindBtn">Find candidates</button>
+    </div>
+    <div class="sub" style="color:var(--dim);font-size:13px;margin:-8px 0 12px;">Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.</div>
+    <div id="giftsMeta" style="font-size:12.5px;color:var(--dim);margin-bottom:10px;"></div>
+    <div id="giftsBody"><div class="empty">Click "Find candidates" to pull a fresh list from Shopify (can take up to a minute).</div></div>
+  </div>
+</div>
+
+<!-- pick detail overlay -->
+<div id="pdOverlay" class="overlay hidden">
+  <div class="sheet">
+    <h2 id="pdTitle">Order</h2>
+    <div class="sub" id="pdSub"></div>
+    <div id="pdBody"></div>
+    <div class="sheetBar">
+      <button class="ghostBtn" id="pdCloseBtn">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- pick list overlay -->
@@ -433,6 +467,14 @@ function contentFlags(o){
 }
 const FLAG_LABELS = {buttons:"Buttons", embroidery:"Embroidery", magnets:"Mask Magnets"};
 
+/* customer note (order.note) vs internal timeline note (staff comment) — distinct emoji + color, hover preview */
+function noteChipsHtml(o){
+  let html = "";
+  if(o.note) html += '<span class="chip note cust" title="'+esc(o.note.slice(0,300))+'">&#128140; note</span>';
+  if(o.timelineNotes && o.timelineNotes.length) html += '<span class="chip note tl" title="'+esc(o.timelineNotes.join(" · ").slice(0,300))+'">&#128221; internal</span>';
+  return html;
+}
+
 /* ---------- stars ---------- */
 function starsOf(o){
   const n = o.ordersCount ?? 1;
@@ -480,7 +522,7 @@ document.querySelectorAll(".tab").forEach(b=> b.onclick = ()=> switchTab(b.datas
 function switchTab(t){
   activeTab = t;
   document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on", x.dataset.tab===t));
-  ["pick","pack","print","count","stats"].forEach(x=> $("tab-"+x).classList.toggle("hidden", x!==t));
+  ["pick","pack","print","count","stats","gifts"].forEach(x=> $("tab-"+x).classList.toggle("hidden", x!==t));
   if(t==="print"){ renderPrintBins(); loadPrintQueue(); }
   if(t==="count"){ renderCountBins(); }
   if(t==="stats"){ renderStats(); }
@@ -575,16 +617,43 @@ function renderPick(){
     const flags = [...contentFlags(o)].map(f=>'<span class="chip flag">'+FLAG_LABELS[f]+'</span>').join("");
     const tags = (o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("");
     const pay = o.financial!=="PAID" ? ' <span class="badge unpaid">'+esc(o.financial)+'</span>' : "";
-    return '<div class="ocard">'
-      + '<input type="checkbox" '+(selected.has(o.orderId)?"checked":"")+' onchange="toggleSel(\''+o.orderId+'\')">'
+    return '<div class="ocard clickable" onclick="openPickDetail(\''+o.orderId+'\')">'
+      + '<input type="checkbox" '+(selected.has(o.orderId)?"checked":"")+' onclick="event.stopPropagation()" onchange="toggleSel(\''+o.orderId+'\')">'
       + '<div class="onum">'+esc(o.number)+'</div>'
       + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+pay+'</div>'
       + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+' ('+ageOf(o.createdAt)+')</div>'
-      + '<div class="chips">'+flags+tags+(o.note?'<span class="chip note">✎ note</span>':"")+'</div></div>'
+      + '<div class="chips">'+flags+tags+noteChipsHtml(o)+'</div></div>'
       + '<div class="ocount"><b>'+units+'</b>items</div></div>';
   }).join("");
 }
 function toggleSel(id){ selected.has(id)?selected.delete(id):selected.add(id); renderPick(); }
+
+/* click an order card in Pick to see its items + details (not aggregated across orders) */
+function embSwatchHtml(it){
+  if(!it.embroideryColor) return "";
+  const tip = "Embroidery color "+it.embroideryColor+(it.embroideryText?': "'+it.embroideryText+'"':"");
+  return ' <span class="embSwatch" style="background:'+esc(it.embroideryColor)+'" title="'+esc(tip)+'"></span>';
+}
+function openPickDetail(orderId){
+  const o = toPick.find(x=>x.orderId===orderId);
+  if(!o) return;
+  $("pdTitle").textContent = "Order "+o.number+" · "+o.customer;
+  const pay = o.financial!=="PAID" ? ' <span class="badge unpaid">'+esc(o.financial)+'</span>' : "";
+  $("pdSub").innerHTML = esc(o.destination||"")+' · '+fmtDate(o.createdAt)+' ('+ageOf(o.createdAt)+')'+pay;
+  let notesHtml = "";
+  if(o.note) notesHtml += '<div class="pnote" style="margin-bottom:8px;">&#128140; <b>Customer note:</b> '+esc(o.note)+'</div>';
+  if(o.timelineNotes && o.timelineNotes.length) notesHtml += '<div class="pnote" style="background:var(--teal-soft);border-color:var(--teal);color:var(--teal-dark);margin-bottom:8px;">&#128221; <b>Internal note'+(o.timelineNotes.length>1?"s":"")+':</b> '+o.timelineNotes.map(esc).join(" · ")+'</div>';
+  const items = (o.items||[]).filter(it=>it.requiresShipping!==false);
+  const rowsHtml = items.length ? items.map(it=>{
+    const qty = it.unfulfilledQty ?? it.qty ?? 1;
+    return '<div class="prow"><span class="q">'+qty+'×</span><span class="sk">'+esc(it.sku||"—")+'</span>'
+      + '<span class="ti">'+esc(it.title)+' <span class="vt">'+esc(it.variantTitle||"")+'</span>'+embSwatchHtml(it)+'</span>'
+      + '<span class="bin" style="font-size:11px;padding:3px 8px;">'+esc(binOf(it.sku))+'</span></div>';
+  }).join("") : '<div class="empty">No shippable items.</div>';
+  $("pdBody").innerHTML = notesHtml + rowsHtml;
+  $("pdOverlay").classList.remove("hidden");
+}
+$("pdCloseBtn").onclick = ()=> $("pdOverlay").classList.add("hidden");
 
 /* pick list build */
 $("pickListBtn").onclick = ()=>{
@@ -662,7 +731,7 @@ function packCard(o, greyed){
     + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+' '+badge+'</div>'
     + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+'</div>'
     + '<div class="chips">'+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
-    + (o.note?'<span class="chip note">✎ note</span>':"")+'</div></div>'
+    + noteChipsHtml(o)+'</div></div>'
     + '<div class="ocount"><b>'+units+'</b>items</div></div>';
 }
 function renderPack(){
@@ -702,7 +771,8 @@ async function openOrder(i){
     if(!it.requiresShipping) continue;
     const key = it.barcode || ("line:"+it.lineId);
     if(!map.has(key)) map.set(key,{ key, barcode:it.barcode, title:it.title, variant:it.variantTitle,
-      sku:it.sku, bin:binOf(it.sku), need:0, got:0, manual:!it.barcode, archived:it.productStatus==="ARCHIVED" });
+      sku:it.sku, bin:binOf(it.sku), need:0, got:0, manual:!it.barcode, archived:it.productStatus==="ARCHIVED",
+      embroideryColor:it.embroideryColor||null, embroideryText:it.embroideryText||null });
     map.get(key).need += it.qty;
   }
   const items = [...map.values()].sort((a,b)=> binSort(a.bin,b.bin) || (a.title+(a.variant||"")).localeCompare(b.title+(b.variant||"")));
@@ -740,7 +810,7 @@ function renderItems(){
     const done = it.got>=it.need;
     return '<div class="irow'+(done?" done":"")+'" id="row'+idx+'">'
       + '<div class="iqty">'+it.got+'<small>/'+it.need+'</small></div>'
-      + '<div class="ititle"><div class="t">'+esc(it.title)+'</div>'
+      + '<div class="ititle"><div class="t">'+esc(it.title)+embSwatchHtml(it)+'</div>'
       + (it.variant?'<div class="v">'+esc(it.variant)+'</div>':"")
       + '<div class="s">'+esc(it.sku||"no SKU")+(it.archived?' · <span style="color:var(--warn)">archived</span>':"")+'</div></div>'
       + (it.bin!=="OTHER"?'<div class="bin">'+esc(it.bin)+'</div>':"")
@@ -1626,6 +1696,79 @@ async function renderStats(){
   }catch(e){
     $("statsBody").innerHTML = '<div class="empty">Could not load stats: '+esc(e.message||e)+'</div>';
   }
+}
+
+/* ================= GIFTS TAB ================= */
+/* Rule-based, no LLM call (consistent with the rest of this tool): facts come straight from  */
+/* Shopify order history, dropped into a couple of varied templates the user can edit/shuffle. */
+let giftCands = [];
+let giftNoteIdx = {};
+const GIFT_TEMPLATES = [
+  (f)=> "Hi "+f.first+"! I just wanted to personally say thank you — you've ordered from Taylor Made "+f.ordersCount+" times now"+f.spendLine+", and it truly means so much to our small shop. "+f.styleLine+"As a small token of appreciation, we wanted to send this your way. Thank you for being part of the TMSH family!",
+  (f)=> "Hi "+f.first+", thank you for being such a loyal Taylor Made customer! "+f.spendLine2+f.styleLine+"We wanted to send a little something your way just to say we appreciate you. Hope you love it!",
+  (f)=> f.first+", we were looking through our orders and your name kept coming up — "+f.ordersCount+" orders"+f.spendLine+"! "+f.styleLine+"Thank you for trusting us again and again. Enjoy this little gift, on us.",
+];
+function giftFacts(c){
+  const first = (c.name||"").split(" ")[0] || "there";
+  const spendLine = c.totalSpent ? " and $"+c.totalSpent.toFixed(0)+" in orders" : "";
+  const spendLine2 = c.totalSpent ? "You've spent $"+c.totalSpent.toFixed(0)+" with us across "+c.ordersCount+" orders. " : "";
+  const styleLine = c.favoriteStyleName ? "We noticed you tend to go for "+c.favoriteStyleName+" hats"+(c.topPattern?(" — especially "+c.topPattern):"")+", so keep an eye out for new prints in that style. " : "";
+  return { first, ordersCount:c.ordersCount, spendLine, spendLine2, styleLine };
+}
+function giftIdea(c){
+  const ideas = [];
+  if(c.favoriteStyleName) ideas.push("a "+c.favoriteStyleName+" hat"+(c.topPattern?" in "+c.topPattern:"")+" — their most-ordered style");
+  if(!c.hasMagnet) ideas.push("a mask magnet set (they haven't tried these yet)");
+  if(!c.hasHeadband) ideas.push("a headband (new to them)");
+  if(!ideas.length) ideas.push("a surprise new pattern they haven't ordered before");
+  return ideas.slice(0,2).join(" or ");
+}
+$("giftsFindBtn").onclick = async ()=>{
+  $("giftsFindBtn").disabled = true; $("giftsFindBtn").textContent = "Pulling from Shopify…";
+  $("giftsBody").innerHTML = '<div class="empty">Scanning your customer base — this can take up to a minute…</div>';
+  try{
+    const { data, error } = await sb.functions.invoke("vip-gifts");
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    giftCands = data.candidates||[];
+    giftNoteIdx = {};
+    $("giftsMeta").textContent = (data.poolSize||0)+" repeat customers considered · showing top "+giftCands.length+" (~"+(data.threshold?.topPercent||10)+"%)";
+    renderGifts();
+  }catch(e){
+    $("giftsBody").innerHTML = '<div class="empty">Could not load: '+esc(e.message||e)+'</div>';
+  }finally{
+    $("giftsFindBtn").disabled = false; $("giftsFindBtn").textContent = "Find candidates";
+  }
+};
+function renderGifts(){
+  if(!giftCands.length){ $("giftsBody").innerHTML='<div class="empty">No candidates yet — click "Find candidates".</div>'; return; }
+  $("giftsBody").innerHTML = giftCands.map((c,i)=>{
+    const f = giftFacts(c);
+    const note = GIFT_TEMPLATES[0](f);
+    const since = c.customerSince ? new Date(c.customerSince).toLocaleDateString() : "—";
+    return '<div class="giftCard">'
+      + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+      + '<div><b style="font-size:15px;">'+esc(c.name||"—")+'</b> <span style="color:var(--dim);font-size:12.5px;">'+esc(c.email||"")+'</span></div>'
+      + '<div style="font-size:12px;color:var(--dim);">'+(c.city?esc(c.city)+(c.state?", "+esc(c.state):""):"")+'</div></div>'
+      + '<div class="meta" style="margin:6px 0 10px;">'+c.ordersCount+' orders · $'+c.totalSpent.toFixed(2)+' lifetime · last order '+fmtDate(c.lastOrderDate)+' · customer since '+since
+      + (c.professionHint?' · <span class="chip">'+esc(c.professionHint)+'</span>':"")+'</div>'
+      + '<div class="sub" style="margin-bottom:8px;"><b>Suggested gift:</b> '+esc(giftIdea(c))+'</div>'
+      + '<textarea class="giftNote" id="giftNote'+i+'">'+esc(note)+'</textarea>'
+      + '<div class="sheetBar" style="justify-content:flex-start;margin-top:8px;">'
+      + '<button class="ghostBtn" onclick="shuffleGiftNote('+i+')">&#8635; Try different wording</button>'
+      + '<button class="ghostBtn" onclick="copyGiftNote('+i+')">Copy note</button></div>'
+      + '</div>';
+  }).join("");
+}
+function shuffleGiftNote(i){
+  const c = giftCands[i];
+  giftNoteIdx[i] = ((giftNoteIdx[i]||0)+1) % GIFT_TEMPLATES.length;
+  $("giftNote"+i).value = GIFT_TEMPLATES[giftNoteIdx[i]](giftFacts(c));
+}
+function copyGiftNote(i){
+  const ta = $("giftNote"+i);
+  ta.select();
+  try{ if(navigator.clipboard) navigator.clipboard.writeText(ta.value); else document.execCommand("copy"); }catch(_e){}
 }
 
 function resetCountUnused(){

@@ -191,6 +191,7 @@
   .gtypeBtn{padding:7px 13px; border-radius:8px; border:1.5px solid var(--line); background:var(--card); font-size:12.5px; font-weight:700; color:var(--dim);}
   .gtypeBtn.on{background:var(--teal-soft); border-color:var(--teal); color:var(--teal-dark);}
   .costPreview{font-size:12.5px; color:var(--dim); margin:6px 0;}
+  .giftGap{font-size:11px; color:var(--dim); margin-left:2px;}
 </style>
 </head>
 <body>
@@ -222,7 +223,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms12</span>
+    <span class="build">wms13</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -355,7 +356,15 @@
       <button class="progBtn on" data-prog="loyalty">&#127881; Loyalty thank-you</button>
       <button class="progBtn" data-prog="winback">&#128075; Win-back</button>
     </div>
-    <div class="secHead"><h3 id="giftsHeading">VIP thank-you candidates</h3><span class="sp"></span>
+    <div class="secHead"><h3>Gift program impact</h3><span class="sp"></span>
+      <button class="ghostBtn" id="giftStatsRefreshBtn" style="padding:8px 14px;font-size:12.5px">Check reorders</button>
+    </div>
+    <div id="giftStatsBody"><div class="empty">Loading&hellip;</div></div>
+    <div class="secHead" style="margin-top:20px;"><h3 id="giftsHeading">VIP thank-you candidates</h3><span class="sp"></span>
+      <div class="progSwitch" style="margin:0 10px 0 0;">
+        <button class="progBtn on" id="scopePendingBtn" data-scope="pending">Pending orders</button>
+        <button class="progBtn" id="scopeAllBtn" data-scope="all">Any customer</button>
+      </div>
       <button class="primaryBtn" id="giftsFindBtn">Find candidates</button>
     </div>
     <div class="sub" id="giftsBlurb" style="color:var(--dim);font-size:13px;margin:-8px 0 12px;">Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.</div>
@@ -546,26 +555,35 @@ function noteChipsHtml(o){
 
 /* ---------- gift-program celebration emoji (loyalty = cached snapshot match, ---------- */
 /* ---------- win-back = computed live from data pack-orders already returns) ---------- */
+/* Win-back thresholds (stricter, per Taylor 7/6): 1 wave for a 12-17 month gap ---------- */
+/* since their prior order, 2 waves for an 18+ month gap. Chip stays visible only ------- */
+/* while the order is still pending (Pick) or unverified (Pack) — see packCard(). ------- */
 let giftLoyaltyIds = new Set();
+function prevOrderGapInfo(o){
+  const dates = (o.orderDates||[]).map(x=>new Date(x).getTime()).filter(t=>!isNaN(t)).sort((a,b)=>b-a);
+  if(dates.length<2) return null;
+  const gapDays = Math.round((dates[0]-dates[1])/864e5);
+  return { gapDays, prevDate:new Date(dates[1]) };
+}
+function fmtGap(days){ return days>=60 ? (Math.round(days/30.4)+" mo") : (days+"d"); }
 function winbackFlagOf(o){
-  const n = o.ordersCount ?? 1;
-  if(n<2) return null;
-  const dates = (o.orderDates||[]).map(x=>new Date(x).getTime()).sort((a,b)=>b-a);
-  if(dates.length>=2){
-    const gapDays = Math.round((dates[0]-dates[1])/864e5);
-    if(gapDays>=45) return "Back after "+gapDays+" days away";
-  }
-  if(n===2) return "Just placed their 2nd order";
+  const gap = prevOrderGapInfo(o);
+  if(!gap) return null;
+  if(gap.gapDays>=547) return { waves:2, label:"Back after "+fmtGap(gap.gapDays)+" away", gap };
+  if(gap.gapDays>=365) return { waves:1, label:"Back after "+fmtGap(gap.gapDays)+" away", gap };
   return null;
 }
 function giftChipHtml(o){
   if(!o.customerId) return "";
+  const gap = prevOrderGapInfo(o);
+  const gapNote = gap ? ' <span class="giftGap" title="Previous order '+esc(gap.prevDate.toLocaleDateString())+'">prev order '+esc(gap.prevDate.toLocaleDateString())+' ('+fmtGap(gap.gapDays)+' ago)</span>' : "";
   if(giftLoyaltyIds.has(String(o.customerId))){
-    return '<span class="chip gift loyalty" onclick="event.stopPropagation();openGiftProfile(\''+o.customerId+'\',\'loyalty\',\''+o.orderId+'\')" title="VIP thank-you candidate — click for their gift profile">&#127881; VIP</span>';
+    return '<span class="chip gift loyalty" onclick="event.stopPropagation();openGiftProfile(\''+o.customerId+'\',\'loyalty\',\''+o.orderId+'\')" title="VIP thank-you candidate — click for their gift profile">&#127881; VIP</span>'+gapNote;
   }
   const wb = winbackFlagOf(o);
   if(wb){
-    return '<span class="chip gift winback" onclick="event.stopPropagation();openGiftProfile(\''+o.customerId+'\',\'winback\',\''+o.orderId+'\')" title="'+esc(wb)+' — click for their gift profile">&#128075; Welcome back</span>';
+    const emoji = "&#128075;".repeat(wb.waves);
+    return '<span class="chip gift winback" onclick="event.stopPropagation();openGiftProfile(\''+o.customerId+'\',\'winback\',\''+o.orderId+'\')" title="'+esc(wb.label)+' — click for their gift profile">'+emoji+' Welcome back</span>'+gapNote;
   }
   return "";
 }
@@ -621,6 +639,7 @@ function switchTab(t){
   if(t==="print"){ renderPrintBins(); loadPrintQueue(); }
   if(t==="count"){ renderCountBins(); }
   if(t==="stats"){ renderStats(); }
+  if(t==="gifts"){ loadGiftStats(); }
   focusScan();
 }
 
@@ -828,7 +847,7 @@ function packCard(o, greyed){
     + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+' '+badge+'</div>'
     + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+'</div>'
     + '<div class="chips">'+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
-    + noteChipsHtml(o)+giftChipHtml(o)+'</div></div>'
+    + noteChipsHtml(o)+(greyed?"":giftChipHtml(o))+'</div></div>'
     + '<div class="ocount"><b>'+units+'</b>items</div></div>';
 }
 function renderPack(){
@@ -1800,18 +1819,23 @@ async function renderStats(){
 /* Shopify order history, dropped into a couple of varied templates the user can edit/shuffle. */
 /* Two programs share this whole section: loyalty (VIP thank-you) and winback (re-engagement). */
 let activeGiftProgram = "loyalty";
+let activeGiftScope = "pending";
 let giftCandsByProg = { loyalty:[], winback:[] };
 const GIFT_BLURB = {
   loyalty: "Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.",
-  winback: "Pulls fresh from Shopify — surfaces customers who'd gone quiet between orders and just reordered, or newer customers trying a different style on their 2nd order. A moment worth a small welcome-back gift, not a cold outreach list.",
+  winback: "Pulls fresh from Shopify — surfaces customers who really went quiet (12+ months since their prior order) and just reordered. 1 wave = 12-17 months away, 2 waves = 18+ months away. A moment worth a small welcome-back gift, not a cold outreach list.",
 };
-document.querySelectorAll(".progBtn").forEach(b=> b.onclick = ()=>{
+document.querySelectorAll(".progBtn[data-prog]").forEach(b=> b.onclick = ()=>{
   activeGiftProgram = b.dataset.prog;
-  document.querySelectorAll(".progBtn").forEach(x=>x.classList.toggle("on", x===b));
+  document.querySelectorAll(".progBtn[data-prog]").forEach(x=>x.classList.toggle("on", x===b));
   $("giftsHeading").textContent = activeGiftProgram==="loyalty" ? "VIP thank-you candidates" : "Win-back candidates";
   $("giftsBlurb").textContent = GIFT_BLURB[activeGiftProgram];
   $("giftsMeta").textContent = "";
   renderGifts();
+});
+document.querySelectorAll(".progBtn[data-scope]").forEach(b=> b.onclick = ()=>{
+  activeGiftScope = b.dataset.scope;
+  document.querySelectorAll(".progBtn[data-scope]").forEach(x=>x.classList.toggle("on", x===b));
 });
 
 const GIFT_TEMPLATES = [
@@ -1845,15 +1869,29 @@ function giftIdea(c){
 
 $("giftsFindBtn").onclick = async ()=>{
   const program = activeGiftProgram;
+  const scope = activeGiftScope;
   $("giftsFindBtn").disabled = true; $("giftsFindBtn").textContent = "Pulling from Shopify…";
-  $("giftsBody").innerHTML = '<div class="empty">Scanning your customer base — this can take up to a minute…</div>';
+  let body = undefined;
+  if(scope==="pending"){
+    const ids = new Set();
+    [...toPick, ...toPack].forEach(o=>{ if(o.customerId) ids.add(String(o.customerId)); });
+    if(!ids.size){
+      $("giftsBody").innerHTML = '<div class="empty">No orders currently waiting to be picked or packed — nothing to check yet. Try "Any customer" instead.</div>';
+      $("giftsFindBtn").disabled=false; $("giftsFindBtn").textContent="Find candidates";
+      return;
+    }
+    body = { customerIds:[...ids] };
+  }
+  $("giftsBody").innerHTML = '<div class="empty">Scanning '+(scope==="pending"?"customers with orders waiting to be picked/packed":"your customer base")+' — this can take up to a minute…</div>';
   try{
-    const { data, error } = await sb.functions.invoke("vip-gifts?program="+program);
+    const { data, error } = await sb.functions.invoke("vip-gifts?program="+program+"&scope="+scope, body?{body}:undefined);
     if(error) throw error;
     if(data?.error) throw new Error(data.error);
     giftCandsByProg[program] = data.candidates||[];
     $("giftsMeta").textContent = (data.poolSize||0)+(program==="loyalty"?" repeat customers considered":" active customers considered")
-      +" · showing top "+giftCandsByProg[program].length+" (~"+(data.threshold?.topPercent||10)+"%)";
+      +" · showing "+giftCandsByProg[program].length
+      +(data.threshold?.topPercent ? " (~top "+data.threshold.topPercent+"%)" : "")
+      +(scope==="pending" ? " with a pending order right now" : "");
     if(program==="loyalty"){
       giftLoyaltyIds = new Set(giftCandsByProg.loyalty.map(c=>String(c.id)));
       renderPick(); renderPack();
@@ -1871,11 +1909,13 @@ function renderGifts(){
   if(!cands.length){ $("giftsBody").innerHTML='<div class="empty">No candidates yet — click "Find candidates".</div>'; return; }
   $("giftsBody").innerHTML = cands.map((c)=>{
     const since = c.customerSince ? new Date(c.customerSince).toLocaleDateString() : "—";
+    const waveEmoji = (program==="winback" && c.waves) ? " "+"&#128075;".repeat(c.waves) : "";
+    const prevOrderLine = c.previousOrderDate ? (' · previous order '+fmtDate(c.previousOrderDate)) : "";
     return '<div class="giftCard">'
       + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
-      + '<div><b style="font-size:15px;">'+esc(c.name||"—")+'</b> <span style="color:var(--dim);font-size:12.5px;">'+esc(c.email||"")+'</span></div>'
+      + '<div><b style="font-size:15px;">'+esc(c.name||"—")+waveEmoji+'</b> <span style="color:var(--dim);font-size:12.5px;">'+esc(c.email||"")+'</span></div>'
       + '<div style="font-size:12px;color:var(--dim);">'+(c.city?esc(c.city)+(c.state?", "+esc(c.state):""):"")+'</div></div>'
-      + '<div class="meta" style="margin:6px 0 2px;">'+c.ordersCount+' orders · $'+c.totalSpent.toFixed(2)+' lifetime · last order '+fmtDate(c.lastOrderDate)+' · customer since '+since
+      + '<div class="meta" style="margin:6px 0 2px;">'+c.ordersCount+' orders · $'+c.totalSpent.toFixed(2)+' lifetime · last order '+fmtDate(c.lastOrderDate)+' · customer since '+since+prevOrderLine
       + (c.professionHint?' · <span class="chip">'+esc(c.professionHint)+'</span>':"")+'</div>'
       + (c.reason?'<div class="giftReason">'+esc(c.reason)+'</div>':"")
       + '<div class="sub" style="margin:6px 0 10px;"><b>Suggested gift:</b> '+esc(giftIdea(c))+'</div>'
@@ -1883,6 +1923,99 @@ function renderGifts(){
       + '</div>';
   }).join("");
 }
+
+/* ---------- Gifts tab: program-impact statistics ---------- */
+let giftActionsCache = [];
+async function loadGiftStats(){
+  $("giftStatsBody").innerHTML = '<div class="empty">Loading…</div>';
+  const {data,error} = await sb.from("gift_actions").select("*").order("created_at",{ascending:true});
+  if(error){ $("giftStatsBody").innerHTML='<div class="empty">Could not load: '+esc(error.message)+'</div>'; return; }
+  giftActionsCache = data||[];
+  renderGiftStats();
+}
+function renderGiftStats(){
+  const rows = giftActionsCache;
+  if(!rows.length){ $("giftStatsBody").innerHTML='<div class="empty">No gifts logged yet — once you start gifting, program stats will show up here.</div>'; return; }
+  const totalGifts = rows.length;
+  const totalCost = rows.reduce((a,r)=>a+Number(r.total_cost||0),0);
+  const totalValue = rows.reduce((a,r)=>a+Number(r.total_value||0),0);
+  const byProg = { loyalty:{n:0,cost:0,value:0}, winback:{n:0,cost:0,value:0} };
+  const byStyle = {};
+  const byCustomer = {};
+  rows.forEach(r=>{
+    const p = byProg[r.program] || (byProg[r.program]={n:0,cost:0,value:0});
+    p.n++; p.cost+=Number(r.total_cost||0); p.value+=Number(r.total_value||0);
+    const styleKey = r.style_code || r.sku || r.title || "other";
+    byStyle[styleKey] = (byStyle[styleKey]||0) + Number(r.qty||1);
+    if(!byCustomer[r.customer_id]) byCustomer[r.customer_id] = { name:r.customer_name, first:r.created_at };
+    if(r.created_at < byCustomer[r.customer_id].first) byCustomer[r.customer_id].first = r.created_at;
+  });
+  const topStyles = Object.entries(byStyle).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const uniqueCustomers = Object.keys(byCustomer).length;
+  const months=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
+    const y=d.getFullYear(), m=d.getMonth();
+    const n = rows.filter(r=>{ const rd=new Date(r.created_at); return rd.getFullYear()===y && rd.getMonth()===m; }).length;
+    months.push({ label:d.toLocaleDateString(undefined,{month:"short"}), n });
+  }
+  const mx = Math.max(1,...months.map(m=>m.n));
+  const bars = months.map(m=>'<div class="bcol">'+(m.n?'<em>'+m.n+'</em>':"")+'<i style="height:'+Math.round(m.n/mx*100)+'%"></i><small>'+m.label+'</small></div>').join("");
+  const card=(n,l)=>'<div class="statCard"><b>'+n+'</b><span>'+l+'</span></div>';
+  let html = '<div class="statGrid">'
+    + card(totalGifts, "gifts logged")
+    + card(uniqueCustomers, "unique customers gifted")
+    + card("$"+totalCost.toFixed(2), "total cost of gifted inventory")
+    + card("$"+totalValue.toFixed(2), "total retail value gifted")
+    + card(byProg.loyalty.n, "loyalty thank-you gifts ($"+byProg.loyalty.cost.toFixed(2)+" cost)")
+    + card(byProg.winback.n, "win-back gifts ($"+byProg.winback.cost.toFixed(2)+" cost)")
+    + '</div>'
+    + '<div class="secHead"><h3>Gifts logged — last 6 months</h3></div>'
+    + '<div class="bars">'+bars+'</div>';
+  if(topStyles.length){
+    html += '<div class="secHead"><h3>Most-gifted styles/items</h3></div>'
+      + topStyles.map(([k,n])=>'<div class="prow"><span class="q">'+n+'×</span><span class="ti">'+esc(k)+'</span></div>').join("");
+  }
+  html += '<div class="secHead"><h3>Reorder check</h3></div><div id="giftReorderBody"><div class="empty">Click "Check reorders" above to see how many gifted customers have ordered again since their gift (live Shopify check).</div></div>';
+  $("giftStatsBody").innerHTML = html;
+}
+$("giftStatsRefreshBtn").onclick = async ()=>{
+  if(!giftActionsCache.length){ alert("No gifts logged yet."); return; }
+  $("giftStatsRefreshBtn").disabled=true; $("giftStatsRefreshBtn").textContent="Checking…";
+  const rb = $("giftReorderBody");
+  if(rb) rb.innerHTML = '<div class="empty">Checking Shopify…</div>';
+  try{
+    const byCustomer = {};
+    giftActionsCache.forEach(r=>{
+      if(!byCustomer[r.customer_id]) byCustomer[r.customer_id] = { name:r.customer_name, firstGift:r.created_at };
+      if(r.created_at < byCustomer[r.customer_id].firstGift) byCustomer[r.customer_id].firstGift = r.created_at;
+    });
+    const ids = Object.keys(byCustomer);
+    const { data, error } = await sb.functions.invoke("gift-stats", { body:{ customerIds: ids } });
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    const byId = {}; (data.customers||[]).forEach(c=> byId[String(c.customerId)]=c);
+    let reordered=0, unknown=0;
+    ids.forEach(id=>{
+      const cust = byCustomer[id]; const shop = byId[id];
+      if(!shop){ unknown++; return; }
+      const didReorder = shop.lastOrderDate && new Date(shop.lastOrderDate) > new Date(new Date(cust.firstGift).getTime()+864e5);
+      if(didReorder) reordered++;
+    });
+    const known = ids.length - unknown;
+    const rate = known ? Math.round(reordered/known*100) : 0;
+    const card=(n,l)=>'<div class="statCard"><b>'+n+'</b><span>'+l+'</span></div>';
+    const html = '<div class="statGrid">'
+      + card(rate+"%", "of gifted customers have ordered again since their first gift")
+      + card(reordered+" / "+known, "reordered so far"+(unknown?(" ("+unknown+" not found in Shopify)"):""))
+      + '</div>';
+    const rb2 = $("giftReorderBody"); if(rb2) rb2.innerHTML = html;
+  }catch(e){
+    const rb3 = $("giftReorderBody"); if(rb3) rb3.innerHTML = '<div class="empty">Could not check: '+esc(e.message||e)+'</div>';
+  }finally{
+    $("giftStatsRefreshBtn").disabled=false; $("giftStatsRefreshBtn").textContent="Check reorders";
+  }
+};
 
 /* ---------- shared gift-profile overlay: browsable from Gifts tab OR the celebration emoji ---------- */
 let gpCurrent = null, gpNoteIdx = 0, gpGiftType = "inventory", gpChosenVariant = null, styleGiftCosts = null;
@@ -1922,7 +2055,7 @@ async function openGiftProfile(customerId, program, orderId){
     const o = toPick.find(x=>String(x.customerId)===String(customerId)) || toPack.find(x=>String(x.customerId)===String(customerId));
     c = { id:String(customerId), name:o?.customer||"Customer", email:null, ordersCount:o?.ordersCount||null,
       totalSpent:null, lastOrderDate:o?.createdAt||null, customerSince:null, favoriteStyleName:null, topPattern:null,
-      hasMagnet:false, hasHeadband:false, reason: o?winbackFlagOf(o):null };
+      hasMagnet:false, hasHeadband:false, reason: o?(winbackFlagOf(o)?.label||null):null };
     limited = true;
   }
   gpCurrent = { customerId:String(customerId), program, orderId, c, limited };

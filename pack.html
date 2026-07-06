@@ -172,6 +172,25 @@
   /* Gifts tab */
   .giftCard{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px;}
   .giftNote{width:100%; min-height:88px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font-size:13.5px; font-family:inherit; resize:vertical; background:var(--bg);}
+
+  /* celebration emoji on Pick/Pack cards (gift-program match) */
+  .chip.gift.loyalty{background:#fff4d6; color:#8a5a00; border-color:var(--gold); cursor:pointer;}
+  .chip.gift.winback{background:var(--coral-soft); color:var(--coral); border-color:var(--coral); cursor:pointer;}
+
+  /* Gifts tab program switch + gift profile overlay */
+  .progSwitch{display:flex; gap:8px; margin-bottom:14px;}
+  .progBtn{padding:9px 16px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--dim); font-size:13.5px; font-weight:700;}
+  .progBtn.on{background:var(--teal); border-color:var(--teal); color:#fff;}
+  .giftReason{font-size:12.5px; color:var(--teal-dark); font-style:italic; margin:2px 0 8px;}
+  .gpStats{display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--dim); margin-bottom:10px;}
+  .gpHist{border-top:1px solid var(--line); margin-top:14px; padding-top:10px;}
+  .gpHistRow{display:flex; gap:8px; align-items:center; font-size:12.5px; padding:6px 0; border-bottom:1px dashed var(--line);}
+  .logForm{background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:14px; margin-top:14px;}
+  .logForm h4{font-size:13px; color:var(--teal-dark); margin-bottom:8px;}
+  .gtypeSwitch{display:flex; gap:8px; margin-bottom:10px;}
+  .gtypeBtn{padding:7px 13px; border-radius:8px; border:1.5px solid var(--line); background:var(--card); font-size:12.5px; font-weight:700; color:var(--dim);}
+  .gtypeBtn.on{background:var(--teal-soft); border-color:var(--teal); color:var(--teal-dark);}
+  .costPreview{font-size:12.5px; color:var(--dim); margin:6px 0;}
 </style>
 </head>
 <body>
@@ -203,7 +222,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms11</span>
+    <span class="build">wms12</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -332,10 +351,14 @@
 
   <!-- ============ GIFTS ============ -->
   <div id="tab-gifts" class="wrap hidden">
-    <div class="secHead"><h3>VIP thank-you candidates</h3><span class="sp"></span>
+    <div class="progSwitch">
+      <button class="progBtn on" data-prog="loyalty">&#127881; Loyalty thank-you</button>
+      <button class="progBtn" data-prog="winback">&#128075; Win-back</button>
+    </div>
+    <div class="secHead"><h3 id="giftsHeading">VIP thank-you candidates</h3><span class="sp"></span>
       <button class="primaryBtn" id="giftsFindBtn">Find candidates</button>
     </div>
-    <div class="sub" style="color:var(--dim);font-size:13px;margin:-8px 0 12px;">Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.</div>
+    <div class="sub" id="giftsBlurb" style="color:var(--dim);font-size:13px;margin:-8px 0 12px;">Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.</div>
     <div id="giftsMeta" style="font-size:12.5px;color:var(--dim);margin-bottom:10px;"></div>
     <div id="giftsBody"><div class="empty">Click "Find candidates" to pull a fresh list from Shopify (can take up to a minute).</div></div>
   </div>
@@ -349,6 +372,52 @@
     <div id="pdBody"></div>
     <div class="sheetBar">
       <button class="ghostBtn" id="pdCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- gift profile overlay -->
+<div id="gpOverlay" class="overlay hidden">
+  <div class="sheet">
+    <h2 id="gpTitle">Customer</h2>
+    <div class="sub" id="gpSub"></div>
+    <div id="gpStats" class="gpStats"></div>
+    <div class="sub" id="gpSuggest" style="margin-bottom:8px;"></div>
+    <textarea class="giftNote" id="gpNote"></textarea>
+    <div class="sheetBar" style="justify-content:flex-start;margin-top:8px;">
+      <button class="ghostBtn" id="gpShuffleBtn">&#8635; Try different wording</button>
+      <button class="ghostBtn" id="gpCopyBtn">Copy note</button>
+    </div>
+    <div class="logForm">
+      <h4>Log a gift</h4>
+      <div class="gtypeSwitch">
+        <button class="gtypeBtn on" data-gtype="inventory">Real product (deducts stock)</button>
+        <button class="gtypeBtn" data-gtype="special">Special style gift</button>
+      </div>
+      <div id="gpInventoryFields">
+        <input type="search" id="gpVariantSearch" placeholder="Search catalog for the gift item…" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin-bottom:8px;">
+        <div id="gpVariantResults"></div>
+        <div id="gpVariantChosen" style="font-size:13px;font-weight:700;margin:6px 0;"></div>
+      </div>
+      <div id="gpSpecialFields" class="hidden">
+        <select id="gpStyleSelect" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;width:100%;margin-bottom:8px;"></select>
+      </div>
+      <div class="toolbar" style="margin-bottom:6px;">
+        <label style="font-size:12.5px;color:var(--dim);">Qty</label>
+        <input class="qtyIn" type="number" min="1" value="1" id="gpQty">
+        <span class="sp"></span>
+        <span class="costPreview" id="gpCostPreview"></span>
+      </div>
+      <textarea id="gpActionNote" rows="2" placeholder="Optional note on what you did (e.g. included a handwritten card)…" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:8px;"></textarea>
+      <button class="primaryBtn" id="gpLogBtn">Log this gift</button>
+      <span id="gpLogMsg" style="font-size:12.5px;font-weight:700;margin-left:10px;"></span>
+    </div>
+    <div class="gpHist">
+      <h4 style="font-size:13px;color:var(--teal-dark);margin-bottom:6px;">Gift history</h4>
+      <div id="gpHistBody"></div>
+    </div>
+    <div class="sheetBar">
+      <button class="ghostBtn" id="gpCloseBtn">Close</button>
     </div>
   </div>
 </div>
@@ -475,6 +544,32 @@ function noteChipsHtml(o){
   return html;
 }
 
+/* ---------- gift-program celebration emoji (loyalty = cached snapshot match, ---------- */
+/* ---------- win-back = computed live from data pack-orders already returns) ---------- */
+let giftLoyaltyIds = new Set();
+function winbackFlagOf(o){
+  const n = o.ordersCount ?? 1;
+  if(n<2) return null;
+  const dates = (o.orderDates||[]).map(x=>new Date(x).getTime()).sort((a,b)=>b-a);
+  if(dates.length>=2){
+    const gapDays = Math.round((dates[0]-dates[1])/864e5);
+    if(gapDays>=45) return "Back after "+gapDays+" days away";
+  }
+  if(n===2) return "Just placed their 2nd order";
+  return null;
+}
+function giftChipHtml(o){
+  if(!o.customerId) return "";
+  if(giftLoyaltyIds.has(String(o.customerId))){
+    return '<span class="chip gift loyalty" onclick="event.stopPropagation();openGiftProfile(\''+o.customerId+'\',\'loyalty\',\''+o.orderId+'\')" title="VIP thank-you candidate — click for their gift profile">&#127881; VIP</span>';
+  }
+  const wb = winbackFlagOf(o);
+  if(wb){
+    return '<span class="chip gift winback" onclick="event.stopPropagation();openGiftProfile(\''+o.customerId+'\',\'winback\',\''+o.orderId+'\')" title="'+esc(wb)+' — click for their gift profile">&#128075; Welcome back</span>';
+  }
+  return "";
+}
+
 /* ---------- stars ---------- */
 function starsOf(o){
   const n = o.ordersCount ?? 1;
@@ -542,15 +637,17 @@ $("syncBtn").onclick = async ()=>{
 async function loadQueue(silent){
   if(!silent){ $("pickList").innerHTML='<div class="empty">Loading orders…</div>'; }
   try{
-    const [{data,error}, sess] = await Promise.all([
+    const [{data,error}, sess, giftIds] = await Promise.all([
       sb.functions.invoke("pack-orders"),
       sb.from("pack_sessions").select("shopify_order_id,status,verified_at").order("created_at",{ascending:false}),
+      sb.from("gift_candidates").select("customer_id").eq("program","loyalty"),
     ]);
     if(error) throw error;
     if(data?.error) throw new Error(data.error);
     toPick = data.toPick||[]; toPack = data.toPack||[];
     sessionsByOrder = {};
     (sess.data||[]).forEach(s=>{ if(!sessionsByOrder[s.shopify_order_id]) sessionsByOrder[s.shopify_order_id]=s; });
+    giftLoyaltyIds = new Set((giftIds.data||[]).map(r=>String(r.customer_id)));
     renderPick(); renderPack();
   }catch(e){
     $("pickList").innerHTML = '<div class="empty">Could not load: '+esc(e.message||e)+'</div>';
@@ -622,7 +719,7 @@ function renderPick(){
       + '<div class="onum">'+esc(o.number)+'</div>'
       + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+pay+'</div>'
       + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+' ('+ageOf(o.createdAt)+')</div>'
-      + '<div class="chips">'+flags+tags+noteChipsHtml(o)+'</div></div>'
+      + '<div class="chips">'+flags+tags+noteChipsHtml(o)+giftChipHtml(o)+'</div></div>'
       + '<div class="ocount"><b>'+units+'</b>items</div></div>';
   }).join("");
 }
@@ -731,7 +828,7 @@ function packCard(o, greyed){
     + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+' '+badge+'</div>'
     + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+'</div>'
     + '<div class="chips">'+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
-    + noteChipsHtml(o)+'</div></div>'
+    + noteChipsHtml(o)+giftChipHtml(o)+'</div></div>'
     + '<div class="ocount"><b>'+units+'</b>items</div></div>';
 }
 function renderPack(){
@@ -1701,19 +1798,41 @@ async function renderStats(){
 /* ================= GIFTS TAB ================= */
 /* Rule-based, no LLM call (consistent with the rest of this tool): facts come straight from  */
 /* Shopify order history, dropped into a couple of varied templates the user can edit/shuffle. */
-let giftCands = [];
-let giftNoteIdx = {};
+/* Two programs share this whole section: loyalty (VIP thank-you) and winback (re-engagement). */
+let activeGiftProgram = "loyalty";
+let giftCandsByProg = { loyalty:[], winback:[] };
+const GIFT_BLURB = {
+  loyalty: "Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.",
+  winback: "Pulls fresh from Shopify — surfaces customers who'd gone quiet between orders and just reordered, or newer customers trying a different style on their 2nd order. A moment worth a small welcome-back gift, not a cold outreach list.",
+};
+document.querySelectorAll(".progBtn").forEach(b=> b.onclick = ()=>{
+  activeGiftProgram = b.dataset.prog;
+  document.querySelectorAll(".progBtn").forEach(x=>x.classList.toggle("on", x===b));
+  $("giftsHeading").textContent = activeGiftProgram==="loyalty" ? "VIP thank-you candidates" : "Win-back candidates";
+  $("giftsBlurb").textContent = GIFT_BLURB[activeGiftProgram];
+  $("giftsMeta").textContent = "";
+  renderGifts();
+});
+
 const GIFT_TEMPLATES = [
   (f)=> "Hi "+f.first+"! I just wanted to personally say thank you — you've ordered from Taylor Made "+f.ordersCount+" times now"+f.spendLine+", and it truly means so much to our small shop. "+f.styleLine+"As a small token of appreciation, we wanted to send this your way. Thank you for being part of the TMSH family!",
   (f)=> "Hi "+f.first+", thank you for being such a loyal Taylor Made customer! "+f.spendLine2+f.styleLine+"We wanted to send a little something your way just to say we appreciate you. Hope you love it!",
   (f)=> f.first+", we were looking through our orders and your name kept coming up — "+f.ordersCount+" orders"+f.spendLine+"! "+f.styleLine+"Thank you for trusting us again and again. Enjoy this little gift, on us.",
 ];
+const WINBACK_TEMPLATES = [
+  (f)=> "Hi "+f.first+"! We noticed it had been a little while since your last Taylor Made order, and we were so happy to see you back"+f.reasonLine+". "+f.styleLine+"We wanted to send this along just to say welcome back — thank you for giving us another chance!",
+  (f)=> "Hi "+f.first+", welcome back to Taylor Made! "+f.reasonLine2+f.styleLine+"We wanted to send a little something to say we're glad you're here. Hope you love it!",
+  (f)=> f.first+", so glad to see your name pop back up in our orders"+f.reasonLine+"! "+f.styleLine+"Here's a little welcome-back gift, on us.",
+];
 function giftFacts(c){
   const first = (c.name||"").split(" ")[0] || "there";
   const spendLine = c.totalSpent ? " and $"+c.totalSpent.toFixed(0)+" in orders" : "";
-  const spendLine2 = c.totalSpent ? "You've spent $"+c.totalSpent.toFixed(0)+" with us across "+c.ordersCount+" orders. " : "";
+  const spendLine2 = c.totalSpent ? "You've spent $"+c.totalSpent.toFixed(0)+" with us across "+(c.ordersCount||"several")+" orders. " : "";
   const styleLine = c.favoriteStyleName ? "We noticed you tend to go for "+c.favoriteStyleName+" hats"+(c.topPattern?(" — especially "+c.topPattern):"")+", so keep an eye out for new prints in that style. " : "";
-  return { first, ordersCount:c.ordersCount, spendLine, spendLine2, styleLine };
+  const reasonBare = c.reason ? (c.reason.charAt(0).toLowerCase()+c.reason.slice(1)) : "after a bit of a break";
+  const reasonLine = " — "+reasonBare;
+  const reasonLine2 = c.reason ? (c.reason+". ") : "";
+  return { first, ordersCount:c.ordersCount, spendLine, spendLine2, styleLine, reasonLine, reasonLine2 };
 }
 function giftIdea(c){
   const ideas = [];
@@ -1723,16 +1842,22 @@ function giftIdea(c){
   if(!ideas.length) ideas.push("a surprise new pattern they haven't ordered before");
   return ideas.slice(0,2).join(" or ");
 }
+
 $("giftsFindBtn").onclick = async ()=>{
+  const program = activeGiftProgram;
   $("giftsFindBtn").disabled = true; $("giftsFindBtn").textContent = "Pulling from Shopify…";
   $("giftsBody").innerHTML = '<div class="empty">Scanning your customer base — this can take up to a minute…</div>';
   try{
-    const { data, error } = await sb.functions.invoke("vip-gifts");
+    const { data, error } = await sb.functions.invoke("vip-gifts?program="+program);
     if(error) throw error;
     if(data?.error) throw new Error(data.error);
-    giftCands = data.candidates||[];
-    giftNoteIdx = {};
-    $("giftsMeta").textContent = (data.poolSize||0)+" repeat customers considered · showing top "+giftCands.length+" (~"+(data.threshold?.topPercent||10)+"%)";
+    giftCandsByProg[program] = data.candidates||[];
+    $("giftsMeta").textContent = (data.poolSize||0)+(program==="loyalty"?" repeat customers considered":" active customers considered")
+      +" · showing top "+giftCandsByProg[program].length+" (~"+(data.threshold?.topPercent||10)+"%)";
+    if(program==="loyalty"){
+      giftLoyaltyIds = new Set(giftCandsByProg.loyalty.map(c=>String(c.id)));
+      renderPick(); renderPack();
+    }
     renderGifts();
   }catch(e){
     $("giftsBody").innerHTML = '<div class="empty">Could not load: '+esc(e.message||e)+'</div>';
@@ -1741,34 +1866,190 @@ $("giftsFindBtn").onclick = async ()=>{
   }
 };
 function renderGifts(){
-  if(!giftCands.length){ $("giftsBody").innerHTML='<div class="empty">No candidates yet — click "Find candidates".</div>'; return; }
-  $("giftsBody").innerHTML = giftCands.map((c,i)=>{
-    const f = giftFacts(c);
-    const note = GIFT_TEMPLATES[0](f);
+  const program = activeGiftProgram;
+  const cands = giftCandsByProg[program]||[];
+  if(!cands.length){ $("giftsBody").innerHTML='<div class="empty">No candidates yet — click "Find candidates".</div>'; return; }
+  $("giftsBody").innerHTML = cands.map((c)=>{
     const since = c.customerSince ? new Date(c.customerSince).toLocaleDateString() : "—";
     return '<div class="giftCard">'
       + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
       + '<div><b style="font-size:15px;">'+esc(c.name||"—")+'</b> <span style="color:var(--dim);font-size:12.5px;">'+esc(c.email||"")+'</span></div>'
       + '<div style="font-size:12px;color:var(--dim);">'+(c.city?esc(c.city)+(c.state?", "+esc(c.state):""):"")+'</div></div>'
-      + '<div class="meta" style="margin:6px 0 10px;">'+c.ordersCount+' orders · $'+c.totalSpent.toFixed(2)+' lifetime · last order '+fmtDate(c.lastOrderDate)+' · customer since '+since
+      + '<div class="meta" style="margin:6px 0 2px;">'+c.ordersCount+' orders · $'+c.totalSpent.toFixed(2)+' lifetime · last order '+fmtDate(c.lastOrderDate)+' · customer since '+since
       + (c.professionHint?' · <span class="chip">'+esc(c.professionHint)+'</span>':"")+'</div>'
-      + '<div class="sub" style="margin-bottom:8px;"><b>Suggested gift:</b> '+esc(giftIdea(c))+'</div>'
-      + '<textarea class="giftNote" id="giftNote'+i+'">'+esc(note)+'</textarea>'
-      + '<div class="sheetBar" style="justify-content:flex-start;margin-top:8px;">'
-      + '<button class="ghostBtn" onclick="shuffleGiftNote('+i+')">&#8635; Try different wording</button>'
-      + '<button class="ghostBtn" onclick="copyGiftNote('+i+')">Copy note</button></div>'
+      + (c.reason?'<div class="giftReason">'+esc(c.reason)+'</div>':"")
+      + '<div class="sub" style="margin:6px 0 10px;"><b>Suggested gift:</b> '+esc(giftIdea(c))+'</div>'
+      + '<button class="primaryBtn" onclick="openGiftProfile(\''+c.id+'\',\''+program+'\',null)">Open gift profile &amp; log a gift</button>'
       + '</div>';
   }).join("");
 }
-function shuffleGiftNote(i){
-  const c = giftCands[i];
-  giftNoteIdx[i] = ((giftNoteIdx[i]||0)+1) % GIFT_TEMPLATES.length;
-  $("giftNote"+i).value = GIFT_TEMPLATES[giftNoteIdx[i]](giftFacts(c));
+
+/* ---------- shared gift-profile overlay: browsable from Gifts tab OR the celebration emoji ---------- */
+let gpCurrent = null, gpNoteIdx = 0, gpGiftType = "inventory", gpChosenVariant = null, styleGiftCosts = null;
+async function invokeGet(fnName, params){
+  const { data:{ session } } = await sb.auth.getSession();
+  const qs = new URLSearchParams(params).toString();
+  const res = await fetch(SUPA_URL+"/functions/v1/"+fnName+"?"+qs, {
+    headers: { Authorization: "Bearer "+(session?.access_token||SUPA_KEY), apikey: SUPA_KEY },
+  });
+  return res.json();
 }
-function copyGiftNote(i){
-  const ta = $("giftNote"+i);
-  ta.select();
+async function loadStyleGiftCosts(){
+  if(styleGiftCosts) return styleGiftCosts;
+  const {data} = await sb.from("style_gift_costs").select("*").order("style_code");
+  styleGiftCosts = data||[];
+  return styleGiftCosts;
+}
+async function ensureStyleSelectPopulated(){
+  const rows = await loadStyleGiftCosts();
+  if(!$("gpStyleSelect").options.length){
+    $("gpStyleSelect").innerHTML = rows.map(r=>'<option value="'+r.style_code+'">'+esc(r.style_name)+'</option>').join("");
+  }
+}
+async function openGiftProfile(customerId, program, orderId){
+  $("gpOverlay").classList.remove("hidden");
+  $("gpTitle").textContent = "Loading…";
+  $("gpStats").innerHTML=""; $("gpSuggest").textContent=""; $("gpNote").value=""; $("gpHistBody").innerHTML="";
+  $("gpLogMsg").textContent=""; $("gpActionNote").value=""; $("gpVariantChosen").textContent=""; $("gpVariantResults").innerHTML=""; $("gpVariantSearch").value="";
+  gpChosenVariant = null; gpNoteIdx = 0;
+  let c = (giftCandsByProg[program]||[]).find(x=>String(x.id)===String(customerId));
+  let limited = false;
+  if(!c){
+    const {data} = await sb.from("gift_candidates").select("snapshot").eq("customer_id",String(customerId)).eq("program",program).maybeSingle();
+    c = data?.snapshot || null;
+  }
+  if(!c){
+    const o = toPick.find(x=>String(x.customerId)===String(customerId)) || toPack.find(x=>String(x.customerId)===String(customerId));
+    c = { id:String(customerId), name:o?.customer||"Customer", email:null, ordersCount:o?.ordersCount||null,
+      totalSpent:null, lastOrderDate:o?.createdAt||null, customerSince:null, favoriteStyleName:null, topPattern:null,
+      hasMagnet:false, hasHeadband:false, reason: o?winbackFlagOf(o):null };
+    limited = true;
+  }
+  gpCurrent = { customerId:String(customerId), program, orderId, c, limited };
+  ensureStyleSelectPopulated();
+  renderGiftProfile();
+  loadGiftHistory(customerId);
+}
+function renderGiftProfile(){
+  const { program, c, limited } = gpCurrent;
+  $("gpTitle").textContent = c.name || "Customer";
+  const since = c.customerSince ? new Date(c.customerSince).toLocaleDateString() : "—";
+  $("gpSub").innerHTML = (c.email?esc(c.email)+' · ':'') + (program==="loyalty"?"Loyalty thank-you":"Win-back")
+    + (limited?' <span style="color:var(--warn)">(limited profile — run "Find candidates" for full details)</span>':'');
+  const stats = [
+    c.ordersCount!=null?('<b>'+c.ordersCount+'</b> orders'):'',
+    c.totalSpent!=null?('<b>$'+Number(c.totalSpent).toFixed(2)+'</b> lifetime'):'',
+    c.lastOrderDate?('last order '+fmtDate(c.lastOrderDate)):'',
+    c.customerSince?('customer since '+since):'',
+  ].filter(Boolean).map(s=>'<span>'+s+'</span>').join("");
+  $("gpStats").innerHTML = stats + (c.reason?'<span class="giftReason" style="width:100%;">'+esc(c.reason)+'</span>':'');
+  $("gpSuggest").innerHTML = '<b>Suggested gift:</b> '+esc(giftIdea(c));
+  const templates = program==="winback" ? WINBACK_TEMPLATES : GIFT_TEMPLATES;
+  $("gpNote").value = templates[0](giftFacts(c));
+}
+$("gpShuffleBtn").onclick = ()=>{
+  if(!gpCurrent) return;
+  const templates = gpCurrent.program==="winback" ? WINBACK_TEMPLATES : GIFT_TEMPLATES;
+  gpNoteIdx = (gpNoteIdx+1)%templates.length;
+  $("gpNote").value = templates[gpNoteIdx](giftFacts(gpCurrent.c));
+};
+$("gpCopyBtn").onclick = ()=>{
+  const ta=$("gpNote"); ta.select();
   try{ if(navigator.clipboard) navigator.clipboard.writeText(ta.value); else document.execCommand("copy"); }catch(_e){}
+};
+$("gpCloseBtn").onclick = ()=> $("gpOverlay").classList.add("hidden");
+
+document.querySelectorAll(".gtypeBtn").forEach(b=> b.onclick = ()=>{
+  document.querySelectorAll(".gtypeBtn").forEach(x=>x.classList.toggle("on", x===b));
+  gpGiftType = b.dataset.gtype;
+  $("gpInventoryFields").classList.toggle("hidden", gpGiftType!=="inventory");
+  $("gpSpecialFields").classList.toggle("hidden", gpGiftType!=="special");
+  if(gpGiftType==="special") ensureStyleSelectPopulated();
+  updateGpCostPreview();
+});
+$("gpVariantSearch").addEventListener("input", async ()=>{
+  await loadCatalog();
+  const q = $("gpVariantSearch").value.trim().toLowerCase();
+  if(!q){ $("gpVariantResults").innerHTML=""; return; }
+  const rows = catalog.filter(v=> ((v.sku||"")+" "+(v.product_title||"")+" "+(v.variant_title||"")).toLowerCase().includes(q)).slice(0,20);
+  $("gpVariantResults").innerHTML = rows.map(v=>
+    '<div class="vrow"><div class="ti">'+esc(v.product_title)+' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div>'
+    + '<button class="ghostBtn" style="padding:6px 10px;font-size:12px" onclick="gpChooseVariant(\''+v.variant_id+'\')">Choose</button></div>'
+  ).join("");
+});
+async function gpChooseVariant(variantId){
+  await loadCatalog();
+  const v = catalog.find(x=>String(x.variant_id)===String(variantId));
+  if(!v) return;
+  gpChosenVariant = v;
+  $("gpVariantChosen").textContent = "Selected: "+v.product_title+" — "+(v.variant_title||"");
+  $("gpVariantResults").innerHTML=""; $("gpVariantSearch").value="";
+  await updateGpCostPreview();
+}
+async function updateGpCostPreview(){
+  if(gpGiftType==="inventory"){
+    if(!gpChosenVariant){ $("gpCostPreview").textContent=""; return; }
+    $("gpCostPreview").textContent="Loading cost…";
+    try{
+      const data = await invokeGet("apply-gift", {peek:"1", variantId:gpChosenVariant.variant_id});
+      if(!data || data.error){ $("gpCostPreview").textContent="Could not load cost."; return; }
+      const qty = Math.max(1,Math.round(Number($("gpQty").value))||1);
+      $("gpCostPreview").textContent = "$"+(data.cost*qty).toFixed(2)+" cost · $"+(data.price*qty).toFixed(2)+" value"
+        + (data.available!=null?" · "+data.available+" in stock":"");
+    }catch(_e){ $("gpCostPreview").textContent=""; }
+  } else {
+    await loadStyleGiftCosts();
+    const code = $("gpStyleSelect").value;
+    const row = (styleGiftCosts||[]).find(r=>r.style_code===code);
+    if(!row){ $("gpCostPreview").textContent=""; return; }
+    const qty = Math.max(1,Math.round(Number($("gpQty").value))||1);
+    $("gpCostPreview").textContent = "$"+(Number(row.unit_cost)*qty).toFixed(2)+" cost · $"+(Number(row.unit_price)*qty).toFixed(2)+" value";
+  }
+}
+$("gpQty").addEventListener("input", updateGpCostPreview);
+$("gpStyleSelect").addEventListener("change", updateGpCostPreview);
+$("gpLogBtn").onclick = async ()=>{
+  if(!gpCurrent) return;
+  const qty = Math.max(1,Math.round(Number($("gpQty").value))||1);
+  const note = $("gpActionNote").value.trim();
+  const body = { customerId:gpCurrent.customerId, customerName:gpCurrent.c.name, customerEmail:gpCurrent.c.email,
+    program:gpCurrent.program, orderId:gpCurrent.orderId||null, qty, note };
+  if(gpGiftType==="inventory"){
+    if(!gpChosenVariant){ $("gpLogMsg").textContent="Pick an item first."; $("gpLogMsg").style.color="var(--coral)"; return; }
+    body.giftType="inventory"; body.variantId=gpChosenVariant.variant_id; body.sku=gpChosenVariant.sku;
+    body.title = gpChosenVariant.product_title+" — "+(gpChosenVariant.variant_title||"");
+  } else {
+    const code = $("gpStyleSelect").value;
+    if(!code){ $("gpLogMsg").textContent="Pick a style first."; $("gpLogMsg").style.color="var(--coral)"; return; }
+    body.giftType="special"; body.styleCode=code;
+  }
+  $("gpLogBtn").disabled=true; $("gpLogMsg").textContent="Saving…"; $("gpLogMsg").style.color="var(--dim)";
+  try{
+    const {data,error} = await sb.functions.invoke("apply-gift",{body});
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    $("gpLogMsg").textContent = "✓ Logged"+(body.giftType==="inventory"?(data.shopifyWriteOk?" · inventory updated":" · inventory NOT updated, check Shopify"):"");
+    $("gpLogMsg").style.color = "var(--ok)";
+    $("gpActionNote").value=""; gpChosenVariant=null; $("gpVariantChosen").textContent="";
+    loadGiftHistory(gpCurrent.customerId);
+  }catch(e){
+    $("gpLogMsg").textContent="✖ "+(e.message||e); $("gpLogMsg").style.color="var(--coral)";
+  }finally{
+    $("gpLogBtn").disabled=false;
+  }
+};
+async function loadGiftHistory(customerId){
+  $("gpHistBody").innerHTML = '<div class="empty">Loading…</div>';
+  const {data,error} = await sb.from("gift_actions").select("*").eq("customer_id",String(customerId)).order("created_at",{ascending:false});
+  if(error){ $("gpHistBody").innerHTML='<div class="empty">Could not load history.</div>'; return; }
+  if(!data||!data.length){ $("gpHistBody").innerHTML='<div class="empty">No gifts logged yet.</div>'; return; }
+  $("gpHistBody").innerHTML = data.map(r=>
+    '<div class="gpHistRow"><span style="min-width:80px;color:var(--dim)">'+fmtDate(r.created_at)+'</span>'
+    + '<span style="flex:1">'+esc(r.title||r.style_code||"—")+' &times;'+r.qty+' <span style="color:var(--dim)">('+(r.program==="winback"?"win-back":"loyalty")+')</span></span>'
+    + '<span style="color:var(--dim)">$'+Number(r.total_cost).toFixed(2)+' cost</span>'
+    + (r.note?(' <span title="'+esc(r.note)+'" style="cursor:help">&#128221;</span>'):'')
+    + '</div>'
+  ).join("");
 }
 
 function resetCountUnused(){

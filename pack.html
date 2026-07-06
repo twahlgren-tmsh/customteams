@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TMSH Warehouse</title>
+<title>ShipShape</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700;800&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -45,6 +45,7 @@
   .tab.on{background:var(--teal); color:#fff;}
   .hbtn{background:var(--teal-soft); color:var(--teal-dark); padding:9px 13px; font-size:13px; font-weight:600;}
   .build{font-size:10px; color:var(--dim);}
+  .brand{font-weight:800; font-size:15px; color:var(--teal-dark); letter-spacing:.2px;}
 
   .wrap{max-width:920px; margin:0 auto; padding:16px;}
   .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
@@ -167,7 +168,7 @@
 <div id="loginView" class="hidden">
   <div class="loginBox">
     <img id="loginLogo" alt="Taylor Made Scrub Hats">
-    <h1>Warehouse</h1>
+    <h1>ShipShape</h1>
     <p>Pick &middot; Pack &middot; Print &middot; Count &mdash; sign in with your Taylor Made account.</p>
     <input id="email" type="email" placeholder="Email" autocomplete="username">
     <input id="password" type="password" placeholder="Password" autocomplete="current-password">
@@ -179,6 +180,7 @@
 <div id="appView" class="hidden">
   <header>
     <img id="hdrLogo" alt="TMSH">
+    <span class="brand">ShipShape</span>
     <nav class="tabs">
       <button class="tab on" data-tab="pick">Pick</button>
       <button class="tab" data-tab="pack">Pack</button>
@@ -189,7 +191,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms9</span>
+    <span class="build">wms10</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -252,7 +254,7 @@
     </div>
     <div id="pqList"><div class="empty">Nothing queued.</div></div>
     <div class="secHead"><h3>Add labels — pick one or more styles</h3><span class="sp"></span>
-      <input type="search" id="printSearch" placeholder="Search catalog…" style="padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;">
+      <input type="search" id="printSearch" placeholder="Search catalog or order #…" style="padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;">
     </div>
     <div class="binChips" id="printBins"></div>
     <div id="printCatalog"><div class="empty">Pick styles above to browse labels.</div></div>
@@ -916,7 +918,17 @@ $("printSearch").addEventListener("input", renderPrintCatalog);
 
 function renderPrintCatalog(){
   if(!catalog) return;
-  const q = $("printSearch").value.trim().toLowerCase();
+  const qRaw = $("printSearch").value.trim();
+  const q = qRaw.toLowerCase();
+  // Order-number lookup: a query that's just digits (optionally with a leading #)
+  // is treated as an order number, not a product/SKU search.
+  if(/^#?\d{3,}$/.test(qRaw)){
+    const qDigits = qRaw.replace(/[^0-9]/g,"");
+    const orderMatch = toPick.find(o=>orderNumMatch(o,qDigits)) || toPack.find(o=>orderNumMatch(o,qDigits));
+    if(orderMatch){ renderPrintOrderMatch(orderMatch); return; }
+    $("printCatalog").innerHTML = '<div class="empty">No order '+esc(qRaw)+' found in the current Pick/Pack lists (unfulfilled orders + last 21 days fulfilled). Try the product search instead.</div>';
+    return;
+  }
   const qn = skuNorm(q).toLowerCase();
   let rows = catalog.filter(v=> realVariant(v) && (printBinsSel.size ? printBinsSel.has(binOf(v.sku)) : q));
   if(q) rows = rows.filter(v=> ((v.sku||"")+" "+(v.product_title||"")+" "+(v.variant_title||"")).toLowerCase().includes(q)
@@ -942,6 +954,63 @@ async function pqQueue(id){
     title:v.product_title, variant_title:v.variant_title, bin:binOf(v.sku), qty:pqQty[id]||1, source:"manual" });
   if(error){ alert(error.message); return; }
   pqQty[id]=1; const el=$("qv"+id); if(el) el.value=1;
+  loadPrintQueue();
+}
+
+/* ---- Print tab: search by order number ---- */
+function orderNumMatch(o,qDigits){
+  const on = String(o.number||"").replace(/[^0-9]/g,"");
+  return !!qDigits && on===qDigits;
+}
+function orderPrintItems(o){
+  // Dedupe an order's shippable line items by variant, summing quantity.
+  const map = new Map();
+  for(const it of (o.items||[])){
+    if(it.requiresShipping===false) continue;
+    const qty = it.unfulfilledQty ?? it.qty ?? 1;
+    if(qty<=0) continue;
+    const key = it.variantId || it.barcode || it.sku || it.title;
+    if(!map.has(key)) map.set(key,{ variantId:it.variantId||null, sku:it.sku||"", barcode:it.barcode||"",
+      title:it.title||"", variant:it.variantTitle||"", bin:binOf(it.sku), qty:0 });
+    map.get(key).qty += qty;
+  }
+  return [...map.values()].sort((a,b)=> binSort(a.bin,b.bin) || (a.title+(a.variant||"")).localeCompare(b.title+(b.variant||"")));
+}
+function renderPrintOrderMatch(o){
+  const rows = orderPrintItems(o);
+  const printable = rows.filter(r=>r.barcode);
+  const skipped = rows.length - printable.length;
+  const total = printable.reduce((s,r)=>s+r.qty,0);
+  let html = '<div class="secHead" style="margin-top:0"><h3 style="font-size:14px">Order '+esc(o.number)+' &middot; '+esc(o.customer||"")+'</h3><span class="sp"></span>'
+    + '<button class="primaryBtn" style="padding:8px 14px;font-size:12.5px" '+(total?"":"disabled")+' onclick="pqQueueOrder(\''+o.orderId+'\')">+ Queue all '+total+' labels</button></div>';
+  if(skipped) html += '<div class="empty" style="padding:6px 2px">'+skipped+' line item(s) have no barcode and were left out — add those manually below in Print.</div>';
+  html += rows.map((r,i)=>
+    '<div class="vrow"><div class="ti"><div>'+esc(r.title)+' <span style="color:var(--dim);font-size:12px">'+esc(r.variant||"")+'</span></div></div>'
+    + '<div style="font-size:12px;color:var(--dim);min-width:36px;text-align:right">&times;'+r.qty+'</div>'
+    + '<button class="primaryBtn" style="padding:8px 14px;font-size:12.5px" '+(r.barcode?"":'disabled title="No barcode on file"')+' onclick="pqQueueOrderItem(\''+o.orderId+'\','+i+')">Add</button></div>'
+  ).join("");
+  $("printCatalog").innerHTML = html || '<div class="empty">No shippable items on this order.</div>';
+}
+async function pqQueueOrder(orderId){
+  const o = toPick.find(x=>x.orderId===orderId) || toPack.find(x=>x.orderId===orderId);
+  if(!o) return;
+  const rows = orderPrintItems(o).filter(r=>r.barcode);
+  if(!rows.length) return;
+  const {error} = await sb.from("print_queue").insert(rows.map(r=>({
+    variant_id:r.variantId, sku:r.sku, barcode:r.barcode, title:r.title, variant_title:r.variant,
+    bin:r.bin, qty:r.qty, source:"order "+o.number
+  })));
+  if(error){ alert(error.message); return; }
+  loadPrintQueue();
+}
+async function pqQueueOrderItem(orderId, idx){
+  const o = toPick.find(x=>x.orderId===orderId) || toPack.find(x=>x.orderId===orderId);
+  if(!o) return;
+  const r = orderPrintItems(o)[idx];
+  if(!r || !r.barcode) return;
+  const {error} = await sb.from("print_queue").insert({ variant_id:r.variantId, sku:r.sku, barcode:r.barcode,
+    title:r.title, variant_title:r.variant, bin:r.bin, qty:r.qty, source:"order "+o.number });
+  if(error){ alert(error.message); return; }
   loadPrintQueue();
 }
 

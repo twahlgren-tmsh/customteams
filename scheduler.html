@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Taylor Made — production</title>
+<title>StitchLab</title>
 <style>
 :root { color-scheme: light;
  --ink:#23211C; --soft:#7A766B; --faint:#A9A498; --line:#EBE8DF; --bg:#F7F6F1; --card:#FFFFFF;
@@ -308,6 +308,7 @@ section { display:none; } section.on { display:block; }
 body{ font-family:var(--sans); }
 .top{ background:linear-gradient(120deg,var(--dark) 0%,#067a85 55%,var(--teal) 100%); color:#fff; border-radius:22px; padding:16px 20px; box-shadow:0 12px 30px rgba(4,88,99,.18); align-items:center; margin-bottom:12px; }
 .brandlogo{ height:58px; width:auto; display:block; }
+.brandname{ display:block; font-weight:800; font-size:13px; letter-spacing:.3px; color:rgba(255,255,255,.92); margin-top:2px; }
 .today{ color:rgba(255,255,255,.85); }
 .top .btn{ background:rgba(255,255,255,.95); color:var(--dark); border-color:transparent; }
 .top .vox{ background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.65); color:#fff; }
@@ -364,6 +365,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
  body.shrunk .top{ padding:7px 12px; }
  body.shrunk .brandlogo{ height:24px; }
  body.shrunk .today{ display:none; }
+ body.shrunk .brandname{ display:none; }
  .pills{ display:none; }
  .btn{ min-height:44px; }
  nav{ position:fixed; left:0; right:0; bottom:0; top:auto; z-index:90; background:var(--card); border-top:1px solid var(--line); margin:0; padding:5px 4px calc(5px + env(safe-area-inset-bottom)); gap:0; justify-content:space-around; box-shadow:0 -6px 20px rgba(4,88,99,.10); }
@@ -404,7 +406,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="login" style="position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,#045863,#00acb2);display:flex;align-items:center;justify-content:center;padding:20px;font-family:'Avenir Next','Avenir','Century Gothic',-apple-system,'Segoe UI',Roboto,sans-serif">
  <div style="background:#fff;border-radius:20px;padding:30px 26px;max-width:360px;width:100%;text-align:center">
   <div style="background:linear-gradient(135deg,#045863,#00acb2);border-radius:16px;padding:20px 18px;margin:0 0 16px"><img src="/White%20Logo.png" alt="Taylor Made Scrub Hats" style="width:100%;height:auto;display:block"></div>
-  <h1 style="font-size:19px;font-weight:700;margin:4px 0 2px;color:#045863">Production</h1>
+  <h1 style="font-size:19px;font-weight:700;margin:4px 0 2px;color:#045863">StitchLab</h1>
   <p style="color:#6f8c8f;font-size:13px;margin-bottom:16px">Sign in with your team account</p>
   <input id="liEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:8px">
   <input id="liPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:12px">
@@ -417,6 +419,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div class="top">
   <div>
     <img class="brandlogo" src="/White%20Logo.png" alt="Taylor Made Scrub Hats">
+    <span class="brandname">StitchLab</span>
     <div class="today" id="subdate"></div>
   </div>
   <div class="pills" id="runpills"></div>
@@ -475,7 +478,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-03-web9";
+const BUILD="2026-07-05-web10";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],

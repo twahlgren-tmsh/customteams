@@ -223,7 +223,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms17</span>
+    <span class="build">wms18</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -1161,10 +1161,17 @@ function orderNumMatch(o,qDigits){
 }
 function orderPrintItems(o){
   // Dedupe an order's shippable line items by variant, summing quantity.
+  // BUG FIX (2026-07-06): toPack orders are already fully fulfilled, so every
+  // line's unfulfilledQty is 0 by definition — that made this always compute
+  // qty=0 and skip every line for Pack-tab orders (openOrder(), the actual
+  // pack-scan session, correctly uses it.qty for these). toPick orders still
+  // use the remaining unfulfilledQty so already-shipped partial lines aren't
+  // re-queued.
+  const fulfilledCtx = !toPick.some(x=>x.orderId===o.orderId) && toPack.some(x=>x.orderId===o.orderId);
   const map = new Map();
   for(const it of (o.items||[])){
     if(it.requiresShipping===false) continue;
-    const qty = it.unfulfilledQty ?? it.qty ?? 1;
+    const qty = fulfilledCtx ? (it.qty ?? 1) : (it.unfulfilledQty ?? it.qty ?? 1);
     if(qty<=0) continue;
     const key = it.variantId || it.barcode || it.sku || it.title;
     if(!map.has(key)) map.set(key,{ variantId:it.variantId||null, sku:it.sku||"", barcode:it.barcode||"",
@@ -1216,7 +1223,11 @@ async function pqQueueOrderItem(orderId, idx){
    rules as the single-order queue above), tags each row with its own order
    number for traceability, inserts in one batch, then jumps to Print tab. */
 async function pqQueueOrdersBulk(orderIds, sourceList){
-  const orders = orderIds.map(id=> sourceList.find(o=>o.orderId===id)).filter(Boolean);
+  // Oldest-first, regardless of click order — matches the sequence you'll
+  // actually pack in (packSorted() already lists unverified orders this way),
+  // so the print queue below lines up with the order you'll work through them.
+  const orders = orderIds.map(id=> sourceList.find(o=>o.orderId===id)).filter(Boolean)
+    .sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));
   if(!orders.length) return;
   const rows = [];
   let skippedLines = 0, skippedOrders = 0;
@@ -1243,22 +1254,50 @@ async function pqQueueOrdersBulk(orderIds, sourceList){
 $("pickPrintBtn").onclick = ()=> pqQueueOrdersBulk([...selected], toPick);
 $("packPrintBtn").onclick = ()=> pqQueueOrdersBulk([...cycleSel], toPack);
 
+/* Splits the pending queue into per-order groups (source "order <num>",
+   e.g. from Pick/Pack send-to-print) — kept in queued sequence, NOT
+   re-grouped by bin, so each order's labels print together in one block —
+   plus everything else (manual additions, production-run pulls), which
+   keeps the original bin-grouped browsing/printing behavior. Shared by the
+   on-screen list and the physical print job so what you see is what prints. */
+function printQueueGroups(){
+  const orderRows = pqRows.filter(r=> /^order /.test(r.source||""));
+  const otherRows = pqRows.filter(r=> !/^order /.test(r.source||""));
+  const orderGroups = new Map();
+  orderRows.forEach(r=>{ const k=r.source; if(!orderGroups.has(k)) orderGroups.set(k,[]); orderGroups.get(k).push(r); });
+  const sortedOther = [...otherRows].sort((a,b)=> binSort(a.bin||"OTHER",b.bin||"OTHER") || ((a.title||"")+(a.variant_title||"")).localeCompare((b.title||"")+(b.variant_title||"")));
+  return { orderGroups, otherRows: sortedOther };
+}
 async function loadPrintQueue(){
   const {data} = await sb.from("print_queue").select("*").eq("status","pending").order("created_at");
   pqRows = (data||[]).filter(r=> !FAKE_BINS.has(r.bin||""));
   if(!pqRows.length){ $("pqList").innerHTML='<div class="empty">Nothing queued. Add labels below — your production tool will also drop upcoming runs here.</div>'; return; }
-  const groups={};
-  pqRows.forEach(r=>{ (groups[r.bin||"OTHER"]=groups[r.bin||"OTHER"]||[]).push(r); });
-  let html="";
-  for(const b of Object.keys(groups).sort(binSort)){
-    const rows=groups[b].sort((x,y)=>((x.title||"")+(x.variant_title||"")).localeCompare((y.title||"")+(y.variant_title||"")));
-    html += '<div class="groupHead"><span class="b">'+esc(binLabel(b))+'</span><span class="n">'
+  const { orderGroups, otherRows } = printQueueGroups();
+  const rowHtml = (r)=> '<div class="prow">'
+    + '<input class="qtyIn" type="number" min="1" value="'+r.qty+'" onchange="pqUpdateQty('+r.id+',this.value)" title="Edit label quantity">'
+    + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant_title||"")+'</span>'
+    + (r.source!=="manual"&&!orderGroups.size?' <span class="vt">('+esc(r.source)+')</span>':"")+'</span>'
+    + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="pqRemove('+r.id+')">✕</button></div>';
+  let html = "";
+  for(const [label, rows] of orderGroups){
+    html += '<div class="groupHead"><span class="b">'+esc(label)+'</span><span class="n">'
       + rows.reduce((s,r)=>s+r.qty,0)+' labels</span></div>';
-    html += rows.map(r=>'<div class="prow">'
-      + '<input class="qtyIn" type="number" min="1" value="'+r.qty+'" onchange="pqUpdateQty('+r.id+',this.value)" title="Edit label quantity">'
-      + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant_title||"")+'</span>'
-      + (r.source!=="manual"?' <span class="vt">('+esc(r.source)+')</span>':"")+'</span>'
-      + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="pqRemove('+r.id+')">✕</button></div>').join("");
+    html += rows.map(rowHtml).join("");
+  }
+  if(otherRows.length){
+    if(orderGroups.size) html += '<div class="secLabel">OTHER QUEUED (production / manual)</div>';
+    const groups={};
+    otherRows.forEach(r=>{ (groups[r.bin||"OTHER"]=groups[r.bin||"OTHER"]||[]).push(r); });
+    for(const b of Object.keys(groups).sort(binSort)){
+      const rows=groups[b];
+      html += '<div class="groupHead"><span class="b">'+esc(binLabel(b))+'</span><span class="n">'
+        + rows.reduce((s,r)=>s+r.qty,0)+' labels</span></div>';
+      html += rows.map(r=>'<div class="prow">'
+        + '<input class="qtyIn" type="number" min="1" value="'+r.qty+'" onchange="pqUpdateQty('+r.id+',this.value)" title="Edit label quantity">'
+        + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant_title||"")+'</span>'
+        + (r.source!=="manual"?' <span class="vt">('+esc(r.source)+')</span>':"")+'</span>'
+        + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="pqRemove('+r.id+')">✕</button></div>').join("");
+    }
   }
   $("pqList").innerHTML = html;
 }
@@ -1276,9 +1315,12 @@ $("markPrintedBtn").onclick = async ()=>{
 };
 $("printPendingBtn").onclick = ()=>{
   if(!pqRows.length){ alert("Print queue is empty."); return; }
+  // Same grouping as the on-screen list: each order's labels print together,
+  // in queued (packing) sequence, before any bin-sorted manual/production labels.
+  const { orderGroups, otherRows } = printQueueGroups();
   const labels=[];
-  const sorted=[...pqRows].sort((a,b)=> binSort(a.bin||"OTHER",b.bin||"OTHER") || ((a.title||"")+(a.variant_title||"")).localeCompare((b.title||"")+(b.variant_title||"")));
-  sorted.forEach(r=>{ for(let i=0;i<r.qty;i++) labels.push(r); });
+  for(const rows of orderGroups.values()) rows.forEach(r=>{ for(let i=0;i<r.qty;i++) labels.push(r); });
+  otherRows.forEach(r=>{ for(let i=0;i<r.qty;i++) labels.push(r); });
   printLabels(labels);
 };
 

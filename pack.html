@@ -223,7 +223,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms13</span>
+    <span class="build">wms14</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -355,21 +355,26 @@
     <div class="progSwitch">
       <button class="progBtn on" data-prog="loyalty">&#127881; Loyalty thank-you</button>
       <button class="progBtn" data-prog="winback">&#128075; Win-back</button>
+      <button class="progBtn" data-prog="stats">&#128202; Stats</button>
     </div>
-    <div class="secHead"><h3>Gift program impact</h3><span class="sp"></span>
-      <button class="ghostBtn" id="giftStatsRefreshBtn" style="padding:8px 14px;font-size:12.5px">Check reorders</button>
-    </div>
-    <div id="giftStatsBody"><div class="empty">Loading&hellip;</div></div>
-    <div class="secHead" style="margin-top:20px;"><h3 id="giftsHeading">VIP thank-you candidates</h3><span class="sp"></span>
-      <div class="progSwitch" style="margin:0 10px 0 0;">
-        <button class="progBtn on" id="scopePendingBtn" data-scope="pending">Pending orders</button>
-        <button class="progBtn" id="scopeAllBtn" data-scope="all">Any customer</button>
+    <div id="giftsCandidatesView">
+      <div class="secHead"><h3 id="giftsHeading">VIP thank-you candidates</h3><span class="sp"></span>
+        <div class="progSwitch" style="margin:0 10px 0 0;">
+          <button class="progBtn on" id="scopePendingBtn" data-scope="pending">Pending orders</button>
+          <button class="progBtn" id="scopeAllBtn" data-scope="all">Any customer</button>
+        </div>
+        <button class="primaryBtn" id="giftsFindBtn">Find candidates</button>
       </div>
-      <button class="primaryBtn" id="giftsFindBtn">Find candidates</button>
+      <div class="sub" id="giftsBlurb" style="color:var(--dim);font-size:13px;margin:-8px 0 12px;">Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.</div>
+      <div id="giftsMeta" style="font-size:12.5px;color:var(--dim);margin-bottom:10px;"></div>
+      <div id="giftsBody"><div class="empty">Click "Find candidates" to pull a fresh list from Shopify (can take up to a minute).</div></div>
     </div>
-    <div class="sub" id="giftsBlurb" style="color:var(--dim);font-size:13px;margin:-8px 0 12px;">Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.</div>
-    <div id="giftsMeta" style="font-size:12.5px;color:var(--dim);margin-bottom:10px;"></div>
-    <div id="giftsBody"><div class="empty">Click "Find candidates" to pull a fresh list from Shopify (can take up to a minute).</div></div>
+    <div id="giftsStatsView" class="hidden">
+      <div class="secHead"><h3>Gift program impact</h3><span class="sp"></span>
+        <button class="ghostBtn" id="giftStatsRefreshBtn" style="padding:8px 14px;font-size:12.5px">Check reorders</button>
+      </div>
+      <div id="giftStatsBody"><div class="empty">Loading&hellip;</div></div>
+    </div>
   </div>
 </div>
 
@@ -639,7 +644,7 @@ function switchTab(t){
   if(t==="print"){ renderPrintBins(); loadPrintQueue(); }
   if(t==="count"){ renderCountBins(); }
   if(t==="stats"){ renderStats(); }
-  if(t==="gifts"){ loadGiftStats(); }
+  if(t==="gifts" && activeGiftProgram==="stats"){ loadGiftStats(); }
   focusScan();
 }
 
@@ -1828,6 +1833,10 @@ const GIFT_BLURB = {
 document.querySelectorAll(".progBtn[data-prog]").forEach(b=> b.onclick = ()=>{
   activeGiftProgram = b.dataset.prog;
   document.querySelectorAll(".progBtn[data-prog]").forEach(x=>x.classList.toggle("on", x===b));
+  const isStats = activeGiftProgram==="stats";
+  $("giftsCandidatesView").classList.toggle("hidden", isStats);
+  $("giftsStatsView").classList.toggle("hidden", !isStats);
+  if(isStats){ loadGiftStats(); return; }
   $("giftsHeading").textContent = activeGiftProgram==="loyalty" ? "VIP thank-you candidates" : "Win-back candidates";
   $("giftsBlurb").textContent = GIFT_BLURB[activeGiftProgram];
   $("giftsMeta").textContent = "";
@@ -1852,7 +1861,7 @@ function giftFacts(c){
   const first = (c.name||"").split(" ")[0] || "there";
   const spendLine = c.totalSpent ? " and $"+c.totalSpent.toFixed(0)+" in orders" : "";
   const spendLine2 = c.totalSpent ? "You've spent $"+c.totalSpent.toFixed(0)+" with us across "+(c.ordersCount||"several")+" orders. " : "";
-  const styleLine = c.favoriteStyleName ? "We noticed you tend to go for "+c.favoriteStyleName+" hats"+(c.topPattern?(" — especially "+c.topPattern):"")+", so keep an eye out for new prints in that style. " : "";
+  const styleLine = c.favoriteStyleName ? "We noticed you tend to go for "+c.favoriteStyleName+" hats, so keep an eye out for new prints in that style. " : "";
   const reasonBare = c.reason ? (c.reason.charAt(0).toLowerCase()+c.reason.slice(1)) : "after a bit of a break";
   const reasonLine = " — "+reasonBare;
   const reasonLine2 = c.reason ? (c.reason+". ") : "";
@@ -1860,10 +1869,10 @@ function giftFacts(c){
 }
 function giftIdea(c){
   const ideas = [];
-  if(c.favoriteStyleName) ideas.push("a "+c.favoriteStyleName+" hat"+(c.topPattern?" in "+c.topPattern:"")+" — their most-ordered style");
+  if(c.favoriteStyleName) ideas.push("a "+c.favoriteStyleName+" hat — their most-ordered style");
   if(!c.hasMagnet) ideas.push("a mask magnet set (they haven't tried these yet)");
   if(!c.hasHeadband) ideas.push("a headband (new to them)");
-  if(!ideas.length) ideas.push("a surprise new pattern they haven't ordered before");
+  if(!ideas.length) ideas.push("a surprise style they haven't tried before");
   return ideas.slice(0,2).join(" or ");
 }
 
@@ -1873,8 +1882,12 @@ $("giftsFindBtn").onclick = async ()=>{
   $("giftsFindBtn").disabled = true; $("giftsFindBtn").textContent = "Pulling from Shopify…";
   let body = undefined;
   if(scope==="pending"){
+    // "pending" = an order still open/unfulfilled (toPick) OR fulfilled but not yet verified/packed —
+    // NOT every order in toPack, which also includes already-verified orders from the last 21 days.
     const ids = new Set();
-    [...toPick, ...toPack].forEach(o=>{ if(o.customerId) ids.add(String(o.customerId)); });
+    toPick.forEach(o=>{ if(o.customerId) ids.add(String(o.customerId)); });
+    toPack.filter(o=> sessionsByOrder[o.orderId]?.status!=="verified")
+      .forEach(o=>{ if(o.customerId) ids.add(String(o.customerId)); });
     if(!ids.size){
       $("giftsBody").innerHTML = '<div class="empty">No orders currently waiting to be picked or packed — nothing to check yet. Try "Any customer" instead.</div>';
       $("giftsFindBtn").disabled=false; $("giftsFindBtn").textContent="Find candidates";

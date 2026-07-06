@@ -223,7 +223,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms14</span>
+    <span class="build">wms15</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -1916,20 +1916,35 @@ $("giftsFindBtn").onclick = async ()=>{
     $("giftsFindBtn").disabled = false; $("giftsFindBtn").textContent = "Find candidates";
   }
 };
+// Order-activity dates: always show first order ever, the order right before the
+// current pending one, and the current pending order itself — three distinct points,
+// not just "last order"/"customer since" which was ambiguous about which order was which.
+function findOrderDate(orderId){
+  if(!orderId) return null;
+  const o = toPick.find(x=>x.orderId===orderId) || toPack.find(x=>x.orderId===orderId);
+  return o ? o.createdAt : null;
+}
+function orderActivityHtml(c, orderId){
+  const currentDate = findOrderDate(orderId) || c.lastOrderDate || null;
+  const parts = [];
+  parts.push('<span>First order '+(c.customerSince?fmtDate(c.customerSince):"—")+'</span>');
+  parts.push('<span>Previous order '+(c.previousOrderDate?fmtDate(c.previousOrderDate):"—")+'</span>');
+  parts.push('<span>Current order '+(currentDate?fmtDate(currentDate):"—")+'</span>');
+  return parts.join(" · ");
+}
 function renderGifts(){
   const program = activeGiftProgram;
   const cands = giftCandsByProg[program]||[];
   if(!cands.length){ $("giftsBody").innerHTML='<div class="empty">No candidates yet — click "Find candidates".</div>'; return; }
   $("giftsBody").innerHTML = cands.map((c)=>{
-    const since = c.customerSince ? new Date(c.customerSince).toLocaleDateString() : "—";
     const waveEmoji = (program==="winback" && c.waves) ? " "+"&#128075;".repeat(c.waves) : "";
-    const prevOrderLine = c.previousOrderDate ? (' · previous order '+fmtDate(c.previousOrderDate)) : "";
     return '<div class="giftCard">'
       + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
       + '<div><b style="font-size:15px;">'+esc(c.name||"—")+waveEmoji+'</b> <span style="color:var(--dim);font-size:12.5px;">'+esc(c.email||"")+'</span></div>'
       + '<div style="font-size:12px;color:var(--dim);">'+(c.city?esc(c.city)+(c.state?", "+esc(c.state):""):"")+'</div></div>'
-      + '<div class="meta" style="margin:6px 0 2px;">'+c.ordersCount+' orders · $'+c.totalSpent.toFixed(2)+' lifetime · last order '+fmtDate(c.lastOrderDate)+' · customer since '+since+prevOrderLine
+      + '<div class="meta" style="margin:6px 0 2px;">'+c.ordersCount+' orders · $'+c.totalSpent.toFixed(2)+' lifetime'
       + (c.professionHint?' · <span class="chip">'+esc(c.professionHint)+'</span>':"")+'</div>'
+      + '<div class="meta" style="margin:0 0 2px;">'+orderActivityHtml(c, null)+'</div>'
       + (c.reason?'<div class="giftReason">'+esc(c.reason)+'</div>':"")
       + '<div class="sub" style="margin:6px 0 10px;"><b>Suggested gift:</b> '+esc(giftIdea(c))+'</div>'
       + '<button class="primaryBtn" onclick="openGiftProfile(\''+c.id+'\',\''+program+'\',null)">Open gift profile &amp; log a gift</button>'
@@ -2066,8 +2081,10 @@ async function openGiftProfile(customerId, program, orderId){
   }
   if(!c){
     const o = toPick.find(x=>String(x.customerId)===String(customerId)) || toPack.find(x=>String(x.customerId)===String(customerId));
+    const gap = o ? prevOrderGapInfo(o) : null;
     c = { id:String(customerId), name:o?.customer||"Customer", email:null, ordersCount:o?.ordersCount||null,
-      totalSpent:null, lastOrderDate:o?.createdAt||null, customerSince:null, favoriteStyleName:null, topPattern:null,
+      totalSpent:null, lastOrderDate:o?.createdAt||null, customerSince:null,
+      previousOrderDate: gap ? gap.prevDate.toISOString() : null, favoriteStyleName:null, topPattern:null,
       hasMagnet:false, hasHeadband:false, reason: o?(winbackFlagOf(o)?.label||null):null };
     limited = true;
   }
@@ -2077,18 +2094,16 @@ async function openGiftProfile(customerId, program, orderId){
   loadGiftHistory(customerId);
 }
 function renderGiftProfile(){
-  const { program, c, limited } = gpCurrent;
+  const { program, c, limited, orderId } = gpCurrent;
   $("gpTitle").textContent = c.name || "Customer";
-  const since = c.customerSince ? new Date(c.customerSince).toLocaleDateString() : "—";
   $("gpSub").innerHTML = (c.email?esc(c.email)+' · ':'') + (program==="loyalty"?"Loyalty thank-you":"Win-back")
     + (limited?' <span style="color:var(--warn)">(limited profile — run "Find candidates" for full details)</span>':'');
   const stats = [
     c.ordersCount!=null?('<b>'+c.ordersCount+'</b> orders'):'',
     c.totalSpent!=null?('<b>$'+Number(c.totalSpent).toFixed(2)+'</b> lifetime'):'',
-    c.lastOrderDate?('last order '+fmtDate(c.lastOrderDate)):'',
-    c.customerSince?('customer since '+since):'',
   ].filter(Boolean).map(s=>'<span>'+s+'</span>').join("");
-  $("gpStats").innerHTML = stats + (c.reason?'<span class="giftReason" style="width:100%;">'+esc(c.reason)+'</span>':'');
+  $("gpStats").innerHTML = stats + '<span style="width:100%;">'+orderActivityHtml(c, orderId)+'</span>'
+    + (c.reason?'<span class="giftReason" style="width:100%;">'+esc(c.reason)+'</span>':'');
   $("gpSuggest").innerHTML = '<b>Suggested gift:</b> '+esc(giftIdea(c));
   const templates = program==="winback" ? WINBACK_TEMPLATES : GIFT_TEMPLATES;
   $("gpNote").value = templates[0](giftFacts(c));

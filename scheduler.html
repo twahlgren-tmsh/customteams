@@ -483,7 +483,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-07-web18";
+const BUILD="2026-07-07-web17";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -898,24 +898,74 @@ async function bootCloud(){ try{
   sb.channel("sched").on("postgres_changes",{event:"*",schema:"public",table:"sched_state"},p=>{ const r=p.new; if(!r||!r.key) return; const j=JSON.stringify(r.value); if(CLOUD_KEYS[r.key]===j) return; CLOUD_KEYS[r.key]=j; applyRemote(r.key,r.value); }).subscribe();
  }catch(e){ CLOUD_READY=true; } }
 /* ---------- custom orders: live from the orders table ---------- */
-const MS_MAP={"Cut":"cut","Embroidery":"embroidery","Sewing":"sewing","Fold & inspect":"packaged","Shipped":"shipped"};
+const MS_MAP={"Materials ordered":"materials","Cut fabric":"cut","Embroidery finished":"embroidery","Printed logo finished":"printed_logo","Patches sewn":"patch","Sewing":"sewing","Fold & inspect":"packaged","Shipped":"shipped","Delivered":"delivered"};
 /* web7 unified Orders tab state */
-let ALLORD=[], CUSTBY={}, FINBY={}, CO_VIEW="open", CO_Q="", CO_ANA=false, CO_RANGE="all", COSRC=null;
+let ALLORD=[], CUSTBY={}, FINBY={}, MATBY={}, CO_VIEW="open", CO_Q="", CO_ANA=false, CO_RANGE="all", COSRC=null;
+/* ---------- web10: materials tracking helpers ---------- */
+function detectCarrier(tn){ tn=(tn||"").replace(/[\s-]+/g,"").toUpperCase(); if(!tn) return null;
+ if(/^1Z[0-9A-Z]{16}$/.test(tn)) return "UPS";
+ if(/^(94|93|92|95|91|82)\d{18,24}$/.test(tn)) return "USPS";
+ if(/^(\d{12}|\d{15}|\d{20}|\d{22})$/.test(tn)) return "FedEx";
+ if(/^\d{10}$/.test(tn)) return "DHL";
+ return null; }
+function trackUrl(carrier,tn){ const t=encodeURIComponent((tn||"").trim()); const c=(carrier||"").toUpperCase();
+ if(c.indexOf("UPS")>=0) return "https://www.ups.com/track?tracknum="+t;
+ if(c.indexOf("USPS")>=0) return "https://tools.usps.com/go/TrackConfirmAction?tLabels="+t;
+ if(c.indexOf("FEDEX")>=0) return "https://www.fedex.com/fedextrack/?trknbr="+t;
+ if(c.indexOf("DHL")>=0) return "https://www.dhl.com/us-en/home/tracking.html?tracking-id="+t;
+ return "https://parcelsapp.com/en/tracking/"+t; }
+function matTrackPanel(o){
+ const rows = (MATBY[String(o.num||"")]||[]).slice().sort((a,b)=>String(a.material||"").localeCompare(String(b.material||"")));
+ const list = rows.map(t=>{
+   const url = t.tracking_url || trackUrl(t.carrier,t.tracking_number);
+   const eta = t.delivered_at?("Delivered "+String(t.delivered_at).slice(0,10)):(t.eta?("ETA "+String(t.eta).slice(0,10)):"");
+   return `<div class="mtrow" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--line)">
+     <span style="font-weight:700;font-size:12px">${(t.material||"material")}</span>
+     ${t.carrier?`<span class="duechip" style="background:#EAF0F0;color:#345A5C">${t.carrier}</span>`:""}
+     ${t.tracking_number?`<a href="${url}" target="_blank" rel="noopener" style="font-size:12px">${t.tracking_number}</a>`:""}
+     ${t.status?`<span style="font-size:11px;color:var(--soft)">${t.status}</span>`:""}
+     ${eta?`<span class="duechip" style="background:${t.delivered_at?'#E8F4E0':'#FAEEDA'};color:${t.delivered_at?'#3B6D11':'#854F0B'}">${eta}</span>`:""}
+     ${t.source==='email'?`<span class="duechip" style="background:#F0EEE6;color:#7A766B" title="added from a forwarded email">✉</span>`:""}
+     <button class="btn" data-mtdel="${t.id}" style="margin-left:auto;padding:2px 8px;min-height:0;font-size:11px">✕</button>
+   </div>`; }).join("") || `<div style="font-size:12px;color:var(--soft);padding:5px 0">No materials tracked yet.</div>`;
+ return `<div class="comattrack" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
+   <div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dark);font-weight:700;margin-bottom:4px">\U0001F4E6 Materials tracking</div>
+   ${list}
+   <div class="mtadd" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+     <input data-mtnew="${o.id}|material" placeholder="Material (fabric, patches…)" style="flex:1;min-width:110px;border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:12px">
+     <input data-mtnew="${o.id}|carrier" placeholder="Carrier" style="width:78px;border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:12px">
+     <input data-mtnew="${o.id}|tracking_number" placeholder="Tracking #" style="flex:1;min-width:110px;border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:12px">
+     <input type="date" data-mtnew="${o.id}|eta" title="Expected delivery" style="border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:12px">
+     <button class="btn go" data-mtaddbtn="${o.id}" style="padding:4px 12px;min-height:0;font-size:12px">Add</button>
+   </div>
+ </div>`;
+}
 /* web7 one-click Shopify upload state */
 let rdPostList=[], rdPostRows=[], rdPostTotal=0;
 function orderToCustom(o){
  const m=o.milestones||{}; const dn=k=>!!(m[k]&&m[k].done);
  const types=o.order_type||[];
  const isEmb=types.some(t=>/embro/i.test(t))||o.has_digitizing===true;
- const isPrint=types.some(t=>/print/i.test(t)); const isPatch=types.some(t=>/patch/i.test(t));
+ const isPL=o.has_printed_logo===true;
+ const isPatch=/patch/i.test(o.internal_name||"");
  const shippedRow=dn("shipped")||dn("delivered")||/shipped|delivered/i.test(o.status||"");
- const ms={}; if(dn("cut"))ms.Cut=true; if(dn("embroidery"))ms.Embroidery=true; if(dn("sewing"))ms.Sewing=true; if(dn("packaged"))ms["Fold & inspect"]=true; if(shippedRow)ms.Shipped=true;
+ const deliveredRow=dn("delivered")||/delivered/i.test(o.status||"");
+ const ms={};
+ if(dn("materials"))ms["Materials ordered"]=true;
+ if(dn("cut"))ms["Cut fabric"]=true;
+ if(dn("embroidery"))ms["Embroidery finished"]=true;
+ if(dn("printed_logo"))ms["Printed logo finished"]=true;
+ if(dn("patch"))ms["Patches sewn"]=true;
+ if(dn("sewing"))ms["Sewing"]=true;
+ if(dn("packaged"))ms["Fold & inspect"]=true;
+ if(shippedRow)ms["Shipped"]=true;
+ if(deliveredRow)ms["Delivered"]=true;
  const due=o.internal_deadline||o.deadline||o.est_ship||""; 
- return { id:String(o.order_number||o.id), _db:true, _onum:o.order_number, _ms0:m, _row:o, _done:(dn("delivered")||/delivered/i.test(o.status||"")),
+ return { id:String(o.order_number||o.id), _db:true, _onum:o.order_number, _ms0:m, _row:o, _done:deliveredRow,
   num:String(o.order_number||"").replace(/^#/,""),
   name:o.internal_name||("Order "+(o.order_number||"")),
   due:due?String(due).slice(0,10):"", styles:o.styles||"",
-  emb:isEmb?12:0, e:isEmb?1:0, p:(isPrint||isPatch)?1:0,
+  emb:isEmb?12:0, e:isEmb?1:0, pl:isPL?1:0, patch:isPatch?1:0, stepOpts:(o.step_opts&&typeof o.step_opts==="object")?o.step_opts:null,
   ms, sewPct:dn("sewing")?100:0, embPct:dn("embroidery")?100:0,
   note:((types.join(" · "))||"")+(o.scrub_color?(" · "+o.scrub_color):""),
   scrub:o.scrub_color||"", logo:o.logo||"", ribbon:o.ribbon||"", sthread:o.sewing_thread||"", ethread:o.embroidery_thread||"", place:o.placement||"", font:o.font_option||"", pnotes:o.notes||"", mockup:o.mockup_url||"" };
@@ -926,6 +976,7 @@ async function loadOrders(){ if(typeof sb==="undefined") return; try{
   ALLORD=data;
   const mapped=data.map(orderToCustom).filter(c=>c.num && !c._done);
   CUSTOM=mapped; try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
+  try{ const {data:mt}=await sb.from("materials_tracking").select("*"); if(Array.isArray(mt)){ MATBY={}; mt.forEach(t=>{ const k=String(t.order_number||""); (MATBY[k]=MATBY[k]||[]).push(t); }); } }catch(e){}
   if(isLead){
    try{ const {data:cs}=await sb.from("customers").select("*"); if(Array.isArray(cs)){ CUSTBY={}; cs.forEach(c=>CUSTBY[c.id]=c); } }catch(e){}
    try{ const {data:fs}=await sb.from("order_financials").select("*"); if(Array.isArray(fs)){ FINBY={}; fs.forEach(f=>FINBY[f.order_id]=f); } }catch(e){}
@@ -2563,10 +2614,20 @@ function renderRuns(items, sched){
 }
 
 const COKEY = "tmsh-custom-v4";
-const TOOLDONE = {"75606":["Cut"],"75637":["Cut"],"75287":["Cut","Embroidery","Sewing"]};
+const TOOLDONE = {"75606":["Cut fabric"],"75637":["Cut fabric"],"75287":["Cut fabric","Embroidery finished","Sewing"]};
+// upgrade legacy milestone labels (pre-web10) to the current timeline labels
+const MS_UPGRADE = {"Materials":"Materials ordered","Cut":"Cut fabric","Embroidery":"Embroidery finished","Patch sewn":"Patches sewn"};
+function upgradeCustom(o){
+ o.ms = o.ms || {};
+ const nm = {}; for(const k in o.ms){ if(o.ms[k]) nm[MS_UPGRADE[k]||k] = true; } o.ms = nm;
+ if(o.patch===undefined) o.patch = /patch/i.test(o.name||"") ? 1 : 0;
+ if(o.pl===undefined) o.pl = 0;
+ delete o.p;
+ return o;
+}
 let CUSTOM;
 try { CUSTOM = JSON.parse(localStorage.getItem(COKEY)) || JSON.parse(localStorage.getItem("tmsh-custom-v3")); } catch(e){ CUSTOM = null; }
-if(CUSTOM) CUSTOM.forEach(o=>{ o.ms = o.ms||{}; delete o.ms["Materials"]; (TOOLDONE[o.num]||[]).forEach(s=>{ if(!o.ms[s]) o.ms[s]=true; }); });
+if(CUSTOM) CUSTOM.forEach(o=>{ o.ms = o.ms||{}; (TOOLDONE[o.num]||[]).forEach(s=>{ if(!o.ms[s]) o.ms[s]=true; }); });
 const SEED_CUSTOM = [
  {id:"75805", name:"Floral Faces Print", num:"75805", due:"2026-06-22", styles:"3 CS + 2 CO", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · ship est 6/19"},
  {id:"75847", name:"TriCares Print", num:"75847", due:"2026-06-18", styles:"15 CS + 10 CO", emb:0, e:0, p:0, ms:{}, note:"Custom Print · Black · materials ordered"},
@@ -2586,7 +2647,7 @@ const SEED_CUSTOM = [
  {id:"75963", name:"CO Spine", num:"75963", due:"2026-06-26", styles:"8 CS + 6 CP", emb:12, e:1, p:0, ms:{Cut:true,Embroidery:true}, sewPct:0, embPct:100, note:"Embroidery · embroidery complete"}
 ];
 if(!CUSTOM) CUSTOM = SEED_CUSTOM.map(o=>Object.assign({}, o, {ms:Object.assign({}, o.ms)}));
-CUSTOM.forEach(o=>{ if(o.sewPct===undefined) o.sewPct = o.ms&&o.ms.Sewing?100:0; if(o.embPct===undefined) o.embPct = o.ms&&o.ms.Embroidery?100:0; });
+CUSTOM.forEach(o=>{ upgradeCustom(o); if(o.sewPct===undefined) o.sewPct = o.ms&&o.ms.Sewing?100:0; if(o.embPct===undefined) o.embPct = o.ms&&o.ms["Embroidery finished"]?100:0; });
 const PCTFILL = {"75637":{sew:3},"75606":{sew:34}};
 CUSTOM.forEach(o=>{ const f = PCTFILL[o.num]; if(f){ if(f.sew && !(o.sewPct>0)) o.sewPct = f.sew; if(f.emb && !(o.embPct>0)) o.embPct = f.emb; } });
 function saveCO(){ pushCustomAll(); }
@@ -2606,13 +2667,29 @@ function coTime(o){
  return {hats, sew, emb, total: sew+emb, sewRem, embRem, rem: sewRem+embRem};
 }
 function stepsFor(o){
- const st = ["Cut"];
- if(o.e) st.push("Embroidery");
- if(o.p) st.push("Patch sewn");
- st.push("Sewing","Fold & inspect","Shipped");
+ const ov = o.stepOpts||{};
+ const inc = (label,auto)=> (label in ov) ? !!ov[label] : auto;
+ const st = ["Materials ordered","Cut fabric"];
+ if(inc("Embroidery finished", !!o.e)) st.push("Embroidery finished");
+ if(inc("Printed logo finished", !!o.pl)) st.push("Printed logo finished");
+ if(inc("Patches sewn", !!o.patch)) st.push("Patches sewn");
+ st.push("Sewing","Fold & inspect","Shipped","Delivered");
  return st;
 }
-const shipped = o => !!(o.ms && o.ms["Shipped"]);
+function tlEditPanel(o){
+ const inc = new Set(stepsFor(o));
+ const opt = (label)=>`<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 0;cursor:pointer"><input type="checkbox" data-tlopt="${o.id}|${label}" ${inc.has(label)?"checked":""}> ${label}</label>`;
+ return `<details class="tledit" style="margin-top:6px">
+   <summary style="cursor:pointer;font-size:11.5px;color:#6f8c8f;font-weight:600">✎ Edit timeline steps</summary>
+   <div style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px;background:var(--card)">
+     <div style="font-size:11px;color:var(--soft);margin-bottom:5px">Materials ordered, Cut fabric, Sewing, Fold &amp; inspect, Shipped and Delivered are always included. Tick the optional steps this order needs:</div>
+     ${opt("Embroidery finished")}
+     ${opt("Printed logo finished")}
+     ${opt("Patches sewn")}
+   </div>
+ </details>`;
+}
+const shipped = o => !!(o.ms && (o.ms["Shipped"] || o.ms["Delivered"]));
 function openLightbox(src){ var lb=document.getElementById("lightbox"), im=document.getElementById("lightboximg"); if(!lb||!im) return; im.src=src; lb.style.display="flex"; }
 document.addEventListener("click", function(e){ var z=e.target.closest&&e.target.closest("[data-zoom]"); if(z){ openLightbox(z.getAttribute("data-zoom")); return; } if(e.target.id==="lightbox"||e.target.id==="lightboximg"){ var lb=document.getElementById("lightbox"); if(lb) lb.style.display="none"; } });
 /* ---------- web7: unified Orders tab (lead extras, search, all-orders, analytics) ---------- */
@@ -2753,6 +2830,7 @@ function renderCustom(){
       ${t.embRem>1?`<button class="btn ${o.schedEmb?"":"go"}" data-cosched="${o.id}|emb">${o.schedEmb?"Unschedule":"Schedule embroidery"}</button>`:`<em style="width:auto">✓ done</em>`}</div>`:""}
     </div>
     <div class="cotl">${tl}</div>
+    ${tlEditPanel(o)}
     <div class="coprod" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start">
       ${o.mockup?`<img class="comock" data-zoom="${o.mockup}" src="${o.mockup}" alt="mockup · tap to zoom" title="Tap to zoom" style="height:96px;border-radius:8px;border:1px solid var(--line);object-fit:cover;cursor:zoom-in" loading="lazy" onerror="this.style.display='none'">`:""}
@@ -2770,6 +2848,7 @@ function renderCustom(){
      <textarea class="coprodnote" data-prod="${o.id}|pnotes" rows="3" oninput="this.style.height='auto';this.style.height=Math.max(this.scrollHeight,72)+'px'" onfocus="this.style.minHeight='130px'" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:13px;line-height:1.45;resize:vertical;min-height:64px" placeholder="Add embroidery text, sizing requests, special instructions…">${(o.pnotes||"").replace(/</g,"&lt;")}</textarea>
      <span class="prodsaved" data-saved="${o.id}" style="font-size:11px;color:#3B6D11;opacity:0;transition:opacity .3s">Saved ✓</span>
     </div>
+    ${matTrackPanel(o)}
     ${isLead?coLeadExtras(o):""}
    </div>
   </details>`;
@@ -2797,8 +2876,9 @@ function renderCustom(){
   const nm = document.getElementById("co-name").value.trim();
   if(!nm) return;
   const hasE = confirm("Does this order have embroidery? OK = yes");
-  const hasP = confirm("Does this order have a patch? OK = yes");
-  CUSTOM.push({id:String(Date.now()), name:nm, num:document.getElementById("co-num").value.trim(), due:document.getElementById("co-due").value, styles:document.getElementById("co-styles").value.trim(), emb:hasE?12:0, e:hasE?1:0, p:hasP?1:0, ms:{}, sewPct:0, embPct:0});
+  const hasPL = confirm("Does this order have a custom PRINTED LOGO? OK = yes");
+  const isPatch = /patch/i.test(nm);
+  CUSTOM.push({id:String(Date.now()), name:nm, num:document.getElementById("co-num").value.trim(), due:document.getElementById("co-due").value, styles:document.getElementById("co-styles").value.trim(), emb:hasE?12:0, e:hasE?1:0, pl:hasPL?1:0, patch:isPatch?1:0, ms:{}, sewPct:0, embPct:0});
   saveCO(); render();
  };
  document.querySelectorAll("[data-cms]").forEach(el=>el.onclick=()=>{
@@ -2806,7 +2886,7 @@ function renderCustom(){
   o.ms = o.ms || {};
   o.ms[el.dataset.step] = !o.ms[el.dataset.step];
   if(el.dataset.step==="Sewing" && o.ms.Sewing && (o.sewPct||0)<100) o.sewPct = 100;
-  if(el.dataset.step==="Embroidery" && o.ms.Embroidery && (o.embPct||0)<100) o.embPct = 100;
+  if(el.dataset.step==="Embroidery finished" && o.ms["Embroidery finished"] && (o.embPct||0)<100) o.embPct = 100;
   if(o._db && !CUSTOM.some(x=>x.id===o.id)){ /* web7: archived order in All view — write milestones directly */
    const prev=o._ms0||{}; const base=Object.assign({},prev); const td=new Date().toISOString().slice(0,10);
    for(const step in MS_MAP){ const mk=MS_MAP[step]; const want=!!(o.ms&&o.ms[step]); const cur=base[mk]||{done:false,date:""}; base[mk]=(want!==!!cur.done)?{done:want,date:want?(cur.date||td):(cur.date||"")}:cur; }
@@ -2816,6 +2896,36 @@ function renderCustom(){
   saveCO(); render();
  });
  document.querySelectorAll("[data-coemb]").forEach(i=>i.onchange=()=>{ const o=(COSRC||CUSTOM).find(x=>x.id===i.dataset.coemb); if(!o) return; o.emb=+i.value||0; saveCO(); render(); });
+ document.querySelectorAll("[data-mtaddbtn]").forEach(b=>b.onclick=async()=>{
+  const id=b.dataset.mtaddbtn; const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o) return;
+  const g=f=>{ const el=document.querySelector('[data-mtnew="'+id+'|'+f+'"]'); return el?el.value.trim():""; };
+  const material=g("material"), carrierIn=g("carrier"), tn=g("tracking_number"), eta=g("eta");
+  if(!material && !tn){ boardToast&&boardToast("Add a material or a tracking #"); return; }
+  const car=carrierIn||detectCarrier(tn)||null;
+  const row={ order_id:(o._row?o._row.id:null), order_number:String(o.num||""), material:material||null, carrier:car, tracking_number:tn||null, tracking_url:tn?trackUrl(car,tn):null, eta:eta||null, source:"manual" };
+  if(typeof sb!=="undefined"){ try{ const {data}=await sb.from("materials_tracking").insert(row).select().single(); if(data){ (MATBY[row.order_number]=MATBY[row.order_number]||[]).push(data); } }catch(e){} }
+  else { (MATBY[row.order_number]=MATBY[row.order_number]||[]).push(Object.assign({id:"local"+Date.now()},row)); }
+  renderCustom();
+ });
+ document.querySelectorAll("[data-mtdel]").forEach(b=>b.onclick=async()=>{
+  const tid=b.dataset.mtdel;
+  if(typeof sb!=="undefined"){ try{ await sb.from("materials_tracking").delete().eq("id",tid); }catch(e){} }
+  for(const k in MATBY){ MATBY[k]=(MATBY[k]||[]).filter(t=>String(t.id)!==String(tid)); }
+  renderCustom();
+ });
+ document.querySelectorAll("[data-tlopt]").forEach(cb=>cb.onchange=async()=>{
+  const s=cb.dataset.tlopt; const i=s.indexOf("|"); const id=s.slice(0,i), label=s.slice(i+1);
+  const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o) return;
+  o.stepOpts = o.stepOpts || {};
+  o.stepOpts[label] = cb.checked;
+  if(label==="Printed logo finished") o.pl = cb.checked?1:0;
+  if(!cb.checked && o.ms) delete o.ms[label];
+  if(o._db && o._onum && typeof sb!=="undefined"){ _selfWrite=Date.now();
+   const patch={ step_opts:o.stepOpts, updated_at:new Date().toISOString() };
+   if(label==="Printed logo finished") patch.has_printed_logo=!!cb.checked;
+   try{ await sb.from("orders").update(patch).eq("order_number",o._onum); }catch(e){} }
+  saveCO(); renderCustom();
+ });
  document.querySelectorAll(".coprodf,.coprodnote").forEach(el=>{ el.onchange=()=>{ const parts=el.dataset.prod.split("|"); const id=parts[0], field=parts[1]; const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o) return; o[field]=el.value; saveOrderField(o,field,el.value); const sv=document.querySelector('[data-saved="'+id+'"]'); if(sv){ sv.style.opacity=1; setTimeout(()=>{sv.style.opacity=0;},1500); } }; });
  document.querySelectorAll("[data-cosched]").forEach(b=>b.onclick=()=>{
   const [id,kind] = b.dataset.cosched.split("|");
@@ -2830,7 +2940,7 @@ function renderCustom(){
   const v = prompt((kind==="sew"?"Sewing":"Embroidery")+" % complete for "+o.name+":", cur);
   if(v===null) return;
   const n = Math.max(0, Math.min(100, +v||0));
-  if(kind==="sew"){ o.sewPct = n; if(n>=100) o.ms.Sewing = true; } else { o.embPct = n; if(n>=100) o.ms.Embroidery = true; }
+  if(kind==="sew"){ o.sewPct = n; if(n>=100) o.ms.Sewing = true; } else { o.embPct = n; if(n>=100) o.ms["Embroidery finished"] = true; }
   saveCO(); render();
  });
  /* ---------- web7: unified Orders controls ---------- */
@@ -3636,9 +3746,8 @@ function bisCard(p, kind){
  let mid="";
  if(kind==="makes"){ const rem=OVR.bisrem[p.p]||""; 
   mid=`<div class="fsub" style="margin-top:6px">Remnant: <input data-bisrem="${esc}" value="${rem}" inputmode="decimal" style="width:50px;padding:3px 6px;border:1px solid #DDD8CC;border-radius:7px"> yd ≈ <b data-bisest="${esc}">${bisEstHats(rem)}</b> hats</div>`; }
- if(kind==="quick"){ const d30=p.qwAt?Math.max(0,30-Math.floor((Date.now()-new Date(p.qwAt).getTime())/864e5)):null;
-  mid=`<div class="fsub" style="margin-top:6px;color:#0F8A6D">Restocked${p.qwAt?" "+new Date(p.qwAt).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""} — can buy right now.${p.qwBought?` <b>${p.qwBought} bought since${p.qwRev?` ($${p.qwRev})`:""}.</b>`:""}${d30!==null?` <span style="color:#7A766B">${d30}d left here.</span>`:""}</div>`; }
- return `<div class="focard">${typeof fabCardImg==="function"?fabCardImg(p.p):""}<div class="fbody"><div class="ftitle">${p.p} ${inv}${und}${wk}</div><div class="fsub"><b>${kind==="quick"?p.backN:p.act} ${kind==="quick"?"still waiting":"waiting"}</b> · ${p.flex+p.proxy} flexible${bisStyLine(p)?`<br>${bisStyLine(p)}`:""}</div>${mid}</div><div class="factions"><button class="btn" data-bisopen="${esc}">👥 Shoppers</button><button class="btn go" data-bisrestock="${esc}">＋ Restock ▸</button></div></div>`;
+ if(kind==="quick") mid=`<div class="fsub" style="margin-top:6px;color:#0F8A6D">Back in stock — these shoppers can buy right now.</div>`;
+ return `<div class="focard">${typeof fabCardImg==="function"?fabCardImg(p.p):""}<div class="fbody"><div class="ftitle">${p.p} ${inv}${und}${wk}</div><div class="fsub"><b>${p.act} waiting</b> · ${p.flex+p.proxy} flexible<br>${bisStyLine(p)}</div>${mid}</div><div class="factions"><button class="btn" data-bisopen="${esc}">👥 Shoppers</button><button class="btn go" data-bisrestock="${esc}">＋ Restock ▸</button></div></div>`;
 }
 function renderBIS(){
  const sumEl=document.getElementById("bissummary"), wrap=document.getElementById("biswrap");
@@ -3653,15 +3762,13 @@ function renderBIS(){
  }
  const actRows=bisActive();
  const conv=BIS_ROWS.filter(r=>r.status==="converted").sort((a,b)=>(b.converted_at||"").localeCompare(a.converted_at||""));
- const QW_MS=30*864e5;
- const quickRows=actRows.filter(r=>r.status==="open"&&r.oos===false&&(!r.restocked_at||(Date.now()-new Date(r.restocked_at).getTime())<=QW_MS));
+ const quickRows=actRows.filter(r=>r.status==="open"&&r.oos===false);
  const totAct=actRows.length;
  const revAll=(D.conv&&D.conv.revAll)||conv.reduce((s,r)=>s+Number(r.revenue||0),0);
  const rev30=(D.conv&&D.conv.rev30)||0;
- const allPats=(D.patterns||[]);
- const pats=allPats.filter(p=>p.act>0);
- const sug=(D.suggested||[]).map(name=>allPats.find(p=>p.p===name)).filter(Boolean);
- const quickPats=allPats.filter(p=>p.backN>0); /* quick-win-only patterns can have act 0 */
+ const pats=(D.patterns||[]).filter(p=>p.act>0);
+ const sug=(D.suggested||[]).map(name=>pats.find(p=>p.p===name)).filter(Boolean);
+ const quickPats=pats.filter(p=>p.backN>0);
  sumEl.innerHTML=`<div class="cosnap">
   <div class="cs${bisFocus==='makes'?' act':''}" data-bisjump="makes"><b style="${sug.length?'color:#C2452D':''}">${sug.length}</b><span>suggested makes</span></div>
   <div class="cs${bisFocus==='quick'?' act':''}" data-bisjump="quick"><b style="${quickRows.length?'color:#0F8A6D':''}">${quickRows.length}</b><span>quick wins</span></div>
@@ -3681,7 +3788,7 @@ function renderBIS(){
  /* 2) QUICK WINS */
  h+=secHead("quick","Quick wins — already restocked",quickRows.length);
  if(so("quick")){
-  if(quickPats.length){ h+=`<div class="fmeta" style="margin:-4px 0 9px">The variant these shoppers wanted is back in stock — a personal nudge converts even better than the automatic email. Restocked patterns stay here for 30 days as a scoreboard (waiting vs. bought), then retire — unless they sell out again first, which sends unpurchased shoppers back to the demand list (up to 3 restocks each).</div><div class="fogrid">`;
+  if(quickPats.length){ h+=`<div class="fmeta" style="margin:-4px 0 9px">The variant these shoppers wanted is back in stock — a personal nudge converts even better than the automatic email. Covered shoppers drop off the make list automatically; if it sells out again before they buy, they come back — up to 3 restocks, then they retire from the list.</div><div class="fogrid">`;
    quickPats.forEach(p=>{ h+=bisCard(p,"quick"); }); h+=`</div>`;
   } else h+=`<div class="note">None right now.</div>`;
  }

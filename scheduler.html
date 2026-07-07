@@ -478,7 +478,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-05-web10";
+const BUILD="2026-07-06-web11";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -2184,6 +2184,7 @@ function wireCutAll(){
   const lines=[], hist=[];
   OVR.cut.sess.forEach(sp=>{ const a={}; document.querySelectorAll('[data-cutact^="'+sp.id+'|"]').forEach(i=>a[i.dataset.cutact.split("|")[1]]=+i.value||0); const q=[a.CP||0,a.LP||0,a.CTE||0,a.LTE||0,a.CO||0,a.CS||0,a.LS||0]; if(q.some(x=>x>0)){ lines.push({p:sp.fabric,q,thread:sp.thread}); hist.push({fabric:sp.fabric,boltYd:sp.boltYd,counts:a,when:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),run:nextNo}); } });
   if(!lines.length){ alert("Enter the counts you cut on at least one fabric first."); return; }
+  const _mkrun=()=>{
   const run={no:nextNo,name:nm,sched:false,mult:1,thread:thr,lines}; if(gl) run.goLive=gl;
   XRUNS=XRUNS.filter(r=>r.no!==nextNo).concat([run]); saveRuns(); rebuildRuns();
   lines.forEach(l=>{ const o=(OVR.fabric.orders||[]).find(x=>x.fabric===l.p && x.received && !x.cut); if(o) o.cut=true; });
@@ -2191,8 +2192,38 @@ function wireCutAll(){
   document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x.dataset.v==="runs"));
   document.querySelectorAll("section").forEach(s=>s.classList.remove("on")); const vr=document.getElementById("view-runs"); if(vr) vr.classList.add("on");
   render();
+  };
+  /* web11: offer Shopify drafts for unlinked (new) patterns before the run is created */
+  const _venBy={}; OVR.cut.sess.forEach(sp=>{ _venBy[sp.fabric]=sp.ven||""; });
+  const _newPats=lines.map(l=>l.p).filter(p=>!/^core solid/i.test(p) && !resolveShop(p));
+  if(_newPats.length) cpOfferDrafts(_newPats,_venBy,_mkrun); else _mkrun();
  };
  wireThreadEdits();
+}
+/* web11: create Shopify DRAFT products for new patterns at cut-finalize */
+async function cpCreateOne(pat, ven, prof, btn){
+ btn.disabled=true; const o=btn.textContent; btn.textContent="Creating\u2026";
+ try{
+  const {data,error}=await sb.functions.invoke("create-product",{body:{pattern:pat, profile:prof, supplier:ven||""}});
+  if(error||!data||!data.ok){ const msg=(error&&error.message)||(data&&data.error)||"unknown error"; btn.disabled=false; btn.textContent="\u2717 failed \u2014 retry"; btn.title=msg; if(typeof boardToast==="function") boardToast("Draft failed: "+String(msg).slice(0,120)); return false; }
+  if(!OVR.shop) OVR.shop={};
+  OVR.shop[pat]=data.title; save();
+  btn.classList.remove("go"); btn.textContent=data.existing?"\u2713 already on Shopify \u2014 linked":"\u2713 draft created & linked";
+  const sel=btn.parentElement&&btn.parentElement.querySelector("select"); if(sel) sel.disabled=true;
+  if(typeof boardToast==="function") boardToast((data.existing?"Linked existing: ":"Draft created: ")+data.title+(data.copy==="fallback"?" \u2014 placeholder copy, review before publishing":""));
+  return true;
+ }catch(e){ btn.disabled=false; btn.textContent=o; return false; }
+}
+function cpOfferDrafts(pats, venBy, after){
+ if(typeof isLead!=="undefined" && !isLead){ after(); return; }
+ const ov=document.createElement("div");
+ ov.style.cssText="position:fixed;inset:0;background:rgba(4,40,44,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px";
+ ov.innerHTML='<div class="card" style="max-width:540px;width:100%;max-height:82vh;overflow:auto;margin:0"><b style="font-size:15px">\ud83c\udd95 '+pats.length+' new pattern'+(pats.length>1?"s":"")+' \u2014 create Shopify drafts?</b><div class="fmeta" style="margin:4px 0 10px">These patterns aren\u2019t linked to any Shopify product yet. Create each one as a <b>DRAFT</b> (variants, SKUs, prices, copy &amp; SEO) and link it here so finished hats can post straight to inventory. You review and publish in Shopify.</div>'+pats.map(function(p,i){ return '<div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap"><b style="flex:1;min-width:120px">'+p+'</b><select data-cpprof="'+i+'" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 7px;font-size:12.5px;font-family:inherit"><option value="standard">Standard \u2014 8 variants</option><option value="comfortplus">Comfort+ \u2014 4 variants</option></select><button class="btn go" data-cpgo="'+i+'" style="font-size:12.5px">Create draft</button></div>'; }).join("")+'<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="cpskip">Skip \u2014 pair later</button><button class="btn go" id="cpdone">Done \u2014 create the run</button></div></div>';
+ document.body.appendChild(ov);
+ ov.querySelectorAll("[data-cpgo]").forEach(function(b){ b.onclick=function(){ const i=+b.dataset.cpgo; const sel=ov.querySelector('[data-cpprof="'+i+'"]'); cpCreateOne(pats[i], venBy[pats[i]]||"", sel?sel.value:"standard", b); }; });
+ const fin=function(){ try{ document.body.removeChild(ov); }catch(e){} after(); };
+ const sk=ov.querySelector("#cpskip"); if(sk) sk.onclick=fin;
+ const dn=ov.querySelector("#cpdone"); if(dn) dn.onclick=fin;
 }
 function applyPerms(){
  if(isLead) return;

@@ -8,10 +8,11 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icon.png">
 <link rel="icon" type="image/png" href="/icon.png">
-<!-- web7: the order app merged into the production tool. This page now just redirects
-     to the unified Orders tab (scheduler.html#custom). One tool, one login. -->
-<meta http-equiv="refresh" content="0;url=/scheduler.html#custom">
-<script>location.replace("/scheduler.html#custom");</script>
+<!-- web7: the order app merged into the production tool. This page redirects to the
+     unified Orders tab (scheduler.html#custom). One tool, one login.
+     web10.1: cache-bust the redirect with a timestamp so a fresh scheduler.html loads
+     every visit — Vercel's edge was serving a stale cached copy of the app. -->
+<script>location.replace("/scheduler.html?v=" + Date.now() + "#custom");</script>
 </head>
 <body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#045863,#00acb2);font-family:'Avenir Next','Avenir',-apple-system,'Segoe UI',Roboto,sans-serif">
 <a href="/scheduler.html#custom" style="color:#fff;text-decoration:none;font-size:15px;font-weight:600">Orders now live in the production tool — tap here if you aren't redirected.</a>

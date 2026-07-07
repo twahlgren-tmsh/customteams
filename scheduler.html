@@ -483,7 +483,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-07-web15";
+const BUILD="2026-07-07-web16";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -3596,24 +3596,48 @@ document.getElementById("typein").addEventListener("keydown", e=>{ if(e.key==="E
 
 
 /* ============================================================
-   web15: BACK IN STOCK (lead-only) — Klaviyo restock waitlist.
-   Digest (no PII) arrives via sched_state "tmsh-bis" (sync-bis
-   edge fn, morning cron); subscriber rows read live from the
-   lead-only bis_signups table. Emails never enter sched_state.
+   web16: BACK IN STOCK (lead-only) — Klaviyo restock waitlist.
+   Digest (no PII) via sched_state "tmsh-bis" (sync-bis edge fn,
+   morning cron); subscriber rows live from lead-only bis_signups.
+   Visual pass: fabric-style snapshot tiles (tap to focus), swatch
+   product cards, and a per-pattern modal with shopper actions +
+   restock steppers that post straight to Shopify (post-inventory).
    ============================================================ */
-let BIS_ROWS=[]; let _bisSelf=0;
+let BIS_ROWS=[]; let _bisSelf=0; let bisFocus=null; let _bisModalPat=null; let _bmQty=null;
+const BIS_QVAR=["Ponytail / Classic Cotton","Ponytail / LUXE Satin","Taylor'ed Euro / Classic Cotton","Taylor'ed Euro / LUXE Satin","The Original / Classic Cotton","Skull Hat / Classic Cotton","Skull Hat / LUXE Satin"];
 async function loadBIS(){ if(typeof isLead!=="undefined" && !isLead){ BIS_ROWS=[]; return; }
  try{ const {data,error}=await sb.from("bis_signups").select("*").order("ts",{ascending:false}).limit(800); BIS_ROWS=error?[]:(data||[]); }catch(e){ BIS_ROWS=[]; } }
 function bisBadge(name){ try{ const d=window.BIS_DIG; if(!d||!d.patterns) return "";
  const n=(name||"").toLowerCase().trim(); const hit=d.patterns.find(p=>(p.p||"").toLowerCase().trim()===n);
  return (hit&&hit.act)?` <span class="pill2" style="background:#FBE8D8;color:#B45309" title="restock waitlist — see Back in Stock tab">🔔 ${hit.act} waiting</span>`:""; }catch(e){ return ""; } }
 function bisEstHats(yd){ return Math.max(0, Math.floor((parseFloat(yd)||0)*3.25)); } /* 12yd bolt ≈ 39 hats */
+function bisChip(txt,bg,fg){ return `<span class="pill2" style="background:${bg};color:${fg}">${txt}</span>`; }
+function bisProdTitle(p){ const r=BIS_ROWS.find(x=>x.pattern===p&&x.product_name); return (r&&r.product_name)||(p+" Scrub Hat"); }
+function bisActive(){ return BIS_ROWS.filter(r=>r.status==="open"||r.status==="contacted"); }
+function bisProxySet(){ const byEm={}; bisActive().forEach(r=>{ (byEm[r.email]=byEm[r.email]||[]).push(r); });
+ return new Set(Object.keys(byEm).filter(e=>byEm[e].length>=2 && new Set(byEm[e].map(r=>(r.style||"")+"|"+(r.lining||""))).size===1)); }
+function bisRestockRows(p){
+ const waiting={}; bisActive().filter(r=>r.pattern===p).forEach(r=>{ const v=r.variant_name||""; if(v) waiting[v]=(waiting[v]||0)+1; });
+ const rows=BIS_QVAR.map(v=>({v, w:waiting[v]||0}));
+ Object.keys(waiting).forEach(v=>{ if(!BIS_QVAR.includes(v)) rows.push({v, w:waiting[v]}); });
+ return rows;
+}
 async function bisSet(ids, patch, msg){ if(!ids.length) return; _bisSelf=Date.now();
  try{ const {error}=await sb.from("bis_signups").update(Object.assign({updated_at:new Date().toISOString()},patch)).in("event_id",ids);
   if(error){ boardToast("Couldn't save — "+error.message); return; }
   await loadBIS(); renderBIS(); if(msg) boardToast(msg);
  }catch(e){ boardToast("Couldn't save — check connection"); } }
-function bisChip(txt,bg,fg){ return `<span class="pill2" style="background:${bg};color:${fg}">${txt}</span>`; }
+function bisStyLine(p){ return Object.entries(p.styles||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,n])=>`${n}× ${k}`).join(" · "); }
+function bisCard(p, kind){
+ const esc=p.p.replace(/"/g,'&quot;');
+ const inv=p.oosN?bisChip("sold out","#F7DCD3","#C2452D"):(p.backN?bisChip("restocked","#DDF0E6","#0F8A6D"):"");
+ const wk=p.new7?` <span class="pill2" style="background:#FBF3D8;color:#8A6D1B">+${p.new7} this wk</span>`:"";
+ let mid="";
+ if(kind==="makes"){ const rem=OVR.bisrem[p.p]||""; 
+  mid=`<div class="fsub" style="margin-top:6px">Remnant: <input data-bisrem="${esc}" value="${rem}" inputmode="decimal" style="width:50px;padding:3px 6px;border:1px solid #DDD8CC;border-radius:7px"> yd ≈ <b data-bisest="${esc}">${bisEstHats(rem)}</b> hats</div>`; }
+ if(kind==="quick") mid=`<div class="fsub" style="margin-top:6px;color:#0F8A6D">Back in stock — these shoppers can buy right now.</div>`;
+ return `<div class="focard">${typeof fabCardImg==="function"?fabCardImg(p.p):""}<div class="fbody"><div class="ftitle">${p.p} ${inv}${wk}</div><div class="fsub"><b>${p.act} waiting</b> · ${p.flex+p.proxy} flexible<br>${bisStyLine(p)}</div>${mid}</div><div class="factions"><button class="btn" data-bisopen="${esc}">👥 Shoppers</button><button class="btn go" data-bisrestock="${esc}">＋ Restock ▸</button></div></div>`;
+}
 function renderBIS(){
  const sumEl=document.getElementById("bissummary"), wrap=document.getElementById("biswrap");
  if(!sumEl||!wrap) return;
@@ -3625,84 +3649,141 @@ function renderBIS(){
   wrap.innerHTML=`<div class="note">When a sold-out pattern gets "notify me" signups, this tab shows which patterns have real demand, who'd take a substitute, and what's worth making from remnant fabric.<br><br>To turn it on: in Klaviyo → Settings → API Keys create a <b>read-only private key</b> (Events, Profiles, Metrics), add it as <b>KLAVIYO_API_KEY</b> in Supabase → Edge Functions → Secrets, then tap refresh.<div style="margin-top:10px"><button class="btn go" id="bisrefresh">↻ Pull demand from Klaviyo</button></div></div>`;
   wireBis(); return;
  }
- const actRows=BIS_ROWS.filter(r=>r.status==="open"||r.status==="contacted");
- const byEm={}; actRows.forEach(r=>{ (byEm[r.email]=byEm[r.email]||[]).push(r); });
- const proxySet=new Set(Object.keys(byEm).filter(e=>byEm[e].length>=2 && new Set(byEm[e].map(r=>(r.style||"")+"|"+(r.lining||""))).size===1));
- const rowsBy={}; actRows.forEach(r=>{ (rowsBy[r.pattern]=rowsBy[r.pattern]||[]).push(r); });
+ const actRows=bisActive();
  const conv=BIS_ROWS.filter(r=>r.status==="converted").sort((a,b)=>(b.converted_at||"").localeCompare(a.converted_at||""));
- const quick=actRows.filter(r=>r.status==="open"&&r.oos===false);
- const totAct=actRows.length, totOOS=actRows.filter(r=>r.oos===true).length;
+ const quickRows=actRows.filter(r=>r.status==="open"&&r.oos===false);
+ const totAct=actRows.length;
  const revAll=(D.conv&&D.conv.revAll)||conv.reduce((s,r)=>s+Number(r.revenue||0),0);
  const rev30=(D.conv&&D.conv.rev30)||0;
- sumEl.innerHTML=`<div class="cosnap">
-  <div class="cs"><b>${D.week?D.week.subs:0}</b><span>signups this week</span></div>
-  <div class="cs"><b>${totAct}</b><span>on the waitlist</span></div>
-  <div class="cs"><b style="${totOOS?'color:#C2452D':''}">${totOOS}</b><span>still sold out</span></div>
-  <div class="cs"><b style="${revAll?'color:#0F8A6D':''}">$${Math.round(revAll)}</b><span>won back${rev30?` · $${Math.round(rev30)} this mo`:''}</span></div>
- </div><div class="fmeta" style="text-align:center;margin-top:7px">Fresh from Klaviyo as of ${D.asof||"the last sync"} — updates itself every morning.</div>`;
- const openB=new Set([...document.querySelectorAll('#biswrap details[data-bisp]')].filter(d=>d.open).map(d=>d.dataset.bisp));
- let h=`<div class="coctl"><button class="btn" id="bisrefresh">↻ Refresh demand</button><span class="fmeta" style="margin:0">Reads Klaviyo signups + Shopify stock, and checks contacted shoppers for purchases (same pattern, 30 days).</span></div>`;
- /* 1) suggested makes */
- const sug=(D.suggested||[]).map(name=>(D.patterns||[]).find(p=>p.p===name)).filter(Boolean);
- h+=`<div class="fabsec sechead">▸ Suggested makes this week <span class="pill2">${sug.length}</span></div>`;
- if(sug.length){
-  h+=`<div class="fmeta" style="margin:-4px 0 9px">Sold-out patterns with the most demand and the most flexible shoppers — best candidates for a small remnant run. Set the scrap yards you have and it estimates the hats you could get.</div><div class="fogrid">`;
-  sug.forEach(p=>{ const rem=OVR.bisrem[p.p]||""; const est=bisEstHats(rem);
-   const st=Object.entries(p.styles||{}).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`${n}× ${k}`).join(" · ");
-   h+=`<div class="focard">${typeof fabCardImg==="function"?fabCardImg(p.p):""}<div class="fbody"><div class="ftitle">${p.p}</div><div class="fsub"><b>${p.act} waiting</b>${p.new7?` (+${p.new7} this wk)`:""} · ${p.flex+p.proxy} flexible<br>${st}</div><div class="fsub" style="margin-top:5px">Remnant: <input data-bisrem="${p.p.replace(/"/g,'&quot;')}" value="${rem}" inputmode="decimal" style="width:52px;padding:3px 6px;border:1px solid #DDD8CC;border-radius:7px"> yd ≈ <b data-bisest="${p.p.replace(/"/g,'&quot;')}">${est}</b> hats</div></div><div class="factions"><button class="btn" data-biscut="1" style="flex:0 0 auto">✂ Plan in Cut</button><button class="btn go" data-biscopy="${p.p.replace(/"/g,'&quot;')}">⧉ Copy emails</button></div></div>`; });
-  h+=`</div>`;
- } else h+=`<div class="note">No sold-out patterns with waitlist demand right now. 👍</div>`;
- /* 2) quick wins */
- h+=`<div class="fabsec sechead">Quick wins — already restocked <span class="pill2">${quick.length}</span></div>`;
- if(quick.length){
-  h+=`<div class="fmeta" style="margin:-4px 0 9px">These shoppers' variant is back in stock — the standard back-in-stock email should already fire; a personal nudge converts even better.</div>`;
-  quick.forEach(r=>{ h+=`<div class="note" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap"><b>${r.pattern}</b> — <a href="mailto:${r.email}" style="color:#5B50D6">${r.email}</a> <span class="fmeta" style="margin:0">${r.variant_name||""}</span><span style="margin-left:auto"><button class="btn" data-bisc="${r.event_id}">✉ Contacted</button> <button class="btn" data-bisx="${r.event_id}">✕</button></span></div>`; });
- } else h+=`<div class="note">None right now.</div>`;
- /* 3) demand by pattern */
  const pats=(D.patterns||[]).filter(p=>p.act>0);
- h+=`<div class="fabsec sechead">All demand by pattern <span class="pill2">${pats.length}</span></div>`;
- if(!pats.length) h+=`<div class="note">No active waitlist signups. When zero people are waiting, there's nothing to make.</div>`;
- pats.forEach(p=>{
-  const rows=(rowsBy[p.p]||[]);
-  const st=Object.entries(p.styles||{}).sort((a,b)=>b[1]-a[1]).map(([k,n])=>bisChip(`${n}× ${k}`,"#EFEBE1","#6B6455")).join(" ");
-  const inv=p.oosN?bisChip("still sold out","#F7DCD3","#C2452D"):(p.backN?bisChip("restocked","#DDF0E6","#0F8A6D"):"");
-  h+=`<details class="upnext" data-bisp="${p.p.replace(/"/g,'&quot;')}"${openB.has(p.p)?" open":""}><summary><b>${p.p}</b> — ${p.act} waiting${p.new7?` (+${p.new7} this wk)`:""} ${inv}</summary>
-  <div style="margin:7px 0">${st}${(p.flex||p.proxy)?` <span class="fmeta" style="margin:0">· ${p.flex} said they're flexible${p.proxy?`, ${p.proxy} reliably repeat the same style`:""}</span>`:""}</div>
-  <div style="display:flex;gap:7px;margin-bottom:7px"><button class="btn" data-biscopy="${p.p.replace(/"/g,'&quot;')}">⧉ Copy emails</button><button class="btn go" data-bisall="${p.p.replace(/"/g,'&quot;')}">✉ Mark all contacted</button></div>`;
-  rows.forEach(r=>{
-   const fx=[r.flex_style?"flex style":"",r.flex_lining?"flex lining":"",proxySet.has(r.email)?"★ repeats "+(r.style||"")+" / "+(r.lining||""):""].filter(Boolean).join(" · ");
-   const when=new Date(r.ts).toLocaleDateString("en-US",{month:"short",day:"numeric"});
-   const stat=r.status==="contacted"?bisChip("contacted "+(r.contacted_at?new Date(r.contacted_at).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""),"#E4E9F5","#3D5AA9"):"";
-   const act=r.status==="open"?`<button class="btn" data-bisc="${r.event_id}">✉ Contacted</button> <button class="btn" data-bisx="${r.event_id}" title="dismiss">✕</button>`:`<button class="btn" data-bisro="${r.event_id}" title="back to open">↩</button>`;
-   h+=`<div class="note" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:5px 0"><span class="fmeta" style="margin:0">${when}</span> <a href="mailto:${r.email}" style="color:#5B50D6">${r.name||r.email}</a> <span class="fmeta" style="margin:0">${r.variant_name||""}${r.oos===false?" · back in stock":""}</span>${fx?` ${bisChip(fx,"#FBF3D8","#8A6D1B")}`:""} ${stat}<span style="margin-left:auto">${act}</span></div>`;
-  });
-  h+=`</details>`;
+ const sug=(D.suggested||[]).map(name=>pats.find(p=>p.p===name)).filter(Boolean);
+ const quickPats=pats.filter(p=>p.backN>0);
+ sumEl.innerHTML=`<div class="cosnap">
+  <div class="cs${bisFocus==='makes'?' act':''}" data-bisjump="makes"><b style="${sug.length?'color:#C2452D':''}">${sug.length}</b><span>suggested makes</span></div>
+  <div class="cs${bisFocus==='quick'?' act':''}" data-bisjump="quick"><b style="${quickRows.length?'color:#0F8A6D':''}">${quickRows.length}</b><span>quick wins</span></div>
+  <div class="cs${bisFocus==='demand'?' act':''}" data-bisjump="demand"><b>${totAct}</b><span>on the waitlist</span></div>
+  <div class="cs${bisFocus==='won'?' act':''}" data-bisjump="won"><b style="${revAll?'color:#0F8A6D':''}">$${Math.round(revAll)}</b><span>won back${rev30?` · $${Math.round(rev30)} this mo`:''}</span></div>
+ </div>${bisFocus?`<div style="text-align:center;margin-top:9px"><button class="btn" id="bisshowall">↤ Show all sections</button></div>`:`<div class="fmeta" style="text-align:center;margin-top:7px">Tap a box to focus that section · fresh from Klaviyo as of ${D.asof||"the last sync"} — updates itself every morning.</div>`}`;
+ const so=id=>!bisFocus||bisFocus===id;
+ const secHead=(id,label,count)=>`<div class="fabsec sechead" data-bissec="${id}">${label} <span class="pill2">${count}</span>${(bisFocus&&bisFocus!==id)?'<span class="secshow">show</span>':''}</div>`;
+ let h=`<div class="coctl"><button class="btn" id="bisrefresh">↻ Refresh demand</button><span class="fmeta" style="margin:0">${D.week?D.week.subs:0} signups this week from ${D.week?D.week.shoppers:0} shoppers. Contacted shoppers are checked for purchases (same pattern, 30 days) every morning.</span></div>`;
+ /* 1) SUGGESTED MAKES */
+ h+=secHead("makes","▸ Suggested makes this week",sug.length);
+ if(so("makes")){
+  if(sug.length){ h+=`<div class="fmeta" style="margin:-4px 0 9px">Sold-out patterns with the most demand and the most flexible shoppers — best candidates for a small remnant run. Set the scrap yards you have to see the hats you'd get, then ＋ Restock to post the finished ones.</div><div class="fogrid">`;
+   sug.forEach(p=>{ h+=bisCard(p,"makes"); }); h+=`</div>`;
+  } else h+=`<div class="note">No sold-out patterns with waitlist demand right now. 👍</div>`;
+ }
+ /* 2) QUICK WINS */
+ h+=secHead("quick","Quick wins — already restocked",quickRows.length);
+ if(so("quick")){
+  if(quickPats.length){ h+=`<div class="fmeta" style="margin:-4px 0 9px">The variant these shoppers wanted is back in stock — a personal nudge converts even better than the automatic email.</div><div class="fogrid">`;
+   quickPats.forEach(p=>{ h+=bisCard(p,"quick"); }); h+=`</div>`;
+  } else h+=`<div class="note">None right now.</div>`;
+ }
+ /* 3) ALL DEMAND */
+ h+=secHead("demand","All demand by pattern",pats.length);
+ if(so("demand")){
+  if(pats.length){ h+=`<div class="fmeta" style="margin:-4px 0 9px">Every pattern with someone waiting, most demand first. Open a card to see who's waiting, reach out, and restock.</div><div class="fogrid">`;
+   pats.forEach(p=>{ h+=bisCard(p,"demand"); }); h+=`</div>`;
+  } else h+=`<div class="note">No active waitlist signups.</div>`;
+ }
+ /* 4) WON BACK */
+ h+=secHead("won","Purchases from this effort",conv.length);
+ if(so("won")){
+  if(conv.length){ h+=`<div class="fmeta" style="margin:-4px 0 9px">Contacted shoppers who bought that pattern within 30 days — matched automatically. Total won back: <b>$${Math.round(revAll)}</b>.</div>`;
+   conv.slice(0,25).forEach(r=>{ h+=`<div class="note" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap"><span class="fmeta" style="margin:0">${r.converted_at?new Date(r.converted_at).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""}</span><b>${r.pattern}</b> — ${r.name||r.email} <span style="margin-left:auto"><b style="color:#0F8A6D">$${Math.round(Number(r.revenue||0))}</b> <span class="fmeta" style="margin:0">${r.converted_order||""}</span></span></div>`; });
+  } else h+=`<div class="note">Nothing yet — mark shoppers "contacted" after you reach out, and purchases get matched automatically.</div>`;
+ }
+ wrap.innerHTML=h;
+ renderBisModal();
+ wireBis();
+}
+function ensureBisModal(){ let m=document.getElementById("bismodal");
+ if(!m){ m=document.createElement("div"); m.id="bismodal";
+  m.style.cssText="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:250;overflow:auto;padding:3vh 3vw";
+  document.body.appendChild(m);
+  m.addEventListener("click",e=>{ if(e.target.id==="bismodal") closeBisModal(); });
+ } return m; }
+function openBisModal(pat, toRestock){ _bisModalPat=pat; _bmQty=null; renderBisModal();
+ const m=ensureBisModal(); m.style.display="block";
+ if(toRestock){ const r=document.getElementById("bmrestock"); if(r) r.scrollIntoView({block:"start"}); } }
+function closeBisModal(){ _bisModalPat=null; _bmQty=null; const m=document.getElementById("bismodal"); if(m) m.style.display="none"; }
+function renderBisModal(){
+ if(!_bisModalPat) return;
+ const m=ensureBisModal(); const pat=_bisModalPat;
+ const D=window.BIS_DIG||{}; const p=((D.patterns)||[]).find(x=>x.p===pat)||{p:pat,act:0,flex:0,proxy:0,oosN:0,backN:0,styles:{}};
+ const rows=bisActive().filter(r=>r.pattern===pat);
+ const proxySet=bisProxySet();
+ if(_bmQty===null){ _bmQty={}; bisRestockRows(pat).forEach(x=>{ _bmQty[x.v]=x.w; }); }
+ const inv=p.oosN?bisChip("still sold out","#F7DCD3","#C2452D"):(p.backN?bisChip("restocked","#DDF0E6","#0F8A6D"):"");
+ let h=`<div style="max-width:760px;margin:0 auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.25)">
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #EDEAE2">
+   <div style="width:52px;height:52px;border-radius:12px;overflow:hidden;flex:0 0 auto;position:relative">${typeof fabCardImg==="function"?fabCardImg(pat):""}</div>
+   <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:750">${pat} ${inv}</div><div class="fmeta" style="margin:2px 0 0">${p.act} waiting · ${p.flex+p.proxy} flexible · ${bisStyLine(p)||"—"}</div></div>
+   <button class="btn" id="bmclose" style="flex:0 0 auto">✕</button>
+  </div>
+  <div style="padding:14px 18px">
+  <div class="fabsec" style="margin-top:0">Who's waiting <span class="pill2">${rows.length}</span></div>
+  <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap"><button class="btn" data-biscopy="${pat.replace(/"/g,'&quot;')}">⧉ Copy emails</button><button class="btn go" data-bisall="${pat.replace(/"/g,'&quot;')}">✉ Mark all contacted</button></div>`;
+ rows.forEach(r=>{
+  const fx=[r.flex_style?"flex style":"",r.flex_lining?"flex lining":"",proxySet.has(r.email)?"★ repeats "+(r.style||"")+" / "+(r.lining||""):""].filter(Boolean).join(" · ");
+  const when=new Date(r.ts).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  const stat=r.status==="contacted"?bisChip("contacted "+(r.contacted_at?new Date(r.contacted_at).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""),"#E4E9F5","#3D5AA9"):"";
+  const act=r.status==="open"?`<button class="btn" data-bisc="${r.event_id}">✉ Contacted</button> <button class="btn" data-bisx="${r.event_id}" title="dismiss">✕</button>`:`<button class="btn" data-bisro="${r.event_id}" title="back to open">↩</button>`;
+  h+=`<div class="note" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:5px 0"><span class="fmeta" style="margin:0">${when}</span> <a href="mailto:${r.email}" style="color:#5B50D6">${r.name||r.email}</a> <span class="fmeta" style="margin:0">${r.variant_name||""}${r.oos===false?" · back in stock":""}</span>${fx?` ${bisChip(fx,"#FBF3D8","#8A6D1B")}`:""} ${stat}<span style="margin-left:auto">${act}</span></div>`;
  });
- /* 4) purchases won back */
- h+=`<div class="fabsec sechead">Purchases from this effort <span class="pill2">${conv.length}</span></div>`;
- if(conv.length){
-  h+=`<div class="fmeta" style="margin:-4px 0 9px">Contacted shoppers who bought that pattern within 30 days — checked automatically each morning. Total won back: <b>$${Math.round(revAll)}</b>.</div>`;
-  conv.slice(0,25).forEach(r=>{ h+=`<div class="note" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap"><span class="fmeta" style="margin:0">${r.converted_at?new Date(r.converted_at).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""}</span><b>${r.pattern}</b> — ${r.name||r.email} <span style="margin-left:auto"><b style="color:#0F8A6D">$${Math.round(Number(r.revenue||0))}</b> <span class="fmeta" style="margin:0">${r.converted_order||""}</span></span></div>`; });
- } else h+=`<div class="note">Nothing yet — mark shoppers "contacted" after you reach out, and purchases get matched automatically.</div>`;
- wrap.innerHTML=h; wireBis();
+ if(!rows.length) h+=`<div class="note">No active signups for this pattern.</div>`;
+ const tot=Object.values(_bmQty).reduce((s,q)=>s+(q||0),0);
+ h+=`<div class="fabsec" id="bmrestock">＋ Restock — add finished hats to Shopify <span class="pill2">${tot}</span></div>
+ <div class="fmeta" style="margin:-2px 0 9px">Prefilled with what the waitlist wants. Adjust to what you actually made, then upload — it posts to <b>${bisProdTitle(pat)}</b> the same way "Finish &amp; post" does, and tomorrow's sync flips these shoppers to quick wins.</div>`;
+ bisRestockRows(pat).forEach(x=>{ const q=_bmQty[x.v]||0;
+  h+=`<div style="display:flex;align-items:center;gap:9px;padding:6px 2px;border-bottom:1px dashed #EDEAE2"><span style="flex:1;font-size:13px">${x.v}</span>${x.w?bisChip(x.w+" waiting","#FBE8D8","#B45309"):""}<button class="btn" data-bmminus="${x.v.replace(/"/g,'&quot;')}" style="min-width:34px">−</button><b style="min-width:26px;text-align:center;${q?'':'opacity:.35'}">${q}</b><button class="btn" data-bmplus="${x.v.replace(/"/g,'&quot;')}" style="min-width:34px">＋</button></div>`; });
+ h+=`<div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn go" id="bmpost"${tot?"":" disabled"}>⬆ Add ${tot} hat${tot===1?"":"s"} to Shopify</button><span class="fmeta" style="margin:0">Inventory only — no emails are sent.</span></div>
+ </div></div>`;
+ m.innerHTML=h;
+ const c=document.getElementById("bmclose"); if(c) c.onclick=closeBisModal;
+ m.querySelectorAll("[data-bmminus]").forEach(b=>b.onclick=()=>{ const v=b.dataset.bmminus; _bmQty[v]=Math.max(0,(_bmQty[v]||0)-1); renderBisModal(); });
+ m.querySelectorAll("[data-bmplus]").forEach(b=>b.onclick=()=>{ const v=b.dataset.bmplus; _bmQty[v]=(_bmQty[v]||0)+1; renderBisModal(); });
+ m.querySelectorAll("[data-bisc],[data-bisx],[data-bisro],[data-bisall],[data-biscopy]").forEach(b=>wireBisAction(b));
+ const up=document.getElementById("bmpost"); if(up) up.onclick=async()=>{
+  const lines=Object.entries(_bmQty).filter(([v,q])=>q>0).map(([v,q])=>({prod:bisProdTitle(pat),variant:v,qty:q}));
+  const t=lines.reduce((s,l)=>s+l.qty,0); if(!t) return;
+  if(!confirm(`Add ${t} finished hat${t===1?"":"s"} (${lines.length} variant line${lines.length===1?"":"s"}) to Shopify inventory for ${pat}?`)) return;
+  up.disabled=true; up.textContent="⬆ Uploading…";
+  try{ const {data,error}=await sb.functions.invoke("post-inventory",{body:{lines}});
+   if(error||!data||!data.ok){ alert("Upload failed: "+((data&&data.error)||(error&&error.message)||"unknown error")); renderBisModal(); return; }
+   const fails=(data.failed||[]);
+   boardToast(`⬆ ${data.postedUnits||t} hats added to Shopify${fails.length?` · ${fails.length} line${fails.length===1?"":"s"} failed`:""} ✓`);
+   Object.keys(_bmQty).forEach(k=>_bmQty[k]=0);
+   renderBisModal();
+   try{ sb.functions.invoke("sync-bis").then(()=>loadBIS().then(()=>{ renderBIS(); })); }catch(e){}
+  }catch(e){ alert("Upload failed — check connection"); renderBisModal(); }
+ };
+}
+function wireBisAction(b){
+ if(b.dataset.bisc!==undefined) b.onclick=()=>bisSet([b.dataset.bisc],{status:"contacted",contacted_at:new Date().toISOString()},"✉ Marked contacted — purchases will be matched automatically");
+ else if(b.dataset.bisx!==undefined) b.onclick=()=>bisSet([b.dataset.bisx],{status:"dismissed"},"Dismissed");
+ else if(b.dataset.bisro!==undefined) b.onclick=()=>bisSet([b.dataset.bisro],{status:"open",contacted_at:null},"Back to open");
+ else if(b.dataset.bisall!==undefined) b.onclick=()=>{ const ids=BIS_ROWS.filter(r=>r.pattern===b.dataset.bisall&&r.status==="open").map(r=>r.event_id); bisSet(ids,{status:"contacted",contacted_at:new Date().toISOString()},`✉ ${ids.length} marked contacted`); };
+ else if(b.dataset.biscopy!==undefined) b.onclick=()=>{ const em=[...new Set(BIS_ROWS.filter(r=>r.pattern===b.dataset.biscopy&&(r.status==="open"||r.status==="contacted")).map(r=>r.email))].join(", ");
+  try{ navigator.clipboard.writeText(em); boardToast("⧉ "+em.split(", ").filter(Boolean).length+" emails copied"); }catch(e){ prompt("Copy emails:",em); } };
 }
 function wireBis(){
  const rf=document.getElementById("bisrefresh"); if(rf) rf.onclick=async()=>{ rf.disabled=true; rf.textContent="↻ Pulling…";
-  try{ const {data,error}=await sb.functions.invoke("sync-bis"); 
+  try{ const {data,error}=await sb.functions.invoke("sync-bis");
    if(error||!data||!data.ok){ boardToast((data&&data.error)?data.error:"Refresh failed — try again"); }
    else{ await loadBIS(); boardToast(`✓ ${data.events} signups scanned · ${data.inserted} new · ${data.conversions} purchases matched`); }
   }catch(e){ boardToast("Refresh failed — check connection"); }
   rf.disabled=false; rf.textContent="↻ Refresh demand"; renderBIS(); };
- document.querySelectorAll("[data-bisc]").forEach(b=>b.onclick=()=>bisSet([b.dataset.bisc],{status:"contacted",contacted_at:new Date().toISOString()},"✉ Marked contacted — purchases will be matched automatically"));
- document.querySelectorAll("[data-bisx]").forEach(b=>b.onclick=()=>bisSet([b.dataset.bisx],{status:"dismissed"},"Dismissed"));
- document.querySelectorAll("[data-bisro]").forEach(b=>b.onclick=()=>bisSet([b.dataset.bisro],{status:"open",contacted_at:null},"Back to open"));
- document.querySelectorAll("[data-bisall]").forEach(b=>b.onclick=()=>{ const ids=BIS_ROWS.filter(r=>r.pattern===b.dataset.bisall&&r.status==="open").map(r=>r.event_id); bisSet(ids,{status:"contacted",contacted_at:new Date().toISOString()},`✉ ${ids.length} marked contacted`); });
- document.querySelectorAll("[data-biscopy]").forEach(b=>b.onclick=()=>{ const em=[...new Set(BIS_ROWS.filter(r=>r.pattern===b.dataset.biscopy&&(r.status==="open"||r.status==="contacted")).map(r=>r.email))].join(", ");
-  try{ navigator.clipboard.writeText(em); boardToast("⧉ "+em.split(", ").filter(Boolean).length+" emails copied"); }catch(e){ prompt("Copy emails:",em); } });
- document.querySelectorAll("[data-biscut]").forEach(b=>b.onclick=()=>{ const n=document.querySelector('nav button[data-v="cut"]'); if(n) n.click(); });
+ document.querySelectorAll("[data-bisjump]").forEach(t=>t.onclick=()=>{ bisFocus=(bisFocus===t.dataset.bisjump)?null:t.dataset.bisjump; renderBIS(); });
+ const sa=document.getElementById("bisshowall"); if(sa) sa.onclick=()=>{ bisFocus=null; renderBIS(); };
+ document.querySelectorAll("[data-bissec]").forEach(x=>x.onclick=()=>{ if(bisFocus && bisFocus!==x.dataset.bissec){ bisFocus=x.dataset.bissec; renderBIS(); } });
+ document.querySelectorAll("[data-bisopen]").forEach(b=>b.onclick=()=>openBisModal(b.dataset.bisopen,false));
+ document.querySelectorAll("[data-bisrestock]").forEach(b=>b.onclick=()=>openBisModal(b.dataset.bisrestock,true));
+ document.querySelectorAll("#biswrap [data-bisc],#biswrap [data-bisx],#biswrap [data-bisro],#biswrap [data-bisall],#biswrap [data-biscopy]").forEach(b=>wireBisAction(b));
  document.querySelectorAll("[data-bisrem]").forEach(i=>i.onchange=()=>{ if(!OVR.bisrem)OVR.bisrem={}; OVR.bisrem[i.dataset.bisrem]=i.value; save(); const e=document.querySelector('[data-bisest="'+i.dataset.bisrem.replace(/"/g,'\\"')+'"]'); if(e) e.textContent=bisEstHats(i.value); });
 }
-
 document.querySelectorAll("nav button").forEach(t=>t.onclick=()=>{
  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===t));
  document.querySelectorAll("section").forEach(s=>s.classList.remove("on"));

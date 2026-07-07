@@ -483,7 +483,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-07-web16";
+const BUILD="2026-07-07-web17";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -3617,7 +3617,7 @@ function bisActive(){ return BIS_ROWS.filter(r=>r.status==="open"||r.status==="c
 function bisProxySet(){ const byEm={}; bisActive().forEach(r=>{ (byEm[r.email]=byEm[r.email]||[]).push(r); });
  return new Set(Object.keys(byEm).filter(e=>byEm[e].length>=2 && new Set(byEm[e].map(r=>(r.style||"")+"|"+(r.lining||""))).size===1)); }
 function bisRestockRows(p){
- const waiting={}; bisActive().filter(r=>r.pattern===p).forEach(r=>{ const v=r.variant_name||""; if(v) waiting[v]=(waiting[v]||0)+1; });
+ const waiting={}; bisActive().filter(r=>r.pattern===p && !(r.oos===false && r.covered===true)).forEach(r=>{ const v=r.variant_name||""; if(v) waiting[v]=(waiting[v]||0)+1; }); /* covered restocks don't need making */
  const rows=BIS_QVAR.map(v=>({v, w:waiting[v]||0}));
  Object.keys(waiting).forEach(v=>{ if(!BIS_QVAR.includes(v)) rows.push({v, w:waiting[v]}); });
  return rows;
@@ -3631,12 +3631,13 @@ function bisStyLine(p){ return Object.entries(p.styles||{}).sort((a,b)=>b[1]-a[1
 function bisCard(p, kind){
  const esc=p.p.replace(/"/g,'&quot;');
  const inv=p.oosN?bisChip("sold out","#F7DCD3","#C2452D"):(p.backN?bisChip("restocked","#DDF0E6","#0F8A6D"):"");
+ const und=p.under?bisChip(p.under+" undersupplied","#FBE8D8","#B45309"):"";
  const wk=p.new7?` <span class="pill2" style="background:#FBF3D8;color:#8A6D1B">+${p.new7} this wk</span>`:"";
  let mid="";
  if(kind==="makes"){ const rem=OVR.bisrem[p.p]||""; 
   mid=`<div class="fsub" style="margin-top:6px">Remnant: <input data-bisrem="${esc}" value="${rem}" inputmode="decimal" style="width:50px;padding:3px 6px;border:1px solid #DDD8CC;border-radius:7px"> yd ≈ <b data-bisest="${esc}">${bisEstHats(rem)}</b> hats</div>`; }
  if(kind==="quick") mid=`<div class="fsub" style="margin-top:6px;color:#0F8A6D">Back in stock — these shoppers can buy right now.</div>`;
- return `<div class="focard">${typeof fabCardImg==="function"?fabCardImg(p.p):""}<div class="fbody"><div class="ftitle">${p.p} ${inv}${wk}</div><div class="fsub"><b>${p.act} waiting</b> · ${p.flex+p.proxy} flexible<br>${bisStyLine(p)}</div>${mid}</div><div class="factions"><button class="btn" data-bisopen="${esc}">👥 Shoppers</button><button class="btn go" data-bisrestock="${esc}">＋ Restock ▸</button></div></div>`;
+ return `<div class="focard">${typeof fabCardImg==="function"?fabCardImg(p.p):""}<div class="fbody"><div class="ftitle">${p.p} ${inv}${und}${wk}</div><div class="fsub"><b>${p.act} waiting</b> · ${p.flex+p.proxy} flexible<br>${bisStyLine(p)}</div>${mid}</div><div class="factions"><button class="btn" data-bisopen="${esc}">👥 Shoppers</button><button class="btn go" data-bisrestock="${esc}">＋ Restock ▸</button></div></div>`;
 }
 function renderBIS(){
  const sumEl=document.getElementById("bissummary"), wrap=document.getElementById("biswrap");
@@ -3677,7 +3678,7 @@ function renderBIS(){
  /* 2) QUICK WINS */
  h+=secHead("quick","Quick wins — already restocked",quickRows.length);
  if(so("quick")){
-  if(quickPats.length){ h+=`<div class="fmeta" style="margin:-4px 0 9px">The variant these shoppers wanted is back in stock — a personal nudge converts even better than the automatic email.</div><div class="fogrid">`;
+  if(quickPats.length){ h+=`<div class="fmeta" style="margin:-4px 0 9px">The variant these shoppers wanted is back in stock — a personal nudge converts even better than the automatic email. Covered shoppers drop off the make list automatically; if it sells out again before they buy, they come back — up to 3 restocks, then they retire from the list.</div><div class="fogrid">`;
    quickPats.forEach(p=>{ h+=bisCard(p,"quick"); }); h+=`</div>`;
   } else h+=`<div class="note">None right now.</div>`;
  }
@@ -3731,12 +3732,12 @@ function renderBisModal(){
   const when=new Date(r.ts).toLocaleDateString("en-US",{month:"short",day:"numeric"});
   const stat=r.status==="contacted"?bisChip("contacted "+(r.contacted_at?new Date(r.contacted_at).toLocaleDateString("en-US",{month:"short",day:"numeric"}):""),"#E4E9F5","#3D5AA9"):"";
   const act=r.status==="open"?`<button class="btn" data-bisc="${r.event_id}">✉ Contacted</button> <button class="btn" data-bisx="${r.event_id}" title="dismiss">✕</button>`:`<button class="btn" data-bisro="${r.event_id}" title="back to open">↩</button>`;
-  h+=`<div class="note" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:5px 0"><span class="fmeta" style="margin:0">${when}</span> <a href="mailto:${r.email}" style="color:#5B50D6">${r.name||r.email}</a> <span class="fmeta" style="margin:0">${r.variant_name||""}${r.oos===false?" · back in stock":""}</span>${fx?` ${bisChip(fx,"#FBF3D8","#8A6D1B")}`:""} ${stat}<span style="margin-left:auto">${act}</span></div>`;
+  h+=`<div class="note" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:5px 0"><span class="fmeta" style="margin:0">${when}</span> <a href="mailto:${r.email}" style="color:#5B50D6">${r.name||r.email}</a> <span class="fmeta" style="margin:0">${r.variant_name||""}${r.oos===false?" · back in stock":""}</span>${fx?` ${bisChip(fx,"#FBF3D8","#8A6D1B")}`:""}${r.restocks?` ${bisChip("restock #"+r.restocks+"/3","#EFEBE1","#6B6455")}`:""}${(r.oos===false&&r.covered===true)?` ${bisChip("covered — can buy now","#DDF0E6","#0F8A6D")}`:""} ${stat}<span style="margin-left:auto">${act}</span></div>`;
  });
  if(!rows.length) h+=`<div class="note">No active signups for this pattern.</div>`;
  const tot=Object.values(_bmQty).reduce((s,q)=>s+(q||0),0);
  h+=`<div class="fabsec" id="bmrestock">＋ Restock — add finished hats to Shopify <span class="pill2">${tot}</span></div>
- <div class="fmeta" style="margin:-2px 0 9px">Prefilled with what the waitlist wants. Adjust to what you actually made, then upload — it posts to <b>${bisProdTitle(pat)}</b> the same way "Finish &amp; post" does, and tomorrow's sync flips these shoppers to quick wins.</div>`;
+ <div class="fmeta" style="margin:-2px 0 9px">Prefilled with the shoppers still uncovered (a restock that covered someone removes them from the make counts). Adjust to what you actually made, then upload — it posts to <b>${bisProdTitle(pat)}</b> the same way "Finish &amp; post" does, and tomorrow's sync flips these shoppers to quick wins.</div>`;
  bisRestockRows(pat).forEach(x=>{ const q=_bmQty[x.v]||0;
   h+=`<div style="display:flex;align-items:center;gap:9px;padding:6px 2px;border-bottom:1px dashed #EDEAE2"><span style="flex:1;font-size:13px">${x.v}</span>${x.w?bisChip(x.w+" waiting","#FBE8D8","#B45309"):""}<button class="btn" data-bmminus="${x.v.replace(/"/g,'&quot;')}" style="min-width:34px">−</button><b style="min-width:26px;text-align:center;${q?'':'opacity:.35'}">${q}</b><button class="btn" data-bmplus="${x.v.replace(/"/g,'&quot;')}" style="min-width:34px">＋</button></div>`; });
  h+=`<div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn go" id="bmpost"${tot?"":" disabled"}>⬆ Add ${tot} hat${tot===1?"":"s"} to Shopify</button><span class="fmeta" style="margin:0">Inventory only — no emails are sent.</span></div>

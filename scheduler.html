@@ -483,7 +483,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-07-web17";
+const BUILD="2026-07-08-web19";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -960,13 +960,21 @@ function orderToCustom(o){
  if(dn("packaged"))ms["Fold & inspect"]=true;
  if(shippedRow)ms["Shipped"]=true;
  if(deliveredRow)ms["Delivered"]=true;
- const due=o.internal_deadline||o.deadline||o.est_ship||""; 
+ const due=o.internal_deadline||o.deadline||o.est_ship||"";
+ const so=(o.step_opts&&typeof o.step_opts==="object")?o.step_opts:{};
+ const rmin=so.__min||{}, rpct=so.__pct||{}, rsch=so.__sched||{};
  return { id:String(o.order_number||o.id), _db:true, _onum:o.order_number, _ms0:m, _row:o, _done:deliveredRow,
   num:String(o.order_number||"").replace(/^#/,""),
   name:o.internal_name||("Order "+(o.order_number||"")),
   due:due?String(due).slice(0,10):"", styles:o.styles||"",
-  emb:isEmb?12:0, e:isEmb?1:0, pl:isPL?1:0, patch:isPatch?1:0, stepOpts:(o.step_opts&&typeof o.step_opts==="object")?o.step_opts:null,
-  ms, sewPct:dn("sewing")?100:0, embPct:dn("embroidery")?100:0,
+  emb:(rmin.emb!=null?rmin.emb:(isEmb?10:0)), plmin:(rmin.pl!=null?rmin.pl:1.5), patchmin:(rmin.patch!=null?rmin.patch:1.5),
+  e:isEmb?1:0, pl:isPL?1:0, patch:isPatch?1:0, stepOpts:so,
+  ms,
+  sewPct:(rpct.sew!=null?rpct.sew:(dn("sewing")?100:0)),
+  embPct:(rpct.emb!=null?rpct.emb:(dn("embroidery")?100:0)),
+  plPct:(rpct.pl!=null?rpct.pl:(dn("printed_logo")?100:0)),
+  patchPct:(rpct.patch!=null?rpct.patch:(dn("patch")?100:0)),
+  schedSew:!!rsch.sew, schedEmb:!!rsch.emb, schedPL:!!rsch.pl, schedPatch:!!rsch.patch,
   note:((types.join(" · "))||"")+(o.scrub_color?(" · "+o.scrub_color):""),
   scrub:o.scrub_color||"", logo:o.logo||"", ribbon:o.ribbon||"", sthread:o.sewing_thread||"", ethread:o.embroidery_thread||"", place:o.placement||"", font:o.font_option||"", pnotes:o.notes||"", mockup:o.mockup_url||"" };
 }
@@ -988,6 +996,36 @@ const PROD_COL={scrub:"scrub_color",logo:"logo",ribbon:"ribbon",sthread:"sewing_
 let _selfWrite=0;
 function prodField(label,id,field,val){ return `<label style="display:flex;flex-direction:column;font-size:10.5px;color:#7A766B;font-weight:600;gap:2px">${label}<input class="coprodf" data-prod="${id}|${field}" value="${(val||"").replace(/"/g,"&quot;")}" style="border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:13px;font-weight:400;color:var(--ink)"></label>`; }
 async function saveOrderField(o,field,value){ try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){} if(typeof sb==="undefined"||!o._db||!o._onum) return; const col=PROD_COL[field]; if(!col) return; _selfWrite=Date.now(); try{ await sb.from("orders").update({[col]:value, updated_at:new Date().toISOString()}).eq("order_number", o._onum); }catch(e){} }
+// web19: persist per-decoration minutes / % / schedule flags into the order's step_opts jsonb so they survive Shopify syncs
+async function coPersist(o){
+ if(!o) return;
+ o.stepOpts = o.stepOpts || {};
+ o.stepOpts.__min = { emb:coDecoMin(o,"emb"), pl:coDecoMin(o,"pl"), patch:coDecoMin(o,"patch") };
+ o.stepOpts.__pct = { sew:o.sewPct||0, emb:o.embPct||0, pl:o.plPct||0, patch:o.patchPct||0 };
+ o.stepOpts.__sched = { sew:!!o.schedSew, emb:!!o.schedEmb, pl:!!o.schedPL, patch:!!o.schedPatch };
+ try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
+ if(typeof sb!=="undefined" && o._db && o._onum){ _selfWrite=Date.now();
+  try{ await sb.from("orders").update({step_opts:o.stepOpts, updated_at:new Date().toISOString()}).eq("order_number", o._onum); }catch(e){} }
+}
+// web19: save an internal team name (shown in the order header) to the order
+async function coSaveName(o,name){
+ if(!o) return; o.name=name; if(o._row) o._row.internal_name=name;
+ try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
+ if(typeof sb!=="undefined" && o._db && o._onum){ _selfWrite=Date.now();
+  try{ await sb.from("orders").update({internal_name:name||null, updated_at:new Date().toISOString()}).eq("order_number", o._onum); }catch(e){} }
+}
+// web19: downscale a picked/pasted image to a ~640px JPEG data URL, then hand it back
+function coReadImage(file, cb){
+ if(!file) return; const fr=new FileReader();
+ fr.onload=()=>{ const img=new Image(); img.onload=()=>{ const max=640; let w=img.width,h=img.height; if(w>max||h>max){ const s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s); } const cv=document.createElement("canvas"); cv.width=w; cv.height=h; cv.getContext("2d").drawImage(img,0,0,w,h); let url; try{ url=cv.toDataURL("image/jpeg",0.82); }catch(e){ url=fr.result; } cb(url); }; img.onerror=()=>cb(fr.result); img.src=fr.result; };
+ fr.readAsDataURL(file);
+}
+async function coSaveMockup(o,url){
+ if(!o) return; o.mockup=url||"";
+ try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
+ if(typeof sb!=="undefined" && o._db && o._onum){ _selfWrite=Date.now();
+  try{ await sb.from("orders").update({mockup_url:url||null, updated_at:new Date().toISOString()}).eq("order_number", o._onum); }catch(e){} }
+}
 function pushCustomAll(){
  try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
  if(typeof sb==="undefined"||!CLOUD_READY) return;
@@ -1006,7 +1044,7 @@ function pushCustomAll(){
 /* ---------- web9: native time tracker (replaces Clockify) ---------- */
 let RATES={sew:16,emb:17,zeroFor:["Taylor"]}; // overwritten by sched_state key tmsh-rates at boot
 let TE_ALL=[], TE_OPEN={}, _teSelf=0;
-function rateFor(person,kind){ if((RATES.zeroFor||[]).indexOf(person)>=0) return 0; return kind==="emb"?(RATES.emb!=null?RATES.emb:17):(RATES.sew!=null?RATES.sew:16); }
+function rateFor(person,kind){ if((RATES.zeroFor||[]).indexOf(person)>=0) return 0; return (kind==="emb"||kind==="pl")?(RATES.emb!=null?RATES.emb:17):(RATES.sew!=null?RATES.sew:16); }
 function teKindOf(step){ return (step===4||step===14)?"emb":"sew"; } // logo/embroidery steps bill at the emb rate
 function teMin(e){ const a=new Date(e.started_at), b=e.ended_at?new Date(e.ended_at):new Date(); return Math.max(0,(b-a)/60000); }
 function teLabor(fil){ let min=0,cost=0; TE_ALL.forEach(e=>{ if(!fil(e)) return; const m=teMin(e); min+=m; cost+=m/60*rateFor(e.person,e.kind); }); return {min,cost}; }
@@ -1016,8 +1054,9 @@ function teTaskMin(person,meta){ return teLabor(e=>e.person===person && teSameTa
 function blockMeta(b){
  if(b.custom && !b.fold){
   let on=null, tk=b.label||"custom order", kind="sew";
-  try{ const parts=String(b.key||"").split("|"); const id=parts[1]; if(parts[2]==="emb") kind="emb";
-   const o=(typeof CUSTOM!=="undefined"?CUSTOM:[]).find(x=>String(x.id)===id); if(o){ on=String(o.num||o.id); tk=(kind==="emb"?"Embroidery — ":"Sewing — ")+(o.name||tk); } }catch(e){}
+  const KLBL={emb:"Embroidery — ", pl:"Printed logo — ", patch:"Patches — ", sew:"Sewing — "};
+  try{ const parts=String(b.key||"").split("|"); const id=parts[1]; if(parts[2]&&KLBL[parts[2]]) kind=parts[2];
+   const o=(typeof CUSTOM!=="undefined"?CUSTOM:[]).find(x=>String(x.id)===id); if(o){ on=String(o.num||o.id); tk=(KLBL[kind]||"Sewing — ")+(o.name||tk); } }catch(e){}
   return {order_num:on, run_no:null, step:null, seg:null, task:tk, kind};
  }
  if(b.fold) return {order_num:null, run_no:b.run!=null?b.run:null, step:null, seg:null, task:b.label||"Fold & inspect", kind:"sew"};
@@ -1048,9 +1087,33 @@ async function teStop(person, paused){ if(typeof sb==="undefined") return;
   const mins=teMin(open);
   const {error}=await sb.from("time_entries").update({ended_at:new Date().toISOString(), paused:!!paused}).eq("id",open.id);
   if(error){ boardToast("Couldn't stop the timer — "+error.message); return; }
+  if(!paused){ try{ teMarkDone(open); }catch(e){} }   // ✓ Done also marks the step complete in the tracker
   await loadTimeEntries(); render();
-  boardToast(paused? "⏸ Paused — tap ▶ Start to resume" : "✓ "+fmtMin(mins)+" logged for "+person.split(" ")[0]);
+  boardToast(paused? "⏸ Paused — tap ▶ Resume to keep going" : "✓ "+fmtMin(mins)+" logged & marked done for "+person.split(" ")[0]);
  }catch(e){ boardToast("Couldn't stop the timer"); }
+}
+// ✓ Done on a timer marks the underlying step complete — a custom-order decoration/sewing (100%) or a production-run step (its atoms + a done pin), mirroring the Tracker's Done button.
+function teMarkDone(e){
+ if(e.order_num!=null){
+  const o=(typeof CUSTOM!=="undefined"?CUSTOM:[]).find(x=>String(x.num)===String(e.order_num)||String(x.id)===String(e.order_num));
+  if(o){ o.ms=o.ms||{}; const k=e.kind||"sew";
+   if(k==="emb"){ o.embPct=100; o.ms["Embroidery finished"]=true; }
+   else if(k==="pl"){ o.plPct=100; o.ms["Printed logo finished"]=true; }
+   else if(k==="patch"){ o.patchPct=100; o.ms["Patches sewn"]=true; }
+   else { o.sewPct=100; o.ms["Sewing"]=true; }
+   if(typeof coPersist==="function") coPersist(o); else if(typeof saveCO==="function") saveCO();
+  }
+  return;
+ }
+ if(e.run_no!=null && e.step!=null){
+  const run=e.run_no, step=e.step, sg=e.seg; const pk=run+"|"+step+"|"+sg;
+  const ex=OVR.pins[pk]||{}; let d0=ex.startDay, pr=ex.person;
+  if((d0===undefined||!pr) && LAST && LAST.sched){ const bl=LAST.sched.blocks.filter(x=>x.key===pk); if(bl.length){ if(d0===undefined) d0=Math.min(...bl.map(x=>x.day)); if(!pr) pr=bl[0].person; } }
+  OVR.pins[pk]=Object.assign(ex,{startDay:(d0===undefined?0:d0), person:pr||ex.person, hard:true, done:true});
+  ATOMS.forEach(a=>{ if(a.run===run&&a.step===step&&segKey(a.step,a.style)===sg) DONE[atomKey(a.run,a.style,a.i)]=true; });
+  if(OVR.prog) delete OVR.prog[pk];
+  if(typeof save==="function") save();
+ }
 }
 function tmrHtml(person,b){
  if(b.done) return "";
@@ -1064,7 +1127,7 @@ function tmrHtml(person,b){
    `<button class="tmrbtn" data-tpause="${pq}">⏸ Pause</button>`+
    `<button class="tmrbtn stop" data-tstop="${pq}">✓ Done</button></div>`;
  }
- return `<div class="tmrbar"><button class="tmrbtn go" data-tstart="${pq}" data-tmeta="${encodeURIComponent(JSON.stringify(meta))}">▶ Start</button>${tot>=1?`<span class="tmrtot">${fmtMin(tot)} tracked</span>`:""}</div>`;
+ return `<div class="tmrbar"><button class="tmrbtn go" data-tstart="${pq}" data-tmeta="${encodeURIComponent(JSON.stringify(meta))}">${tot>=1?"▶ Resume":"▶ Start"}</button>${tot>=1?`<span class="tmrtot">${fmtMin(tot)} tracked</span>`:""}</div>`;
 }
 function wireTimers(){
  document.querySelectorAll("[data-tstart],[data-tpause],[data-tstop],[data-taddtime]").forEach(el=>{
@@ -1143,6 +1206,8 @@ function buildItems(){
   map[k].total += m; map[k].styles.add(a.style);
   if(!DONE[atomKey(a.run,a.style,a.i)]) map[k].rem += m;
  });
+ // web19: a manual % typed on the Tracker progress bar overrides atom-derived remaining time for that step
+ if(typeof OVR!=="undefined" && OVR.prog){ for(const k in map){ const pc=OVR.prog[k]; if(pc!=null && !isNaN(+pc)){ map[k].rem = map[k].total * (1 - Math.max(0,Math.min(100,+pc))/100); } } }
  return map;
 }
 function gatesOf(item, items){
@@ -1198,7 +1263,9 @@ function buildUnits(items){
    if(shipped(o)) return;
    const t = coTime(o);
    if(o.schedSew && t.sewRem>1) units.push({key:"co|"+o.id+"|sew", base:null, custom:1, label:"Sewing — "+o.name, who:"Trinna", rem:t.sewRem});
-   if(o.schedEmb && t.embRem>1) units.push({key:"co|"+o.id+"|emb", base:null, custom:1, label:"Embroidery — "+o.name, who:"Caitlynn", rem:t.embRem});
+   if(o.schedEmb && t.hasE && t.embRem>1) units.push({key:"co|"+o.id+"|emb", base:null, custom:1, label:"Embroidery — "+o.name, who:"Caitlynn", rem:t.embRem});
+   if(o.schedPL && t.hasPL && t.plRem>1) units.push({key:"co|"+o.id+"|pl", base:null, custom:1, label:"Printed logo — "+o.name, who:"Caitlynn", rem:t.plRem});
+   if(o.schedPatch && t.hasPatch && t.patchRem>1) units.push({key:"co|"+o.id+"|patch", base:null, custom:1, label:"Patches — "+o.name, who:"Trinna", rem:t.patchRem});
   });
  } catch(e){}
  return units;
@@ -1300,8 +1367,9 @@ function schedule(items){
   if(uk.indexOf("co|")===0){
    const id=uk.split("|")[1], kind=uk.split("|")[2];
    const o=(typeof CUSTOM!=="undefined")?CUSTOM.find(x=>x.id===id):null; if(!o) continue;
-   const t=coTime(o); hrs=(kind==="emb"?t.emb:t.sew)/60; if(hrs<=0.01) continue;
-   person=pin.person||(kind==="emb"?"Caitlynn":"Trinna"); custom=1; label=(kind==="emb"?"Embroidery — ":"Sewing — ")+o.name;
+   const t=coTime(o); const KMIN={sew:t.sew,emb:t.emb,pl:t.pl,patch:t.patch}; const KLBL={sew:"Sewing — ",emb:"Embroidery — ",pl:"Printed logo — ",patch:"Patches — "};
+   hrs=(KMIN[kind]!=null?KMIN[kind]:t.sew)/60; if(hrs<=0.01) continue;
+   person=pin.person||((kind==="emb"||kind==="pl")?"Caitlynn":"Trinna"); custom=1; label=(KLBL[kind]||"Sewing — ")+o.name;
   } else {
    const bs=uk.split("::"); base=bs[0].split("@")[0]; const pr=base.split("|"); run=+pr[0]; step=+pr[1]; seg2=pr[2];
    let m=0; ATOMS.forEach(a=>{ if(a.run===run && a.step===step && segKey(a.step,a.style)===seg2){ if(bs[1]){ if(a.name+"@@"+a.style===bs[1]) m+=a.min*a.qty*a.mult; } else m+=a.min*a.qty*a.mult; } });
@@ -1351,7 +1419,7 @@ const fmtDay = d => d===0 ? "today" : dateOf(d).toLocaleDateString("en-US",{week
 function persistBoard(sched){
  if(OVR.sticky===false) return;            // sticky board on by default — placements persist so nothing drifts
  let added=0;
- sched.blocks.forEach(b=>{ if(!b.key||b.sub||b.part||b.custom||OVR.pins[b.key]) return; OVR.pins[b.key]={startDay:b.day, person:b.person, hard:true, order:b.t0, auto:true}; added++; });
+ sched.blocks.forEach(b=>{ if(!b.key||b.sub||b.part||OVR.pins[b.key]) return; OVR.pins[b.key]={startDay:b.day, person:b.person, hard:true, order:b.t0, auto:true}; added++; });
  if(added) save();
 }
 function _isoToday(){ const t=new Date(); return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"); }
@@ -2377,7 +2445,7 @@ function applyPerms(){
  document.querySelectorAll(".pcell").forEach(i=>i.disabled=true);
  document.querySelectorAll("[data-fplus],[data-fminus],[data-forder],[data-freceive],[data-fcancel]").forEach(e=>e.style.display="none");
  document.querySelectorAll(".thedit").forEach(e=>{ e.style.pointerEvents="none"; const a=e.querySelector(".thadd"); if(a) a.style.display="none"; });
- document.querySelectorAll("[data-cosched],[data-coedit],[data-coemb]").forEach(e=>e.style.display="none");
+ document.querySelectorAll("[data-cosched],[data-coedit],[data-comin],[data-coname],[data-comockpick],[data-comockdel]").forEach(e=>e.style.display="none");
  document.querySelectorAll("[data-cpct]").forEach(e=>{ e.style.cursor="default"; e.onclick=null; });
  document.querySelectorAll(".tblk").forEach(e=>{ e.style.cursor="default"; });
 }
@@ -2657,14 +2725,46 @@ function parseStyles(s){
  while((m = re.exec(s))){ let st = m[2].toUpperCase(); if(st==="CT") st="CTE"; if(st==="LT") st="LTE"; out[st] = (out[st]||0) + (+m[1]); }
  return out;
 }
+/* web19: default touch-time minutes per hat for each decoration type (editable per order via the min/hat box) */
+const DECO_MIN_DEF = { emb:10, pl:1.5, patch:1.5 };
+function coDecoMin(o,kind){
+ const v = kind==="emb" ? o.emb : kind==="pl" ? o.plmin : o.patchmin;
+ return (v!=null && v!=="" && !isNaN(+v) && +v>0) ? +v : DECO_MIN_DEF[kind];
+}
 function coTime(o){
  const q = parseStyles(o.styles);
  let hats = 0, sew = 0;
  for(const st in q){ hats += q[st]; sew += q[st]*(MIN[st]||8); }
- const emb = hats * (o.emb||0);
- const sewRem = sew * (1 - Math.min(100,o.sewPct||0)/100);
- const embRem = emb * (1 - Math.min(100,o.embPct||0)/100);
- return {hats, sew, emb, total: sew+emb, sewRem, embRem, rem: sewRem+embRem};
+ const steps = (typeof stepsFor==="function") ? stepsFor(o) : [];
+ const hasE = steps.indexOf("Embroidery finished")>=0;
+ const hasPL = steps.indexOf("Printed logo finished")>=0;
+ const hasPatch = steps.indexOf("Patches sewn")>=0;
+ const emb = hasE ? hats*coDecoMin(o,"emb") : 0;
+ const pl = hasPL ? hats*coDecoMin(o,"pl") : 0;
+ const patch = hasPatch ? hats*coDecoMin(o,"patch") : 0;
+ const rp = pct => 1 - Math.min(100, pct||0)/100;
+ const sewRem = sew * rp(o.sewPct);
+ const embRem = emb * rp(o.embPct);
+ const plRem = pl * rp(o.plPct);
+ const patchRem = patch * rp(o.patchPct);
+ return {hats, sew, emb, pl, patch, total: sew+emb+pl+patch,
+   sewRem, embRem, plRem, patchRem, rem: sewRem+embRem+plRem+patchRem,
+   hasE, hasPL, hasPatch};
+}
+/* web19: one progress bar + schedule button per decoration type present on the order */
+function coDecoBar(o,t,kind){
+ const meta = {
+   sew:  {label:"Sewing",       pct:o.sewPct||0,   rem:t.sewRem,   min:null,                sched:o.schedSew,   verb:"sewing"},
+   emb:  {label:"Embroidery",   pct:o.embPct||0,   rem:t.embRem,   min:coDecoMin(o,"emb"),  sched:o.schedEmb,   verb:"embroidery"},
+   pl:   {label:"Printed logo", pct:o.plPct||0,    rem:t.plRem,    min:coDecoMin(o,"pl"),   sched:o.schedPL,    verb:"printed logo"},
+   patch:{label:"Patches",      pct:o.patchPct||0, rem:t.patchRem, min:coDecoMin(o,"patch"),sched:o.schedPatch, verb:"patch sewing"}
+ }[kind];
+ if(!meta) return "";
+ const minBox = meta.min!=null ? `<input class="coemb" type="number" min="0" step="0.5" value="${meta.min}" data-comin="${o.id}|${kind}" title="minutes per hat — adjust as needed">` : "";
+ const schedBtn = meta.rem>1
+   ? `<button class="btn ${meta.sched?"":"go"}" data-cosched="${o.id}|${kind}">${meta.sched?"Unschedule":"Schedule "+meta.verb}</button>`
+   : `<em style="width:auto">✓ done</em>`;
+ return `<div class="cb"><span>${meta.label}</span><div class="cbar" data-cpct="${o.id}|${kind}"><i style="width:${meta.pct}%"></i></div><b>${meta.pct}%</b><em>${fmtH(meta.rem)} left</em>${minBox}${schedBtn}</div>`;
 }
 function stepsFor(o){
  const ov = o.stepOpts||{};
@@ -2783,11 +2883,11 @@ async function coEditCust(id){ const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o
 function renderCustom(){
  const open = CUSTOM.filter(o=>!shipped(o));
  const sewL = open.reduce((s,o)=>s+coTime(o).sewRem,0);
- const embL = open.reduce((s,o)=>s+coTime(o).embRem,0);
+ const decoL = open.reduce((s,o)=>{ const t=coTime(o); return s+t.embRem+t.plRem+t.patchRem; },0);
  document.getElementById("cosummary").innerHTML = `<div class="cosnap">
   <div class="cs"><b>${open.length}</b><span>pending orders</span></div>
   <div class="cs"><b>${fmtH(sewL)}</b><span>sewing left</span></div>
-  <div class="cs"><b>${fmtH(embL)}</b><span>embroidery left</span></div>
+  <div class="cs"><b>${fmtH(decoL)}</b><span>decoration left</span></div>
  </div>`;
  const today = new Date(); today.setHours(0,0,0,0);
  /* web7: source list = open orders (default) or full history (lead), filtered by search */
@@ -2796,7 +2896,14 @@ function renderCustom(){
  if(q) src=src.filter(o=>{ const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; return ((o.name||"")+" "+(o.num||"")+" "+(o.styles||"")+" "+(c.name||"")+" "+(c.email||"")+" "+(c.contact||"")).toLowerCase().includes(q); });
  COSRC=src;
  const openIds=new Set([...document.querySelectorAll("details.cocard[open]")].map(d=>d.dataset.coid));
- const rows = src.sort((a,b)=> (isLead&&CO_VIEW==="all") ? (((b._row||{}).order_date||"").localeCompare(((a._row||{}).order_date||""))) : ((shipped(a)?1:0)-(shipped(b)?1:0) || (a.due||"9999").localeCompare(b.due||"9999")) ).map((o,ri)=>{
+ const odate=o=>((o._row||{}).order_date||"");
+ const rows = src.sort((a,b)=>{
+   if(isLead&&CO_VIEW==="all") return odate(b).localeCompare(odate(a));
+   const fa=shipped(a)?1:0, fb=shipped(b)?1:0;
+   if(fa!==fb) return fa-fb;                                  // finished orders sink to the bottom
+   if(fa===1) return odate(b).localeCompare(odate(a));        // finished: by when the order was placed (newest first)
+   return (a.due||"9999").localeCompare(b.due||"9999");       // open: by deadline
+ }).map((o,ri)=>{
   const t = coTime(o);
   const steps = stepsFor(o);
   o.ms = o.ms || {};
@@ -2812,28 +2919,34 @@ function renderCustom(){
   return `<details class="cocard" data-coid="${o.id}" style="${shipped(o)?"opacity:.5":""}">
    <summary class="cosum">
     <span class="cobadge"><b>${t.hats||"?"}</b><span>hats</span></span>
-    <span class="coname"><b>${o.name}</b><small>${o.styles||"styles not set — tap Edit"}</small></span>
+    <span class="coname"><b>${(o.name||"").replace(/</g,"&lt;")}</b>${isLead?`<button class="conameedit" data-coname="${o.id}" title="Edit internal order name" style="border:none;background:none;cursor:pointer;color:#6f8c8f;font-size:12px;padding:0 4px">✎</button>`:""}<small>${o.styles||"styles not set — tap Edit"}</small></span>
     ${chip}
-    <span class="copct">Sew ${o.sewPct||0}%${(o.e||o.emb)?` · Emb ${o.embPct||0}%`:""}</span>
+    <span class="copct">Sew ${o.sewPct||0}%${t.hasE?` · Emb ${o.embPct||0}%`:""}${t.hasPL?` · Logo ${o.plPct||0}%`:""}${t.hasPatch?` · Patch ${o.patchPct||0}%`:""}</span>
     <span class="chev">▶</span>
    </summary>
    <div class="cobody">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">
      <div class="cotime"><b>${fmtH(t.rem)} left</b>of ${fmtH(t.total)}</div>
-     ${o.e?`<input class="coemb" type="number" min="0" step="1" value="${o.emb||0}" data-coemb="${o.id}" title="embroidery min/hat">`:""}
      <button class="btn" data-coedit="${o.id}">Edit</button>
     </div>
     <div class="cobars">
-     <div class="cb"><span>Sewing</span><div class="cbar" data-cpct="${o.id}|sew"><i style="width:${o.sewPct||0}%"></i></div><b>${o.sewPct||0}%</b><em>${fmtH(t.sewRem)} left</em>
-      ${t.sewRem>1?`<button class="btn ${o.schedSew?"":"go"}" data-cosched="${o.id}|sew">${o.schedSew?"Unschedule":"Schedule sewing"}</button>`:`<em style="width:auto">✓ done</em>`}</div>
-     ${(o.e||o.emb)?`<div class="cb"><span>Embr.</span><div class="cbar" data-cpct="${o.id}|emb"><i style="width:${o.embPct||0}%"></i></div><b>${o.embPct||0}%</b><em>${fmtH(t.embRem)} left</em>
-      ${t.embRem>1?`<button class="btn ${o.schedEmb?"":"go"}" data-cosched="${o.id}|emb">${o.schedEmb?"Unschedule":"Schedule embroidery"}</button>`:`<em style="width:auto">✓ done</em>`}</div>`:""}
+     ${coDecoBar(o,t,"sew")}
+     ${t.hasE?coDecoBar(o,t,"emb"):""}
+     ${t.hasPL?coDecoBar(o,t,"pl"):""}
+     ${t.hasPatch?coDecoBar(o,t,"patch"):""}
     </div>
     <div class="cotl">${tl}</div>
     ${tlEditPanel(o)}
     <div class="coprod" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start">
-      ${o.mockup?`<img class="comock" data-zoom="${o.mockup}" src="${o.mockup}" alt="mockup · tap to zoom" title="Tap to zoom" style="height:96px;border-radius:8px;border:1px solid var(--line);object-fit:cover;cursor:zoom-in" loading="lazy" onerror="this.style.display='none'">`:""}
+      <div class="comockbox" style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+       ${o.mockup?`<img class="comock" data-zoom="${o.mockup}" src="${o.mockup}" alt="mockup · tap to zoom" title="Tap to zoom" style="height:96px;border-radius:8px;border:1px solid var(--line);object-fit:cover;cursor:zoom-in" loading="lazy" onerror="this.style.display='none'">`:`<label for="comockf-${o.id}" style="height:96px;width:96px;border-radius:8px;border:1.5px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#7A766B;font-size:11px;cursor:pointer;text-align:center;box-sizing:border-box">📷<span>Add mockup</span></label>`}
+       <input id="comockf-${o.id}" type="file" accept="image/*" data-comockfile="${o.id}" style="display:none">
+       <div style="display:flex;gap:6px">
+        <button class="btn" data-comockpick="${o.id}" style="padding:2px 8px;min-height:0;font-size:11px">${o.mockup?"Replace":"Add photo"}</button>
+        ${o.mockup?`<button class="btn" data-comockdel="${o.id}" style="padding:2px 8px;min-height:0;font-size:11px">Remove</button>`:""}
+       </div>
+      </div>
       <div style="flex:1;min-width:240px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
        ${prodField("Scrub / base color",o.id,"scrub",o.scrub)}
        ${prodField("Logo colors",o.id,"logo",o.logo)}
@@ -2895,7 +3008,7 @@ function renderCustom(){
   }
   saveCO(); render();
  });
- document.querySelectorAll("[data-coemb]").forEach(i=>i.onchange=()=>{ const o=(COSRC||CUSTOM).find(x=>x.id===i.dataset.coemb); if(!o) return; o.emb=+i.value||0; saveCO(); render(); });
+ document.querySelectorAll("[data-comin]").forEach(i=>i.onchange=()=>{ const [id,kind]=i.dataset.comin.split("|"); const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o) return; const v=+i.value; const val=(isNaN(v)||v<0)?0:v; if(kind==="emb") o.emb=val; else if(kind==="pl") o.plmin=val; else if(kind==="patch") o.patchmin=val; coPersist(o); render(); });
  document.querySelectorAll("[data-mtaddbtn]").forEach(b=>b.onclick=async()=>{
   const id=b.dataset.mtaddbtn; const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o) return;
   const g=f=>{ const el=document.querySelector('[data-mtnew="'+id+'|'+f+'"]'); return el?el.value.trim():""; };
@@ -2930,19 +3043,32 @@ function renderCustom(){
  document.querySelectorAll("[data-cosched]").forEach(b=>b.onclick=()=>{
   const [id,kind] = b.dataset.cosched.split("|");
   const o = CUSTOM.find(x=>x.id===id); if(!o) return;
-  if(kind==="sew") o.schedSew = !o.schedSew; else o.schedEmb = !o.schedEmb;
-  saveCO(); render();
+  const fld = {sew:"schedSew",emb:"schedEmb",pl:"schedPL",patch:"schedPatch"}[kind]; if(!fld) return;
+  o[fld] = !o[fld];
+  if(!o[fld] && typeof OVR!=="undefined" && OVR.pins) delete OVR.pins["co|"+id+"|"+kind]; // unschedule → drop its board pin
+  coPersist(o); render();
  });
  document.querySelectorAll("[data-cpct]").forEach(el=>el.onclick=()=>{
   const [id,kind] = el.dataset.cpct.split("|");
   const o = (COSRC||CUSTOM).find(x=>x.id===id); if(!o) return;
-  const cur = kind==="sew" ? (o.sewPct||0) : (o.embPct||0);
-  const v = prompt((kind==="sew"?"Sewing":"Embroidery")+" % complete for "+o.name+":", cur);
+  const F={sew:["sewPct","Sewing","Sewing"],emb:["embPct","Embroidery","Embroidery finished"],pl:["plPct","Printed logo","Printed logo finished"],patch:["patchPct","Patches","Patches sewn"]}[kind]; if(!F) return;
+  const v = prompt(F[1]+" % complete for "+o.name+":", o[F[0]]||0);
   if(v===null) return;
   const n = Math.max(0, Math.min(100, +v||0));
-  if(kind==="sew"){ o.sewPct = n; if(n>=100) o.ms.Sewing = true; } else { o.embPct = n; if(n>=100) o.ms["Embroidery finished"] = true; }
-  saveCO(); render();
+  o[F[0]] = n; if(n>=100){ o.ms=o.ms||{}; o.ms[F[2]] = true; }
+  coPersist(o); render();
  });
+ document.querySelectorAll("[data-coname]").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); ev.preventDefault(); const o=(COSRC||CUSTOM).find(x=>x.id===b.dataset.coname); if(!o) return; const v=prompt("Internal order name (shown to the team in the header):", o.name||""); if(v===null) return; coSaveName(o, v.trim()); renderCustom(); });
+ document.querySelectorAll("[data-comockpick]").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const f=document.querySelector('[data-comockfile="'+b.dataset.comockpick+'"]'); if(f) f.click(); });
+ document.querySelectorAll("[data-comockfile]").forEach(inp=>inp.onchange=()=>{ const o=(COSRC||CUSTOM).find(x=>x.id===inp.dataset.comockfile); if(!o) return; const file=inp.files&&inp.files[0]; if(!file) return; coReadImage(file,url=>{ coSaveMockup(o,url); renderCustom(); }); });
+ document.querySelectorAll("[data-comockdel]").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const o=(COSRC||CUSTOM).find(x=>x.id===b.dataset.comockdel); if(!o) return; if(!confirm("Remove this mockup?")) return; coSaveMockup(o,""); renderCustom(); });
+ if(!window._coPasteWired){ window._coPasteWired=true; document.addEventListener("paste", ev=>{
+   const card=document.querySelector('#colist details.cocard[open]'); if(!card) return;
+   const its=(ev.clipboardData&&ev.clipboardData.items)||[]; let file=null;
+   for(const it of its){ if(it.type&&it.type.indexOf("image")===0){ file=it.getAsFile(); break; } }
+   if(!file) return; const o=(COSRC||CUSTOM).find(x=>x.id===card.dataset.coid); if(!o) return;
+   ev.preventDefault(); coReadImage(file,url=>{ coSaveMockup(o,url); renderCustom(); if(typeof boardToast==="function") boardToast("Mockup set from paste ✓"); });
+ }); }
  /* ---------- web7: unified Orders controls ---------- */
  renderCoAna();
  document.querySelectorAll("[data-cov]").forEach(b=>b.onclick=()=>{ CO_VIEW=b.dataset.cov; renderCustom(); });
@@ -3266,7 +3392,7 @@ function renderTracker(items){
    return `<div class="trow">
     <div class="tinfo"><b>${nameOf(i.step,i.seg)}</b>${both&&i.step!==1?`<span class="linpill" style="background:${tint(r.hex,"22")};color:${r.hex}">${i.seg==="L"?"LUXE":"CLASSIC"}</span>`:""}
      <span class="sty">${[...i.styles].join(" · ")}</span></div>
-    <div class="tprog"><i style="width:${p}%;background:${r.hex}"></i></div>
+    <div class="tprog" data-tpct="${i.run}|${i.step}|${i.seg}" title="Tap to set % complete" style="cursor:pointer"><i style="width:${p}%;background:${r.hex}"></i></div>
     <div class="tleft">${fmtH(i.rem)} left</div>
     <button class="btn" data-toggle="${id}">Details</button>
     <button class="btn ${i.rem<=1?"":"go"}" data-markrun="${i.run}" data-markstep="${i.step}" data-markseg="${i.seg}" data-to="${i.rem<=1?0:1}">${i.rem<=1?"Undo":"Done"}</button>
@@ -3281,12 +3407,22 @@ function renderTracker(items){
   const run=+b.dataset.markrun, step=+b.dataset.markstep, sg=b.dataset.markseg, to=b.dataset.to==="1";
   const pk = run+"|"+step+"|"+sg;
   if(to){ const ex=OVR.pins[pk]||{}; let d0=ex.startDay, pr=ex.person; if((d0===undefined||!pr) && LAST && LAST.sched){ const bl=LAST.sched.blocks.filter(x=>x.key===pk); if(bl.length){ if(d0===undefined) d0=Math.min(...bl.map(x=>x.day)); if(!pr) pr=bl[0].person; } } OVR.pins[pk]=Object.assign(ex,{startDay:(d0===undefined?0:d0), person:pr||ex.person, hard:true, done:true}); } else if(OVR.pins[pk]){ delete OVR.pins[pk].done; }
+  if(OVR.prog) delete OVR.prog[pk];   // a discrete Done/Undo clears any manual % override
   ATOMS.forEach(a=>{ if(a.run===run&&a.step===step&&segKey(a.step,a.style)===sg){ if(to) DONE[atomKey(a.run,a.style,a.i)]=true; else delete DONE[atomKey(a.run,a.style,a.i)]; }});
   save(); render();
  });
  el.querySelectorAll(".subrow input").forEach(c=>c.onchange=()=>{
   const {run,step,seg:sg,sub}=c.dataset;
+  if(OVR.prog) delete OVR.prog[run+"|"+step+"|"+sg];   // ticking a sub-step clears any manual % override
   ATOMS.forEach(a=>{ if(a.run===+run&&a.step===+step&&segKey(a.step,a.style)===sg&&a.name===sub){ if(c.checked) DONE[atomKey(a.run,a.style,a.i)]=true; else delete DONE[atomKey(a.run,a.style,a.i)]; }});
+  save(); render();
+ });
+ el.querySelectorAll("[data-tpct]").forEach(bar=>bar.onclick=()=>{
+  const [run,step,sg]=bar.dataset.tpct.split("|"); const pk=run+"|"+step+"|"+sg;
+  const it=(items||{})[pk]; const cur=(it&&it.total)?Math.round(100*(it.total-it.rem)/it.total):0;
+  const v=prompt("% complete for this step (updates the remaining time):", cur); if(v===null) return;
+  const n=Math.max(0,Math.min(100,+v||0));
+  if(!OVR.prog) OVR.prog={}; OVR.prog[pk]=n;
   save(); render();
  });
 }
@@ -3432,7 +3568,7 @@ function boardRestore(){
  let p; try{ p=JSON.parse(code.trim()); }catch(e){ alert("That doesn't look like a valid backup code."); return; }
  if(!p || !p.ovr){ alert("That backup code is missing board data."); return; }
  OVR = p.ovr; if(p.done) DONE = p.done;
- if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; if(!OVR.pins)OVR.pins={}; if(!OVR.log)OVR.log=[]; if(!OVR.avail)OVR.avail={}; if(!OVR.shop)OVR.shop={}; if(!OVR.posted)OVR.posted={};
+ if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; if(!OVR.pins)OVR.pins={}; if(!OVR.log)OVR.log=[]; if(!OVR.avail)OVR.avail={}; if(!OVR.shop)OVR.shop={}; if(!OVR.posted)OVR.posted={}; if(!OVR.prog)OVR.prog={};
  if(p.ts && !OVR.dayAnchor){ const d=new Date(p.ts); OVR.dayAnchor = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
  try{ if(p.custom && typeof CUSTOM!=="undefined"){ CUSTOM=p.custom; if(typeof SEED_CUSTOM!=="undefined"){ SEED_CUSTOM.forEach(s=>{ if(!CUSTOM.some(o=>String(o.num)===String(s.num))) CUSTOM.push(Object.assign({}, s, {ms:Object.assign({}, s.ms)})); }); } saveCO(); } }catch(e){}
  try{ if(p.runs && typeof XRUNS!=="undefined"){ XRUNS=p.runs; saveRuns(); if(typeof rebuildRuns==="function") rebuildRuns(); } }catch(e){}

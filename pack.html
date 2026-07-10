@@ -223,7 +223,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms18</span>
+    <span class="build">wms19</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -368,6 +368,12 @@
         <button class="primaryBtn" id="giftsFindBtn">Find candidates</button>
       </div>
       <div class="sub" id="giftsBlurb" style="color:var(--dim);font-size:13px;margin:-8px 0 12px;">Pulls fresh from Shopify — ranks customers by a blend of lifetime spend, order frequency, and recency, then surfaces roughly the top 10% of your repeat-customer base. Draft notes are template-based from their real order history — edit freely before sending.</div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 12px;background:var(--card);">
+        <div style="font-size:12.5px;font-weight:700;color:var(--teal-dark);margin-bottom:6px;">Add a gift to anyone</div>
+        <div class="sub" style="color:var(--dim);font-size:12px;margin:-2px 0 8px;">Search the orders you're currently picking or packing by customer name or order # — you can gift any of them, even if they weren't recommended above.</div>
+        <input type="search" id="giftOrderSearch" placeholder="Search current orders by customer or order #…" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box;">
+        <div id="giftSearchResults" style="margin-top:10px;"></div>
+      </div>
       <div id="giftsMeta" style="font-size:12.5px;color:var(--dim);margin-bottom:10px;"></div>
       <div id="giftsBody"><div class="empty">Click "Find candidates" to pull a fresh list from Shopify (can take up to a minute).</div></div>
     </div>
@@ -675,9 +681,38 @@ async function loadQueue(silent){
     (sess.data||[]).forEach(s=>{ if(!sessionsByOrder[s.shopify_order_id]) sessionsByOrder[s.shopify_order_id]=s; });
     giftLoyaltyIds = new Set((giftIds.data||[]).map(r=>String(r.customer_id)));
     renderPick(); renderPack();
+    autoEvalGifts();   // wms19: run the VIP criteria on the fresh queue so new orders self-flag
   }catch(e){
     $("pickList").innerHTML = '<div class="empty">Could not load: '+esc(e.message||e)+'</div>';
   }
+}
+/* wms19: auto-run the loyalty/VIP criteria on the current pick/pack queue so newly-arrived
+   qualifying orders get the VIP chip on their own — no need to click "Find candidates".
+   Only customers we haven't already evaluated this session trigger a background call, so
+   the every-2-minute refresh won't re-hit Shopify for customers already checked. */
+let giftEvaluatedIds = new Set();
+let giftAutoEvalRunning = false;
+async function autoEvalGifts(){
+  if(giftAutoEvalRunning || typeof sb==="undefined") return;
+  const ids = new Set();
+  toPick.forEach(o=>{ if(o.customerId) ids.add(String(o.customerId)); });
+  toPack.filter(o=> sessionsByOrder[o.orderId]?.status!=="verified")
+    .forEach(o=>{ if(o.customerId) ids.add(String(o.customerId)); });
+  const fresh = [...ids].filter(id=> !giftEvaluatedIds.has(id) && !giftLoyaltyIds.has(id));
+  if(!fresh.length) return;
+  giftAutoEvalRunning = true;
+  try{
+    const { data, error } = await sb.functions.invoke("vip-gifts?program=loyalty&scope=pending", { body:{ customerIds: fresh } });
+    if(error || !data || data.error) return;
+    fresh.forEach(id=> giftEvaluatedIds.add(id));   // mark evaluated only on success, so failures retry next load
+    const cands = data.candidates||[];
+    if(cands.length){
+      const have = new Set(giftCandsByProg.loyalty.map(c=>String(c.id)));
+      cands.forEach(c=>{ giftLoyaltyIds.add(String(c.id)); if(!have.has(String(c.id))) giftCandsByProg.loyalty.push(c); });
+      renderPick(); renderPack();
+    }
+  }catch(_e){ /* background — stay silent */ }
+  finally{ giftAutoEvalRunning = false; }
 }
 
 async function loadCatalog(){
@@ -2031,6 +2066,34 @@ function renderGifts(){
       + '</div>';
   }).join("");
 }
+
+/* wms19: search the current pick/pack orders to gift ANY customer, incl. ones the criteria didn't recommend */
+function renderGiftSearch(){
+  const el = $("giftSearchResults"); if(!el) return;
+  const q = ($("giftOrderSearch").value||"").trim().toLowerCase();
+  if(!q){ el.innerHTML=""; return; }
+  const seen = new Set(); const out = [];
+  [...toPick, ...toPack].forEach(o=>{
+    if(seen.has(o.orderId)) return;
+    const hay = [o.number,o.customer,o.destination].join(" ").toLowerCase();
+    if(!hay.includes(q)) return;
+    seen.add(o.orderId); out.push(o);
+  });
+  if(!out.length){ el.innerHTML='<div class="empty" style="padding:10px;">No current pick/pack orders match &ldquo;'+esc(q)+'&rdquo;.</div>'; return; }
+  const prog = (activeGiftProgram==="winback") ? "winback" : "loyalty";
+  el.innerHTML = out.slice(0,25).map(o=>{
+    const flagged = giftLoyaltyIds.has(String(o.customerId)) || !!winbackFlagOf(o);
+    const badge = flagged ? ' <span class="chip" style="background:#fff4d6;color:#8a5a00;">already recommended</span>' : '';
+    const action = o.customerId
+      ? '<button class="primaryBtn" style="padding:8px 14px;font-size:12.5px;" onclick="openGiftProfile(\''+o.customerId+'\',\''+prog+'\',\''+o.orderId+'\')">Add a gift</button>'
+      : '<span style="color:var(--dim);font-size:12px;">no customer account</span>';
+    return '<div style="display:flex;align-items:center;gap:10px;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap;">'
+      + '<div><div style="font-weight:700;">'+esc(o.customer||"Customer")+' '+starsHtml(o)+badge+'</div>'
+      + '<div style="font-size:12px;color:var(--dim);">'+esc(o.number||"")+' &middot; '+esc(o.destination||"")+' &middot; '+fmtDate(o.createdAt)+'</div></div>'
+      + '<div>'+action+'</div></div>';
+  }).join("");
+}
+if($("giftOrderSearch")) $("giftOrderSearch").addEventListener("input", renderGiftSearch);
 
 /* ---------- Gifts tab: program-impact statistics ---------- */
 let giftActionsCache = [];

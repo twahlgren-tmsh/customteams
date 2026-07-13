@@ -1377,13 +1377,13 @@ function printLabels(labels){
   work.innerHTML="";
   printDoc(html,
     "@page{size:2in 1in;margin:0} body{margin:0;font-family:Arial,sans-serif}"
-    + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:2px 4px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box}"
-    + ".top{display:flex;width:100%;align-items:center;gap:4px}"
+    + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:3px 5px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box}"
+    + ".top{display:flex;width:100%;align-items:center;gap:5px}"
     + ".tt{flex:1;min-width:0}"
-    + ".t{font-size:7.5px;font-weight:bold;overflow:hidden;white-space:nowrap}"
-    + ".v{font-size:6.5px;white-space:nowrap;overflow:hidden}"
-    + ".lg{height:0.26in;max-width:0.85in;object-fit:contain}"
-    + ".bc{flex:1;display:flex;align-items:center;min-height:0} .bc svg{max-width:1.85in;height:0.52in}", 900);
+    + ".t{font-size:11px;font-weight:bold;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}"
+    + ".v{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
+    + ".lg{height:0.34in;max-width:0.95in;object-fit:contain;flex-shrink:0}"
+    + ".bc{flex:1;display:flex;align-items:center;justify-content:center;min-height:0} .bc svg{max-width:1.75in;height:0.38in}", 900);
 }
 
 function printDoc(bodyHtml, css, delay){
@@ -1871,11 +1871,11 @@ function printCustomLabels(labels){
     + ".clabel{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:4px 6px;box-sizing:border-box;display:flex;flex-direction:column}"
     + ".ctop{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}"
     + ".ctt{flex:1;min-width:0}"
-    + ".ctt .t{font-size:10.5px;font-weight:bold;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}"
-    + ".ctt .v{font-size:8.5px;color:#333;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:1px}"
-    + ".clg{height:0.22in;max-width:0.5in;object-fit:contain;flex-shrink:0}"
+    + ".ctt .t{font-size:12px;font-weight:bold;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}"
+    + ".ctt .v{font-size:10px;color:#333;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:1px}"
+    + ".clg{height:0.3in;max-width:0.85in;object-fit:contain;flex-shrink:0}"
     + ".cbc{flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0;margin-top:2px}"
-    + ".cbc svg{width:1.88in;height:0.62in}", 900);
+    + ".cbc svg{width:1.7in;height:0.4in}", 900);
 }
 
 /* ================= STATS TAB ================= */

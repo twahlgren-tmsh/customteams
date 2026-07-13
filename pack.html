@@ -1368,9 +1368,19 @@ function printLabels(labels){
     try{ JsBarcode("#"+sid, r.barcode, {format:"CODE128", displayValue:false, height:40, width:1.2, margin:0}); }catch(_e){}
     const el=$(sid);
     const svg=el?el.outerHTML.replace('id="'+sid+'"',""):"";
+    const title=(r.title||"").trim(), vt=(r.variant_title||"").trim();
+    let tt;
+    if(title.toUpperCase()==="CSH"){
+      // CSH: drop the product title, split variant on "|" into two lines
+      const seg = vt.split("|").map(s=>s.trim()).filter(Boolean);
+      tt = '<div class="t">'+esc((seg[0]||vt).slice(0,28))+'</div>'
+         + (seg.length>1?'<div class="v">'+esc(seg.slice(1).join(" | ").slice(0,32))+'</div>':"");
+    } else {
+      tt = '<div class="t">'+esc(title.slice(0,34))+'</div>'
+         + '<div class="v">'+esc(vt.slice(0,40))+'</div>';
+    }
     html += '<div class="label">'
-      + '<div class="top"><div class="tt"><div class="t">'+esc((r.title||"").slice(0,34))+'</div>'
-      + '<div class="v">'+esc((r.variant_title||"").slice(0,40))+'</div></div>'
+      + '<div class="top"><div class="tt">'+tt+'</div>'
       + '<img class="lg" src="'+LOGO+'"></div>'
       + '<div class="bc">'+svg+'</div></div>';
   });
@@ -1859,9 +1869,18 @@ function printCustomLabels(labels){
     try{ JsBarcode("#"+sid, r.barcode, {format:"CODE128", displayValue:false, height:70, width:1.7, margin:0}); }catch(_e){}
     const el=$(sid);
     const svg=el?el.outerHTML.replace('id="'+sid+'"',""):"";
+    const title=(r.title||"").trim(), vt=(r.variant||"").trim();
+    let tt;
+    if(title.toUpperCase()==="CSH"){
+      const seg = vt.split("|").map(s=>s.trim()).filter(Boolean);
+      tt = '<div class="t">'+esc((seg[0]||vt).slice(0,28))+'</div>'
+         + (seg.length>1?'<div class="v">'+esc(seg.slice(1).join(" | ").slice(0,32))+'</div>':"");
+    } else {
+      tt = '<div class="t">'+esc(title.slice(0,36))+'</div>'
+         + (vt?'<div class="v">'+esc(vt.slice(0,40))+'</div>':"");
+    }
     html += '<div class="clabel">'
-      + '<div class="ctop"><div class="ctt"><div class="t">'+esc((r.title||"").slice(0,36))+'</div>'
-      + (r.variant?'<div class="v">'+esc(r.variant.slice(0,40))+'</div>':"")+'</div>'
+      + '<div class="ctop"><div class="ctt">'+tt+'</div>'
       + '<img class="clg" src="'+LOGO+'"></div>'
       + '<div class="cbc">'+svg+'</div></div>';
   });

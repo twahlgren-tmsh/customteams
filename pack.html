@@ -223,7 +223,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms20</span>
+    <span class="build">wms21</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -436,9 +436,11 @@
       <div class="toolbar" style="margin-bottom:6px;">
         <label style="font-size:12.5px;color:var(--dim);">Qty</label>
         <input class="qtyIn" type="number" min="1" value="1" id="gpQty">
+        <button class="ghostBtn" id="gpAddItemBtn" style="padding:8px 13px;font-size:12.5px;" title="Add this item to the gift list, then pick another — log them all together">+ Add &amp; pick another</button>
         <span class="sp"></span>
         <span class="costPreview" id="gpCostPreview"></span>
       </div>
+      <div id="gpBasket"></div>
       <textarea id="gpActionNote" rows="2" placeholder="Optional note on what you did (e.g. included a handwritten card)…" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:8px;"></textarea>
       <button class="primaryBtn" id="gpLogBtn">Log this gift</button>
       <span id="gpLogMsg" style="font-size:12.5px;font-weight:700;margin-left:10px;"></span>
@@ -1443,8 +1445,8 @@ function printLabels(labels){
     + ".top{display:flex;width:100%;align-items:center;gap:5px}"
     + ".tt{flex:1;min-width:0}"
     + LABEL_SIZE_CSS
-    + ".lg{height:0.32in;max-width:0.9in;object-fit:contain;flex-shrink:0}"
-    + ".szM .lg,.szS .lg{height:0.24in;max-width:0.7in}"
+    + ".lg{height:0.55in;max-width:1.05in;object-fit:contain;object-position:right center;flex-shrink:0}"
+    + ".szS .lg{height:0.44in;max-width:0.9in}"
     + ".bc{flex:1;display:flex;align-items:center;justify-content:center;min-height:0} .bc svg{max-width:1.75in;height:0.34in}", 900);
 }
 
@@ -1958,8 +1960,8 @@ function printCustomLabels(labels){
     + ".ctt{flex:1;min-width:0}"
     + LABEL_SIZE_CSS
     + ".ctt .v{color:#333}"
-    + ".clg{height:0.28in;max-width:0.8in;object-fit:contain;flex-shrink:0}"
-    + ".szM .clg,.szS .clg{height:0.22in;max-width:0.6in}"
+    + ".clg{height:0.52in;max-width:1in;object-fit:contain;object-position:right top;flex-shrink:0}"
+    + ".szS .clg{height:0.42in;max-width:0.85in}"
     + ".cbc{flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0;margin-top:1px}"
     + ".cbc svg{max-width:1.7in;height:0.36in}", 900);
 }
@@ -2392,6 +2394,7 @@ async function openGiftProfile(customerId, program, orderId){
   $("gpStats").innerHTML=""; $("gpSuggest").textContent=""; $("gpNote").value=""; $("gpHistBody").innerHTML="";
   $("gpLogMsg").textContent=""; $("gpActionNote").value=""; $("gpVariantChosen").textContent=""; $("gpVariantResults").innerHTML=""; $("gpVariantSearch").value="";
   gpChosenVariant = null; gpNoteIdx = 0;
+  gpBasket = []; renderGpBasket();
   let c = (giftCandsByProg[program]||[]).find(x=>String(x.id)===String(customerId));
   let limited = false;
   if(!c){
@@ -2490,35 +2493,75 @@ async function updateGpCostPreview(){
 }
 $("gpQty").addEventListener("input", updateGpCostPreview);
 $("gpStyleSelect").addEventListener("change", updateGpCostPreview);
+
+/* wms21: multiple gifts on one order — build a "gift list" (basket) of items,
+   then Log commits them all (one apply-gift call per item, sharing order/program). */
+let gpBasket = [];
+function gpCurrentItem(){    // reads the form's current selection as a basket-shaped item, or null
+  const qty = Math.max(1,Math.round(Number($("gpQty").value))||1);
+  if(gpGiftType==="inventory"){
+    if(!gpChosenVariant) return null;
+    return { giftType:"inventory", variantId:gpChosenVariant.variant_id, sku:gpChosenVariant.sku,
+      title:gpChosenVariant.product_title+" — "+(gpChosenVariant.variant_title||""), qty };
+  }
+  const code = $("gpStyleSelect").value;
+  if(!code) return null;
+  const row = (styleGiftCosts||[]).find(r=>r.style_code===code);
+  return { giftType:"special", styleCode:code, title:(row?row.style_name:code), qty };
+}
+function renderGpBasket(){
+  const el = $("gpBasket"); if(!el) return;
+  if(!gpBasket.length){ el.innerHTML=""; return; }
+  el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--teal-dark);margin:4px 0 2px;">Gift list — '+gpBasket.length+' item'+(gpBasket.length===1?"":"s")+' so far</div>'
+    + gpBasket.map((b,i)=>'<div class="prow"><span class="q">'+b.qty+'×</span><span class="ti">'+esc(b.title)+'</span>'
+      + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="gpBasketRemove('+i+')">✕</button></div>').join("");
+}
+function gpBasketRemove(i){ gpBasket.splice(i,1); renderGpBasket(); }
+$("gpAddItemBtn").onclick = ()=>{
+  const it = gpCurrentItem();
+  if(!it){ $("gpLogMsg").textContent = gpGiftType==="inventory"?"Pick an item first.":"Pick a style first."; $("gpLogMsg").style.color="var(--coral)"; return; }
+  gpBasket.push(it);
+  gpChosenVariant=null; $("gpVariantChosen").textContent=""; $("gpQty").value=1;
+  $("gpLogMsg").textContent="Added — pick the next item, or log the list."; $("gpLogMsg").style.color="var(--dim)";
+  updateGpCostPreview(); renderGpBasket();
+};
 $("gpLogBtn").onclick = async ()=>{
   if(!gpCurrent) return;
-  const qty = Math.max(1,Math.round(Number($("gpQty").value))||1);
   const note = $("gpActionNote").value.trim();
-  const body = { customerId:gpCurrent.customerId, customerName:gpCurrent.c.name, customerEmail:gpCurrent.c.email,
-    program:gpCurrent.program, orderId:gpCurrent.orderId||null, qty, note };
-  if(gpGiftType==="inventory"){
-    if(!gpChosenVariant){ $("gpLogMsg").textContent="Pick an item first."; $("gpLogMsg").style.color="var(--coral)"; return; }
-    body.giftType="inventory"; body.variantId=gpChosenVariant.variant_id; body.sku=gpChosenVariant.sku;
-    body.title = gpChosenVariant.product_title+" — "+(gpChosenVariant.variant_title||"");
+  const items = [...gpBasket];
+  const cur2 = gpCurrentItem();
+  if(cur2 && (gpGiftType==="inventory" || !items.length)) items.push(cur2);   // whatever's still selected counts too
+  if(!items.length){ $("gpLogMsg").textContent = gpGiftType==="inventory"?"Pick an item first.":"Pick a style first."; $("gpLogMsg").style.color="var(--coral)"; return; }
+  $("gpLogBtn").disabled=true; $("gpLogMsg").textContent="Saving "+items.length+" gift"+(items.length===1?"":"s")+"…"; $("gpLogMsg").style.color="var(--dim)";
+  let okCount=0, invWarn=false, err=null;
+  for(const it of items){
+    const body = { customerId:gpCurrent.customerId, customerName:gpCurrent.c.name, customerEmail:gpCurrent.c.email,
+      program:gpCurrent.program, orderId:gpCurrent.orderId||null, qty:it.qty,
+      note: okCount===0 ? note : null,   // note recorded once, on the first item
+      giftType:it.giftType, variantId:it.variantId||null, sku:it.sku||null, styleCode:it.styleCode||null, title:it.title };
+    try{
+      const {data,error} = await sb.functions.invoke("apply-gift",{body});
+      if(error) throw error;
+      if(data?.error) throw new Error(data.error);
+      okCount++;
+      if(it.giftType==="inventory" && !data.shopifyWriteOk) invWarn=true;
+    }catch(e){ err=e; break; }
+  }
+  if(err){
+    gpBasket = items.slice(okCount);   // whatever didn't make it stays in the list to retry
+    renderGpBasket();
+    $("gpLogMsg").textContent="✖ Logged "+okCount+" of "+items.length+" — "+(err.message||err)+" (the rest stayed in the list).";
+    $("gpLogMsg").style.color="var(--coral)";
   } else {
-    const code = $("gpStyleSelect").value;
-    if(!code){ $("gpLogMsg").textContent="Pick a style first."; $("gpLogMsg").style.color="var(--coral)"; return; }
-    body.giftType="special"; body.styleCode=code;
+    gpBasket=[]; renderGpBasket();
+    const hadInv = items.some(it=>it.giftType==="inventory");
+    $("gpLogMsg").textContent = "✓ Logged "+okCount+" gift"+(okCount===1?"":"s")
+      + (hadInv ? (invWarn?" · some inventory NOT updated, check Shopify":" · inventory updated") : "");
+    $("gpLogMsg").style.color = invWarn?"var(--warn)":"var(--ok)";
+    $("gpActionNote").value=""; gpChosenVariant=null; $("gpVariantChosen").textContent=""; $("gpQty").value=1;
   }
-  $("gpLogBtn").disabled=true; $("gpLogMsg").textContent="Saving…"; $("gpLogMsg").style.color="var(--dim)";
-  try{
-    const {data,error} = await sb.functions.invoke("apply-gift",{body});
-    if(error) throw error;
-    if(data?.error) throw new Error(data.error);
-    $("gpLogMsg").textContent = "✓ Logged"+(body.giftType==="inventory"?(data.shopifyWriteOk?" · inventory updated":" · inventory NOT updated, check Shopify"):"");
-    $("gpLogMsg").style.color = "var(--ok)";
-    $("gpActionNote").value=""; gpChosenVariant=null; $("gpVariantChosen").textContent="";
-    loadGiftHistory(gpCurrent.customerId);
-  }catch(e){
-    $("gpLogMsg").textContent="✖ "+(e.message||e); $("gpLogMsg").style.color="var(--coral)";
-  }finally{
-    $("gpLogBtn").disabled=false;
-  }
+  loadGiftHistory(gpCurrent.customerId);
+  $("gpLogBtn").disabled=false;
 };
 async function loadGiftHistory(customerId){
   $("gpHistBody").innerHTML = '<div class="empty">Loading…</div>';

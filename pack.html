@@ -223,7 +223,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms21</span>
+    <span class="build">wms22</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -367,6 +367,7 @@
       <button class="progBtn on" data-prog="loyalty">&#127881; Loyalty thank-you</button>
       <button class="progBtn" data-prog="winback">&#128075; Win-back</button>
       <button class="progBtn" data-prog="stats">&#128202; Stats</button>
+      <button class="progBtn" data-prog="log">&#128220; Gift log</button>
     </div>
     <div id="giftsCandidatesView">
       <div class="secHead"><h3 id="giftsHeading">VIP thank-you candidates</h3><span class="sp"></span>
@@ -391,6 +392,13 @@
         <button class="ghostBtn" id="giftStatsRefreshBtn" style="padding:8px 14px;font-size:12.5px">Check reorders</button>
       </div>
       <div id="giftStatsBody"><div class="empty">Loading&hellip;</div></div>
+    </div>
+    <div id="giftsLogView" class="hidden">
+      <div class="secHead"><h3>Gift log</h3><span class="sp"></span>
+        <input type="search" id="glSearch" placeholder="Search by customer, item, order #, outcome…" style="padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;min-width:240px;">
+      </div>
+      <div class="sub" style="color:var(--dim);font-size:12px;margin:-6px 0 10px;">Every gift ever logged, newest first. Set an outcome when you hear back, or fix a qty/note. Edits and deletes only change the log — Shopify inventory is never adjusted retroactively.</div>
+      <div id="giftsLogBody"><div class="empty">Loading&hellip;</div></div>
     </div>
   </div>
 </div>
@@ -669,6 +677,7 @@ function switchTab(t){
   if(t==="count"){ renderCountBins(); }
   if(t==="stats"){ renderStats(); }
   if(t==="gifts" && activeGiftProgram==="stats"){ loadGiftStats(); }
+  if(t==="gifts" && activeGiftProgram==="log"){ loadGiftLog(); }
   focusScan();
 }
 
@@ -2095,10 +2104,12 @@ const GIFT_BLURB = {
 document.querySelectorAll(".progBtn[data-prog]").forEach(b=> b.onclick = ()=>{
   activeGiftProgram = b.dataset.prog;
   document.querySelectorAll(".progBtn[data-prog]").forEach(x=>x.classList.toggle("on", x===b));
-  const isStats = activeGiftProgram==="stats";
-  $("giftsCandidatesView").classList.toggle("hidden", isStats);
+  const isStats = activeGiftProgram==="stats", isLog = activeGiftProgram==="log";
+  $("giftsCandidatesView").classList.toggle("hidden", isStats||isLog);
   $("giftsStatsView").classList.toggle("hidden", !isStats);
+  $("giftsLogView").classList.toggle("hidden", !isLog);
   if(isStats){ loadGiftStats(); return; }
+  if(isLog){ loadGiftLog(); return; }
   $("giftsHeading").textContent = activeGiftProgram==="loyalty" ? "VIP thank-you candidates" : "Win-back candidates";
   $("giftsBlurb").textContent = GIFT_BLURB[activeGiftProgram];
   $("giftsMeta").textContent = "";
@@ -2271,6 +2282,112 @@ async function giftSearchAll(){
         + '<div>'+action+'</div></div>';
     }).join("");
   }catch(e){ box.innerHTML='<div class="empty" style="padding:10px;">Search failed: '+esc(e.message||e)+'</div>'; }
+}
+
+/* ---------- Gifts tab: full gift log — browse, edit, follow-up outcomes (wms22) ---------- */
+const GIFT_OUTCOMES = [
+  ["", "— outcome —"],
+  ["emailed_thanks", "💌 Emailed a thank-you"],
+  ["social_post", "📣 Posted on social"],
+  ["reordered", "🛒 Ordered again"],
+  ["returned", "📦 Sent it back"],
+  ["no_response", "😐 No response"],
+  ["other", "✏️ Other…"],
+];
+const GIFT_OUTCOME_LABEL = Object.fromEntries(GIFT_OUTCOMES);
+function outcomeChipHtml(r){
+  if(!r.outcome) return "";
+  const label = r.outcome==="other" ? (r.outcome_note||"Other") : (GIFT_OUTCOME_LABEL[r.outcome]||r.outcome);
+  const good = r.outcome==="emailed_thanks"||r.outcome==="social_post"||r.outcome==="reordered";
+  const bad = r.outcome==="returned";
+  const style = good ? "background:var(--ok-soft);color:var(--ok);border-color:var(--ok);"
+    : bad ? "background:var(--coral-soft);color:var(--coral);border-color:var(--coral);" : "";
+  return ' <span class="chip" style="'+style+'"'+(r.outcome_at?' title="'+esc(fmtDate(r.outcome_at))+'"':'')+'>'+esc(label)+'</span>';
+}
+let glRows = [];
+async function loadGiftLog(){
+  $("giftsLogBody").innerHTML = '<div class="empty">Loading…</div>';
+  const {data,error} = await sb.from("gift_actions").select("*").order("created_at",{ascending:false}).limit(500);
+  if(error){ $("giftsLogBody").innerHTML='<div class="empty">Could not load: '+esc(error.message)+'</div>'; return; }
+  glRows = data||[];
+  renderGiftLog();
+}
+if($("glSearch")) $("glSearch").addEventListener("input", renderGiftLog);
+function renderGiftLog(){
+  const q = ($("glSearch").value||"").trim().toLowerCase();
+  let rows = glRows;
+  if(q) rows = rows.filter(r=> [r.customer_name,r.customer_email,r.title,r.sku,r.order_number,r.program,r.note,r.outcome,r.outcome_note]
+    .join(" ").toLowerCase().includes(q));
+  if(!rows.length){ $("giftsLogBody").innerHTML='<div class="empty">'+(glRows.length?"No gifts match that search.":"No gifts logged yet.")+'</div>'; return; }
+  const totalCost = rows.reduce((a,r)=>a+Number(r.total_cost||0),0);
+  const withOutcome = rows.filter(r=>r.outcome).length;
+  let html = '<div class="sub" style="color:var(--dim);font-size:12.5px;margin-bottom:8px;">'
+    + rows.length+' gift'+(rows.length===1?"":"s")+' · $'+totalCost.toFixed(2)+' total cost · '+withOutcome+' with a follow-up outcome</div>';
+  html += rows.map(r=>{
+    const custClick = r.customer_id ? ' style="cursor:pointer;color:var(--teal-dark)" onclick="openGiftProfile(\''+esc(r.customer_id)+'\',\''+(r.program==="winback"?"winback":"loyalty")+'\','+(r.order_id?'\''+esc(r.order_id)+'\'':'null')+')" title="Open gift profile"' : '';
+    return '<div class="prow" style="flex-wrap:wrap;row-gap:4px;">'
+      + '<span style="min-width:76px;color:var(--dim);font-size:12px">'+fmtDate(r.created_at)+'</span>'
+      + '<span class="ti"><b'+custClick+'>'+esc(r.customer_name||"Customer")+'</b> — '+esc(r.title||r.style_code||"—")+' ×'+r.qty
+      + ' <span class="vt">('+(r.program==="winback"?"win-back":"loyalty")+(r.order_number?' · order '+esc(r.order_number):'')+' · $'+Number(r.total_cost||0).toFixed(2)+' cost)</span>'
+      + (r.note?' <span title="'+esc(r.note)+'" style="cursor:help">&#128221;</span>':'')
+      + outcomeChipHtml(r)+'</span>'
+      + '<select onchange="glSetOutcome('+r.id+',this.value)" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;">'
+      + GIFT_OUTCOMES.map(([v,l])=>'<option value="'+v+'"'+(v===(r.outcome||"")?" selected":"")+'>'+esc(l)+'</option>').join("")
+      + '</select>'
+      + '<button class="ghostBtn" style="padding:5px 9px;font-size:11.5px" title="Edit quantity" onclick="glEditQty('+r.id+')">✎ qty</button>'
+      + '<button class="ghostBtn" style="padding:5px 9px;font-size:11.5px" title="Edit note" onclick="glEditNote('+r.id+')">✎ note</button>'
+      + '<button class="ghostBtn" style="padding:5px 9px;font-size:11.5px;color:var(--coral)" title="Delete this log entry" onclick="glDelete('+r.id+')">✕</button>'
+      + '</div>';
+  }).join("");
+  $("giftsLogBody").innerHTML = html;
+}
+async function glSetOutcome(id, val){
+  const r = glRows.find(x=>x.id===id); if(!r) return;
+  let outcomeNote = null;
+  if(val==="other"){
+    const t = prompt("What happened?", r.outcome_note||"");
+    if(t===null){ renderGiftLog(); return; }
+    outcomeNote = t.trim()||null;
+  }
+  const patch = { outcome: val||null, outcome_note: outcomeNote, outcome_at: val ? new Date().toISOString() : null };
+  const {error} = await sb.from("gift_actions").update(patch).eq("id",id);
+  if(error){ alert(error.message); renderGiftLog(); return; }
+  Object.assign(r, patch);
+  giftActionsCache = [];   // stats view re-pulls fresh next time
+  renderGiftLog();
+}
+async function glEditQty(id){
+  const r = glRows.find(x=>x.id===id); if(!r) return;
+  const v = prompt("Quantity for "+(r.title||"this gift")+":\n(log only — Shopify stock is not adjusted retroactively)", r.qty);
+  if(v===null) return;
+  const qty = Math.max(1, Math.round(Number(v))||1);
+  const patch = { qty,
+    total_cost: Math.round(Number(r.unit_cost||0)*qty*100)/100,
+    total_value: Math.round(Number(r.unit_value||0)*qty*100)/100 };
+  const {error} = await sb.from("gift_actions").update(patch).eq("id",id);
+  if(error){ alert(error.message); return; }
+  Object.assign(r, patch);
+  giftActionsCache = [];
+  renderGiftLog();
+}
+async function glEditNote(id){
+  const r = glRows.find(x=>x.id===id); if(!r) return;
+  const t = prompt("Note for this gift:", r.note||"");
+  if(t===null) return;
+  const note = t.trim()||null;
+  const {error} = await sb.from("gift_actions").update({note}).eq("id",id);
+  if(error){ alert(error.message); return; }
+  r.note = note;
+  renderGiftLog();
+}
+async function glDelete(id){
+  const r = glRows.find(x=>x.id===id); if(!r) return;
+  if(!confirm("Delete this gift entry for "+(r.customer_name||"this customer")+"?\n(Log only — Shopify inventory is NOT restored. Fix stock separately if needed.)")) return;
+  const {error} = await sb.from("gift_actions").delete().eq("id",id);
+  if(error){ alert(error.message); return; }
+  glRows = glRows.filter(x=>x.id!==id);
+  giftActionsCache = [];
+  renderGiftLog();
 }
 
 /* ---------- Gifts tab: program-impact statistics ---------- */
@@ -2573,6 +2690,7 @@ async function loadGiftHistory(customerId){
     + '<span style="flex:1">'+esc(r.title||r.style_code||"—")+' &times;'+r.qty+' <span style="color:var(--dim)">('+(r.program==="winback"?"win-back":"loyalty")+')</span></span>'
     + '<span style="color:var(--dim)">$'+Number(r.total_cost).toFixed(2)+' cost</span>'
     + (r.note?(' <span title="'+esc(r.note)+'" style="cursor:help">&#128221;</span>'):'')
+    + outcomeChipHtml(r)
     + '</div>'
   ).join("");
 }

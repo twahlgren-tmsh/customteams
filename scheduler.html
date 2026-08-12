@@ -476,14 +476,14 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 </section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-07-03 · web9 (native time tracker — ▶ Start / ⏸ Pause / ✓ Done on every block — real labor costs, phone-first layout)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-12 · web20 (Draft Shopify products now show when adding fabric — order &amp; cut a restock while the listing stays hidden. Drafts stay out of the reorder list, and Finish &amp; post warns you to reactivate before uploading stock.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-07-08-web19";
+const BUILD="2026-08-12-web20";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -1516,14 +1516,16 @@ function applyFabLive(){
  f.products.forEach(pr=>{
   try{
    const c=(typeof CATALOG!=="undefined")&&CATALOG.find(x=>x.p===pr.p);
-   if(c){ c.on=pr.on; if(pr.v!=null) c.v=pr.v; if(pr.ven&&!c.ven) c.ven=pr.ven; }
-   else if(typeof CATALOG!=="undefined"){ CATALOG.push({p:pr.p, ven:pr.ven||"", v:pr.v!=null?pr.v:0, on:pr.on||0, _new:true}); } /* web8: NEW Shopify products join the catalog (so pairing finds them) */
+   if(c){ c.on=pr.on; if(pr.v!=null) c.v=pr.v; if(pr.ven&&!c.ven) c.ven=pr.ven; if(pr.dr) c.dr=1; else delete c.dr; if(pr.dc) c.dc=1; } /* web20: dr = draft on Shopify (hidden listing, still restockable) */
+   else if(typeof CATALOG!=="undefined"){ CATALOG.push({p:pr.p, ven:pr.ven||"", v:pr.v!=null?pr.v:0, on:pr.on||0, _new:true, ...(pr.dr?{dr:1}:{}), ...(pr.dc?{dc:1}:{})}); } /* web8: NEW Shopify products join the catalog (so pairing finds them) */
    if(pr.img && typeof SWATCH!=="undefined" && !SWATCH[pr.p]) SWATCH[pr.p]=pr.img; /* web8: learn new products' ponytail images (Comfort+ etc.) */
    if(typeof CSTYLE!=="undefined"&&CSTYLE[pr.p]&&Array.isArray(pr.styles)) CSTYLE[pr.p].o=pr.styles.slice();
   }catch(e){}
  });
  try{ if(f.core&&typeof CORE_STYLE!=="undefined"){ Object.keys(f.core).forEach(cl=>{ if(CORE_STYLE[cl]&&Array.isArray(f.core[cl].o)) CORE_STYLE[cl].o=f.core[cl].o.slice(); }); } }catch(e){}
 }
+/* web20: is this pattern a DRAFT product on Shopify? (fed by sync-fabric v3 `dr` flag) */
+function isDraftPat(p){ try{ if(typeof CATALOG==="undefined"||!p) return false; const n=cnorm(p); const c=CATALOG.find(x=>x.p===p)||CATALOG.find(x=>cnorm(x.p)===n); return !!(c&&c.dr); }catch(e){ return false; } }
 const trendBadge = t => t==="rising" ? '<span class="fbadge" style="background:#E3F3E0;color:#2E6B1E">▲ rising</span>' : t==="fading" ? '<span class="fbadge" style="background:#F1EEE7;color:#A07B45">▾ cooling</span>' : '';
 const stockBadge = s => s==="out" ? '<span class="fbadge" style="background:#FBE3DC;color:#B23A1B">⚠ sold out · restock</span>' : s==="low" ? '<span class="fbadge" style="background:#FAEEDA;color:#854F0B">low stock</span>' : s==="slow" ? '<span class="fbadge" style="background:#ECEAF7;color:#6A5FB0">overstocked · slow</span>' : '';
 const FAST_MO = 12;  // ≥ this many/mo = reorder ahead even while in a queued run
@@ -1770,7 +1772,7 @@ function renderFabric(){
    CATALOG.forEach(c=>{ const cn=cnorm(c.p); if(cn.length>=4 && (ln===cn||ln.startsWith(cn)) && (!best||cnorm(best.p).length<cn.length)) best=c; });
    if(best) incBy[best.p]=(incBy[best.p]||0)+hats; }); });
  const REORDER_WK = OVR.fabric.reorderWk || 8; // recommend ordering when weeks-of-cover drops below this
- const ranked = CATALOG.filter(c=>!noReorder.has(c.p) && !onOrderName.has(c.p)).map(c=>{
+ const ranked = CATALOG.filter(c=>!noReorder.has(c.p) && !onOrderName.has(c.p) && !c.dr).map(c=>{ /* web20: drafts are all 0 on hand — they'd swamp the list. Search only. */
    const inc=incBy[c.p]||0;
    const wk = c.v>0 ? Math.round(((c.on+inc)/(c.v/4.33))*10)/10 : 999;
    const stock = c.on<=2?"out" : c.on<=8?"low" : (c.on>=18 && c.v<4 ? "slow":"ok");
@@ -1900,15 +1902,21 @@ function openFabricPicker(onPick){
  const m=document.createElement("div"); m.id="fpick"; m.className="fpickwrap";
  m.innerHTML=`<div class="fpick"><div class="fpickhead"><b>${onPick?"Search products":"Add a fabric to your order"}</b><button class="rdclose" id="fpx">✕</button></div>
   <input id="fpq" placeholder="Search any product…" autocomplete="off">
-  <div class="fmeta" style="margin:2px 0 8px;display:flex;align-items:center;gap:8px"><span style="flex:1">Every active product is here. Just created it in Shopify? Tap refresh.</span><button class="btn" id="fprefresh" style="min-height:30px;padding:4px 11px;font-size:11.5px;flex:none">↻ New products</button></div>
+  <div class="fmeta" style="margin:2px 0 8px;display:flex;align-items:center;gap:8px"><span style="flex:1">Live products first, then your Shopify drafts — pick a draft to restock and cut it. Just created it in Shopify? Tap refresh.</span><button class="btn" id="fprefresh" style="min-height:30px;padding:4px 11px;font-size:11.5px;flex:none">↻ New products</button></div>
   <div id="fplist" class="fplist"></div>
   <button class="btn" id="fpcustom" style="margin-top:10px;width:100%">＋ Add a fabric not listed</button></div>`;
  document.body.appendChild(m);
  const list=m.querySelector("#fplist"), q=m.querySelector("#fpq");
+ const DRCHIP=`<span style="display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:99px;background:#EFE7D6;color:#8A6D1F;border:1px solid #DECFA8;margin-left:6px;vertical-align:1px">Draft</span>`;
  const draw=()=>{
   const s=cnorm(q.value);
-  const rows=CATALOG.filter(c=>!s||cnorm(c.p).includes(s)).slice(0,40);
-  list.innerHTML = rows.length ? rows.map(c=>`<button class="fprow" data-pick="${c.p.replace(/"/g,'&quot;')}">${swatchHtml(c.p)}<span class="fpn"><b>${c.p}</b><span>${c.ven} · ${c.v}/mo · ${c.on} on hand${c.dc?' · Last Chance (not restocking)':''}${onOrderName.has(c.p)?' · already on order':''}</span></span></button>`).join("") : `<div class="fmeta" style="padding:8px">No match — use “Add a fabric not listed”.</div>`;
+  const hit=CATALOG.filter(c=>!s||cnorm(c.p).includes(s));
+  const act=hit.filter(c=>!c.dr).slice(0,40), drAll=hit.filter(c=>c.dr), dr=drAll.slice(0,40); /* web20 */
+  const rowA=c=>`<button class="fprow" data-pick="${c.p.replace(/"/g,'&quot;')}">${swatchHtml(c.p)}<span class="fpn"><b>${c.p}</b><span>${c.ven} · ${c.v}/mo · ${c.on} on hand${c.dc?' · Last Chance (not restocking)':''}${onOrderName.has(c.p)?' · already on order':''}</span></span></button>`;
+  const rowD=c=>`<button class="fprow" data-pick="${c.p.replace(/"/g,'&quot;')}">${swatchHtml(c.p)}<span class="fpn"><b>${c.p}${DRCHIP}</b><span>${c.ven||'—'} · draft — hidden on your store${c.dc?' · Last Chance':''}${onOrderName.has(c.p)?' · already on order':''}</span></span></button>`;
+  let hh = act.map(rowA).join("");
+  if(dr.length) hh += `<div class="fmeta" style="padding:9px 6px 5px;margin-top:6px;border-top:1px solid var(--line);font-weight:600">Draft products — hidden on your store (${drAll.length})</div>` + dr.map(rowD).join("");
+  list.innerHTML = hh || `<div class="fmeta" style="padding:8px">No match — use “Add a fabric not listed”.</div>`;
   list.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ const nm=b.dataset.pick; const c=CATALOG.find(x=>x.p===nm); closeFabricPicker(); pick(nm, c?c.ven:""); });
  };
  q.oninput=draw; draw(); setTimeout(()=>q.focus(),30);
@@ -3169,12 +3177,14 @@ function renderRD(){
    const variants=q.map((v,i)=>(v>0&&stySel.has(i))?{variant:col?QVAR[i]+" / "+col:QVAR[i],qty:v}:null).filter(Boolean);
    const excluded=!!skip[l.p];
    const isPosted=!!ppost[l.p];
-   return {p:l.p, prodT, qty, variants, excluded, isPosted, included:(!!prodT && !excluded && !isPosted && qty>0)};
+   return {p:l.p, prodT, qty, variants, excluded, isPosted, isDr:isDraftPat(l.p), included:(!!prodT && !excluded && !isPosted && qty>0)};
   });
   const postedN=rows.filter(x=>x.isPosted).length;
   const postRows = rows.filter(x=>x.included);
   const list=[]; postRows.forEach(x=>x.variants.forEach(v=>list.push({prod:x.prodT, variant:v.variant, qty:v.qty})));
-  rdPostTxt="Post run "+r.no+" ("+r.name+") to Shopify — add finished hats:\n"+list.map(x=>"+"+x.qty+"  "+x.prod+" — "+x.variant).join("\n");
+  const drSel=postRows.filter(x=>x.isDr).map(x=>x.prodT||x.p);
+  rdPostTxt="Post run "+r.no+" ("+r.name+") to Shopify — add finished hats:\n"+list.map(x=>"+"+x.qty+"  "+x.prod+" — "+x.variant).join("\n")
+    +(drSel.length?"\n\nAlso set these back to ACTIVE (they're draft right now):\n"+drSel.map(pp=>"• "+pp).join("\n"):"");
   const totalSel=postRows.reduce((s,x)=>s+x.qty,0);
   rdPostList=list; rdPostRows=postRows; rdPostTotal=totalSel;
   const unlinkedN=rows.filter(x=>!x.prodT).length;
@@ -3186,19 +3196,22 @@ function renderRD(){
        ? `<button class="btn" data-pairpat="${x.p.replace(/"/g,"&quot;")}" style="min-height:30px;background:#FBE3DC;color:#B23A1B;border-color:#E7B6A7;font-size:11.5px;padding:3px 10px">⚠ not linked — pair…</button>`
        : `<span style="font-size:11.5px;color:#0F8A6D">→ ${x.prodT}</span>`);
    const vlist = x.variants.map(v=>`${v.variant} <b>+${v.qty}</b>`).join(" &nbsp;·&nbsp; ");
+   const drNote = x.isDr && !x.isPosted ? `<div style="margin-top:4px;font-size:11px;color:#8A6D1F;background:#FBF6E9;border:1px solid #E7DAB6;border-radius:7px;padding:4px 8px">⚑ Draft on Shopify — set this product back to <b>Active</b>, or the stock you upload won’t be buyable.</div>` : "";
    const op = x.isPosted ? .55 : (x.excluded ? .5 : 1);
    return `<div class="postrow" style="display:flex;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);opacity:${op}${x.isPosted?";background:#F4FAF7":""}">`+
      `<input type="checkbox" class="postchk" data-pat="${x.p.replace(/"/g,"&quot;")}" ${(x.prodT && !x.isPosted)?"":"disabled"} ${x.included?"checked":""} style="width:21px;height:21px;margin-top:1px;flex:none;accent-color:#0F8A6D">`+
      `<div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><b style="font-size:13px${x.isPosted?";text-decoration:line-through;color:var(--soft)":""}">${swatchHtml(x.p,true)}${dispName(x.p)}</b><b class="num" style="font-size:13px;white-space:nowrap">${x.qty} hat${x.qty>1?"s":""}</b></div>`+
      `<div style="margin-top:3px">${status}</div>`+
-     `<div class="fmeta" style="margin-top:4px;font-size:11px;line-height:1.5">${vlist}</div></div></div>`;
+     `<div class="fmeta" style="margin-top:4px;font-size:11px;line-height:1.5">${vlist}</div>${drNote}</div></div>`;
   }).join("");
-  const flags=[]; if(unlinkedN) flags.push(`<span style="color:#B23A1B">⚠ ${unlinkedN} not linked (tap “pair…”)</span>`); if(skippedN) flags.push(`<span style="color:var(--soft)">${skippedN} unticked</span>`); if(postedN) flags.push(`<span style="color:#0F8A6D">✓ ${postedN} already posted</span>`);
+  const draftPend=rows.filter(x=>x.isDr && !x.isPosted);
+  const flags=[]; if(unlinkedN) flags.push(`<span style="color:#B23A1B">⚠ ${unlinkedN} not linked (tap “pair…”)</span>`); if(draftPend.length) flags.push(`<span style="color:#8A6D1F">⚑ ${draftPend.length} still draft on Shopify</span>`); if(skippedN) flags.push(`<span style="color:var(--soft)">${skippedN} unticked</span>`); if(postedN) flags.push(`<span style="color:#0F8A6D">✓ ${postedN} already posted</span>`);
   const styChips=`<div style="display:flex;gap:5px;flex-wrap:wrap;margin:0 0 8px;align-items:center"><span style="font-size:11px;color:var(--soft);font-weight:600">Styles:</span>${QCOLS.map((c,i)=>`<button class="seg${stySel.has(i)?" on":""}" data-postty="${i}" style="padding:5px 11px;border:1px solid var(--line);border-radius:99px;font-size:11.5px">${c}</button>`).join("")}<button class="lnkbtn" data-postyall="1" style="font-size:10.5px;padding:2px 9px;border:1px solid var(--line);border-radius:99px;background:#fff">${stySel.size===7?"none":"all"}</button></div>`;
   body=`<div class="card"><b style="font-size:15px">Finished goods → Shopify</b>`+
     `<div class="fmeta" style="margin:5px 0 10px">Tick the patterns, pick the styles, tap <b>⬆ Upload</b> — inventory posts straight to Shopify and the patterns mark themselves posted.</div>`+
     styChips+
     (flags.length?`<div class="fmeta" style="margin:-4px 0 8px">${flags.join(" &nbsp;·&nbsp; ")}</div>`:"")+
+    (draftPend.length?`<div style="margin:0 0 10px;padding:8px 10px;border:1px solid #E7DAB6;background:#FBF6E9;border-radius:9px;font-size:11.5px;color:#6E5715;line-height:1.5"><b>⚑ Reactivate before uploading:</b> ${draftPend.map(x=>dispName(x.p)).join(", ")} ${draftPend.length>1?"are":"is"} still a draft on Shopify. The upload will add stock, but nobody can buy ${draftPend.length>1?"them":"it"} until the product is set to Active.</div>`:"")+
     `<div style="max-height:360px;overflow:auto;border-top:1px solid var(--line)">${rowHtml||'<div class="empty">No finished hats in this run.</div>'}</div>`+
     `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:9px;border-top:2px solid var(--dark)"><b>Selected to upload</b><b class="num" style="font-size:15px">${totalSel} hat${totalSel!==1?"s":""}</b></div>`+
     `<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${isLead?`<button class="btn ${list.length?'go':''}" id="rdupload"${list.length?'':' disabled'}>⬆ Upload to Shopify${list.length?` (${totalSel} hats)`:''}</button>`:''}<button class="btn" id="rdcopy">Copy for Claude</button><button class="btn" id="rdposted"${postRows.length?'':' disabled'}>✓ Mark posted only</button></div>`+

@@ -508,14 +508,15 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web22 (Custom tab: mockup thumbnails show the head view; tap the legend icons to filter by customization type (multi-select); previous orders load as you scroll and are fully editable. Supabase library pinned to 2.45.4 + auth timeout so the tool can never boot blank.)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web23 (Boot hardening: no cross-tab auth lock + sign-in timeout, so a stuck tab can never blank the tool. Custom tab: head-view thumbnails, multi-select type filter, previous orders load as you scroll and are fully editable.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
-const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-08-29-web22";
+/* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
+const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { lock: (_name, _timeout, fn) => fn() } }) : undefined;
+const BUILD="2026-08-29-web23";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -3074,7 +3075,8 @@ function renderCustom(){
  /* web22: previous orders page in as you scroll (or tap Show more) */
  const _more=document.getElementById("comore");
  if(_more){ const go=()=>{ CO_PAGE+=12; renderCustom(); }; const _mb=_more.querySelector("[data-comore]"); if(_mb) _mb.onclick=go;
-  try{ if(window._coIO) window._coIO.disconnect(); window._coIO=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)){ window._coIO.disconnect(); go(); } },{rootMargin:"300px"}); window._coIO.observe(_more); }catch(e){} }
+  try{ if(window._coIO) window._coIO.disconnect(); window._coIO=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)){ window._coIO.disconnect(); go(); } },{rootMargin:"300px"}); window._coIO.observe(_more); }catch(e){}
+  if(!window._coScrollWired){ window._coScrollWired=true; window.addEventListener("scroll",()=>{ const m=document.getElementById("comore"); if(!m||!document.getElementById("view-custom").classList.contains("on")) return; if(m.getBoundingClientRect().top<innerHeight+300){ if(window._coIO) window._coIO.disconnect(); CO_PAGE+=12; renderCustom(); } },{passive:true}); } }
  var _cs=document.getElementById("co-sync"); if(_cs) _cs.onclick = ()=>{
   const code = JSON.stringify(CUSTOM.map(o=>({num:o.num, name:o.name, done:Object.keys(o.ms||{}).filter(k=>o.ms[k])})));
   try { navigator.clipboard.writeText("Sync custom orders: " + code); } catch(e){ prompt("Copy this for Claude:", code); }
@@ -4182,7 +4184,12 @@ function startApp(){ if(APP_STARTED) return; APP_STARTED=true;
 }
 if(typeof sb!=="undefined"){
  sb.auth.onAuthStateChange((ev,s)=>{ ACCESS_TOKEN=s?s.access_token:null; if(s) startApp(); else if(APP_STARTED) location.reload(); });
- sb.auth.getSession().then(({data:{session}})=>{ if(session){ ACCESS_TOKEN=session.access_token; startApp(); } else { var lg=document.getElementById("login"); if(lg) lg.style.display="flex"; } });
+ /* web23: boot can never hang — 6s timeout on getSession, then fall back to the stored session, else show the login */
+ (async()=>{ let session=null;
+  try{ session=(await Promise.race([sb.auth.getSession(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("getSession timeout")),6000))])).data.session; }
+  catch(e){ try{ const tok=JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); if(tok&&tok.access_token&&tok.expires_at*1000>Date.now()+30000) session=tok; }catch(e2){} }
+  if(session){ ACCESS_TOKEN=session.access_token; startApp(); } else if(!APP_STARTED){ var lg=document.getElementById("login"); if(lg) lg.style.display="flex"; }
+ })();
  var _li=document.getElementById("liBtn"); if(_li) _li.onclick=async()=>{ document.getElementById("liErr").textContent=""; const {error}=await sb.auth.signInWithPassword({email:document.getElementById("liEmail").value.trim(),password:document.getElementById("liPass").value}); if(error) document.getElementById("liErr").textContent=error.message; };
  var _lp=document.getElementById("liPass"); if(_lp) _lp.addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("liBtn").click(); });
  var _so=document.getElementById("soBtn"); if(_so) _so.onclick=async()=>{ try{ await sb.auth.signOut(); }catch(e){} location.reload(); };

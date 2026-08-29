@@ -507,7 +507,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
 <div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web21 (Custom tab is now a card rolodex — tap a card for the full order; customization-type icons; Shopify order notes + timeline comments shown beside the team’s own production notes. Tracker lists planned runs with a ▶ Schedule button; newest run opens by default.)</span></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
@@ -4150,7 +4150,13 @@ document.getElementById("dnext").onclick = ()=>document.getElementById("daystrip
 { const _rb=document.getElementById("resetbtn"); if(_rb) _rb.onclick=()=>{ DONE=seedDone(); save(); render(); }; } /* web8: reset button removed (artifact-era; would wipe real progress) */
 function startApp(){ if(APP_STARTED) return; APP_STARTED=true;
  var lg=document.getElementById("login"); if(lg) lg.style.display="none";
- (async()=>{ try{ const {data:{user}}=await sb.auth.getUser(); window._uid=user&&user.id; const {data:prof}=await sb.from("profiles").select("role").eq("id",user.id).maybeSingle(); isLead=!!(prof&&prof.role==="lead"); }catch(e){ isLead=true; }
+ (async()=>{ try{
+   /* web21: never let a hung auth call blank the tool — 6s timeout, then fall back to the stored session / direct auth endpoint */
+   const withTO=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("auth timeout")),ms))]);
+   let user=null;
+   try{ user=(await withTO(sb.auth.getUser(),6000)).data.user; }
+   catch(e){ try{ const tok=JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); if(tok&&tok.access_token){ const r=await fetch(SUPABASE_URL+"/auth/v1/user",{headers:{apikey:SUPABASE_ANON,Authorization:"Bearer "+tok.access_token}}); if(r.ok) user=await r.json(); } }catch(e2){} }
+   window._uid=user&&user.id; const {data:prof}=await sb.from("profiles").select("role").eq("id",user.id).maybeSingle(); isLead=!!(prof&&prof.role==="lead"); }catch(e){ isLead=true; }
   await bootCloud(); await loadOrders(); await loadTimeEntries(); await loadBIS(); /* web9 tracker · web15 back-in-stock */
   try{ sb.channel("orders-live").on("postgres_changes",{event:"*",schema:"public",table:"orders"},()=>{ if(Date.now()-_selfWrite<2500) return; loadOrders(); }).subscribe(); }catch(e){}
   try{ sb.channel("te-live").on("postgres_changes",{event:"*",schema:"public",table:"time_entries"},()=>{ if(Date.now()-_teSelf<2000) return; loadTimeEntries().then(render); }).subscribe(); }catch(e){} /* web9: everyone sees running timers live */

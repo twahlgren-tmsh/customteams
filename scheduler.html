@@ -187,6 +187,15 @@ details[open] .chev { transform:rotate(90deg); }
 .focard .fsub { font-size:11px; color:var(--soft); line-height:1.55; margin-top:5px; }
 .focard .factions { display:flex; gap:7px; padding:10px 12px 12px; }
 .focard .factions .btn { min-height:38px; flex:1; }
+/* web26: unified product card */
+.pcard .pimg { position:absolute; right:6px; top:6px; width:26px; height:26px; border-radius:99px; border:none; background:rgba(255,255,255,.85); font-size:13px; cursor:pointer; display:grid; place-items:center; box-shadow:0 1px 4px rgba(0,0,0,.15); }
+.pcard .pyd b { cursor:pointer; border-bottom:1px dashed var(--soft); color:var(--ink); }
+.pcard .pnote { font-size:11px; color:#55534C; margin-top:5px; padding:4px 6px; border:1px dashed transparent; border-radius:7px; min-height:16px; line-height:1.4; white-space:pre-wrap; }
+.pcard .pnote[contenteditable="true"]:hover, .pcard .pnote[contenteditable="true"]:focus { border-color:var(--line); background:#FBFAF6; outline:none; }
+.pcard .pnote:empty:before { content:attr(data-ph); color:var(--faint); }
+.pcard .prun { font-size:11px; color:var(--soft); margin-top:4px; }
+.pcard .pbar { height:5px; background:#EDEAE2; border-radius:99px; overflow:hidden; margin-top:4px; } .pcard .pbar i { display:block; height:100%; }
+.fabstages { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 2px; } .fabstages .stg { font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px; background:#F0EEE6; color:#55534C; cursor:pointer; } .fabstages .stg.act { background:var(--dark,#045863); color:#fff; } .fabstages .stg small { font-weight:600; opacity:.7; margin-left:4px; }
 .foadd { border:1.5px dashed var(--line); background:var(--bg); color:var(--soft); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; cursor:pointer; font-size:12.5px; font-weight:650; text-align:center; min-height:190px; font-family:inherit; }
 .foadd:hover { border-color:var(--ink); color:var(--ink); }
 .foaddplus { font-size:32px; line-height:1; }
@@ -471,7 +480,6 @@ nav a.navlink:hover{ background:var(--tmsoft); }
   <button data-v="tracker"><span class="nico">✅</span>Tracker</button>
   <button data-v="fabric"><span class="nico">🪡</span>Fabric</button>
   <button data-v="cut"><span class="nico">✂️</span>Cut</button>
-  <button data-v="bis"><span class="nico">🔔</span>Back in Stock</button>
 </nav>
 
 <section id="view-board" class="on">
@@ -493,6 +501,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <section id="view-fabric">
   <div class="card" id="fabsummary"></div>
   <div id="fabwrap"></div>
+  <div id="fabbis"><div class="fabsec" id="fabbishead">🔔 Waitlist demand (Back in Stock)</div><div class="card" id="bissummary"></div><div id="biswrap"></div></div>
 </section>
 
 <section id="view-tracker">
@@ -501,21 +510,17 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <section id="view-cut">
   <div id="cutwrap"></div>
 </section>
-<section id="view-bis">
-  <div class="card" id="bissummary"></div>
-  <div id="biswrap"></div>
-</section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web25 (Data and sign-in are now separate connections, so a slow Supabase auth service can no longer stall or blank the tool. Custom tab: head-view thumbnails, multi-select type filter, previous orders load as you scroll and are fully editable.)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web26 (Fabric tab is now the whole product pipeline — To order → New designs → On order → Ready to cut → In production → Launch, with waitlist demand folded in from the old Back in Stock tab. One product card everywhere: thread, yards on hand and notes are editable on the card; ↻ Refresh from Shopify also updates changed product photos.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-08-29-web25";
+const BUILD="2026-08-29-web26";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -1563,7 +1568,7 @@ function applyFabLive(){
    const c=(typeof CATALOG!=="undefined")&&CATALOG.find(x=>x.p===pr.p);
    if(c){ c.on=pr.on; if(pr.v!=null) c.v=pr.v; if(pr.ven&&!c.ven) c.ven=pr.ven; if(pr.dr) c.dr=1; else delete c.dr; if(pr.dc) c.dc=1; } /* web20: dr = draft on Shopify (hidden listing, still restockable) */
    else if(typeof CATALOG!=="undefined"){ CATALOG.push({p:pr.p, ven:pr.ven||"", v:pr.v!=null?pr.v:0, on:pr.on||0, _new:true, ...(pr.dr?{dr:1}:{}), ...(pr.dc?{dc:1}:{})}); } /* web8: NEW Shopify products join the catalog (so pairing finds them) */
-   if(pr.img && typeof SWATCH!=="undefined" && !SWATCH[pr.p]) SWATCH[pr.p]=pr.img; /* web8: learn new products' ponytail images (Comfort+ etc.) */
+   if(pr.img && typeof SWATCH!=="undefined") SWATCH[pr.p]=pr.img; /* web26: always take Shopify's current image so a changed listing photo shows here (manual uploads in OVR.fabimg still win) */
    if(typeof CSTYLE!=="undefined"&&CSTYLE[pr.p]&&Array.isArray(pr.styles)) CSTYLE[pr.p].o=pr.styles.slice();
   }catch(e){}
  });
@@ -1725,7 +1730,49 @@ const CATALOG = [
  {p:"Take You To Rio",ven:"Dear Stella",v:0.0,on:49}
 ];
 const cnorm = s => String(s).toLowerCase().replace(/\(comfort\+\)/g," ").replace(/scrub hat/g," ").replace(/&/g,"and").replace(/[^a-z0-9]+/g,"");
-function fabInit(){ if(!OVR.fabric) OVR.fabric={}; if(!OVR.fabric.yards) OVR.fabric.yards={}; if(!OVR.fabric.orders) OVR.fabric.orders=[]; }
+function fabInit(){ if(!OVR.fabric) OVR.fabric={}; if(!OVR.fabric.yards) OVR.fabric.yards={}; if(!OVR.fabric.orders) OVR.fabric.orders=[]; if(!OVR.fabric.notes) OVR.fabric.notes={}; if(!OVR.fabric.newDesigns) OVR.fabric.newDesigns={}; }
+/* ---------- web26: ONE product record per pattern / core color, shared by every tab ---------- */
+function prodIsCore(name){ return /^core solid/i.test(name||""); }
+function prodCoreColor(name){ return String(name||"").replace(/^core solid:\s*/i,"").trim(); }
+function prodCat(name){ if(typeof CATALOG==="undefined"||!name) return null; return CATALOG.find(x=>x.p===name)||CATALOG.find(x=>cnorm(x.p)===cnorm(name))||null; }
+function prodThread(name){ const ov=(OVR.fabric&&OVR.fabric.threadOv)||{}; if(prodIsCore(name)){ const c=prodCoreColor(name); return ov[c]||ov[name]||CORE_THREAD[c]||"white"; } return ov[name]||""; }
+function prodNotes(name){ return ((OVR.fabric&&OVR.fabric.notes)||{})[name]||""; }
+function prodReadyOrders(name){ return ((OVR.fabric&&OVR.fabric.orders)||[]).filter(o=>o.fabric===name&&o.received&&!o.cut); }
+function prodYards(name){ fabInit(); if(prodIsCore(name)) return OVR.fabric.yards[prodCoreColor(name)]||0; return prodReadyOrders(name).reduce((s,o)=>s+(o.yards!=null?+o.yards:((o.bolts||1)*(o.boltYd||15))),0); }
+function prodSetYards(name, v){ fabInit(); v=Math.max(0,+v||0);
+ if(prodIsCore(name)){ OVR.fabric.yards[prodCoreColor(name)]=v; return; }
+ const rs=prodReadyOrders(name);
+ if(rs.length){ rs[0].yards=v; for(let i=1;i<rs.length;i++) rs[i].yards=0; }
+ else if(v>0){ const c=prodCat(name); OVR.fabric.orders.push({id:"o"+Date.now()+name, fabric:name, bolts:1, boltYd:15, vendor:c?c.ven:"", thread:prodThread(name), core:false, placed:0, arrive:0, received:true, yards:v, manual:true}); }
+}
+function prodStatus(name){ if(prodIsCore(name)) return "core"; const c=prodCat(name); if(!c) return "new"; if(c.dr) return "draft"; if(c._manual || (((OVR.fabric&&OVR.fabric.newDesigns)||{})[name] && c.v===0 && !c.on)) return "new"; if(c.dc) return "lastchance"; return "live"; }
+function prodStatusChip(name){ const M={core:["core solid","#EDEAE2","#55534C"],new:["new design","#E3F3E0","#2E6B1E"],draft:["draft on Shopify","#EFE7D6","#8A6D1F"],lastchance:["last chance","#F1EEE7","#A07B45"],live:["live","#E3EEF9","#1F4E88"]}[prodStatus(name)]; return `<span class="fbadge" style="background:${M[1]};color:${M[2]}">${M[0]}</span>`; }
+function prodRuns(name){ const n=cnorm(name); return RUNS.filter(r=>!r.done && (r.lines||[]).some(l=>cnorm(l.p)===n||cnorm(l.p).startsWith(n))); }
+/* the card: image (📷 = manage images), status chip, thread chips (editable), yards on hand (tap to set), note (click to type) */
+function productCard(name, opts){ opts=opts||{}; fabInit();
+ const isC=prodIsCore(name), col=isC?prodCoreColor(name):null, c=prodCat(name);
+ const th=opts.thread!=null?opts.thread:prodThread(name);
+ const yd=prodYards(name); const esc=name.replace(/"/g,'&quot;');
+ const sub=opts.sub!=null?opts.sub:(isC?`${Math.round(CORE_VEL[col]||0)}/mo · MDG · 25 yd bolt`:(c?`${c.v}/mo · ${c.on} on hand${c.ven?` · ${c.ven} · ~${LEAD[c.ven]||7}d`:""}`:"not on Shopify yet"));
+ const notes=prodNotes(name);
+ return `<div class="focard pcard${opts.cls?" "+opts.cls:""}" data-pcard="${esc}"${opts.style?` style="${opts.style}"`:""}>
+  <div style="position:relative">${fabCardImg(name)}${opts.badge||""}${(isLead&&!isC)?`<button class="pimg" data-pimg="${esc}" title="Product images">📷</button>`:""}</div>
+  <div class="fbody">
+   <div class="ftitle">${opts.title||name} ${prodStatusChip(name)}${opts.chips||""}${bisBadge(name)} ${threadEdit("core", isC?col:name, th)}</div>
+   <div class="fsub">${sub}</div>
+   <div class="fsub pyd">Yards on hand: <b data-pyd="${esc}" title="Tap to set">${Math.round(yd*10)/10}</b> yd${opts.ydExtra||""}</div>
+   ${opts.extra||""}
+   <div class="pnote" data-pnote="${esc}" contenteditable="${isLead?"true":"false"}" data-ph="＋ note (thread tip, cut direction…)">${notes.replace(/</g,"&lt;")}</div>
+  </div>
+  ${opts.actions?`<div class="factions">${opts.actions}</div>`:""}
+ </div>`;
+}
+function wireProductCards(){
+ document.querySelectorAll("[data-pyd]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); if(!isLead) return; const n=b.dataset.pyd; const v=prompt(n+" — yards on hand:", Math.round(prodYards(n)*10)/10); if(v===null) return; prodSetYards(n,v); save(); render(); });
+ document.querySelectorAll("[data-pnote]").forEach(el=>{ el.onclick=e=>e.stopPropagation(); el.onblur=()=>{ const n=el.dataset.pnote; const v=el.textContent.trim(); fabInit(); if(v) OVR.fabric.notes[n]=v; else delete OVR.fabric.notes[n]; save(); }; el.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); el.blur(); } }; });
+ document.querySelectorAll("[data-pimg]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); fabImgSheet(b.dataset.pimg); });
+ wireThreadEdits();
+}
 function coreDemand(color){
  let hats=0;
  RUNS.forEach(r=>{ if(r.done) return; r.lines.forEach(l=>{ if(l.p==="Core Solid: "+color) hats+=l.q.reduce((a,b)=>a+b,0); }); });
@@ -1759,7 +1806,8 @@ function wireThreadEdits(){
   const kind=el.dataset.thkind, id=el.dataset.thid, cur=el.dataset.thval;
   openThreadPicker(ev.clientX, ev.clientY, cur, val=>{
    if(kind==="order"){ const o=OVR.fabric.orders.find(x=>x.id===id); if(o){ o.thread=val; } }
-   else if(kind==="core"){ OVR.fabric.threadOv=OVR.fabric.threadOv||{}; if(val) OVR.fabric.threadOv[id]=val; else delete OVR.fabric.threadOv[id]; }
+   else if(kind==="core"){ OVR.fabric.threadOv=OVR.fabric.threadOv||{}; if(val) OVR.fabric.threadOv[id]=val; else delete OVR.fabric.threadOv[id];
+    try{ const fn=(typeof CORE_VEL!=="undefined"&&CORE_VEL[id]!==undefined)?"Core Solid: "+id:id; (OVR.fabric.orders||[]).forEach(o=>{ if(o.fabric===fn && !o.cut && val) o.thread=val; }); }catch(e){} /* web26: one product record — open orders follow the card */ }
    else if(kind==="cut"){ const sp=(OVR.cut&&OVR.cut.sess||[]).find(s=>s.id===id); if(sp) sp.thread=val||"white"; }
    else if(kind==="run"){ OVR.runThread=OVR.runThread||{}; if(val) OVR.runThread[id]=val; else delete OVR.runThread[id]; try{ const x=(typeof XRUNS!=="undefined")&&XRUNS.find(z=>String(z.no)===String(id)); if(x&&val){ x.thread=val; if(typeof saveRuns==="function") saveRuns(); } }catch(e){} if(typeof rebuildRuns==="function") rebuildRuns(); }
    save(); render();
@@ -1829,78 +1877,131 @@ function renderFabric(){
  const upSkip = new Set(OVR.fabric.upSkip||[]);
  const upPool = ranked.filter(c=>c.v>=3 && !c.dc && !recSet.has(c.p) && !upSkip.has(c.p)).sort((a,b)=>a.wk-b.wk);
 
- // SNAPSHOT — tiles are clickable to focus one section
+ /* ---------- web26: one pipeline — To order → New designs → On order → Ready to cut → In production → Launch (+ core stock, waitlist demand below) ---------- */
+ const items=(typeof LAST!=="undefined"&&LAST&&LAST.items)||{}, schedL=(typeof LAST!=="undefined"&&LAST&&LAST.sched)||{runDone:{},sewDone:{}};
+ const D=window.BIS_DIG||{}; const bisSug=((D.suggested||[]).map(n=>((D.patterns||[]).find(p=>p.p===n))).filter(Boolean));
+ const recNames=new Set(recs.map(c=>c.p));
+ const bisRecs=bisSug.filter(p=>!recNames.has(p.p) && !noReorder.has(p.p) && !onOrderName.has(p.p));
+ // NEW DESIGNS: Shopify drafts, brand-new catalog entries, and designs added by hand here
+ const newNames=[...new Set([].concat(CATALOG.filter(c=>c.dr).map(c=>c.p), Object.keys(OVR.fabric.newDesigns||{})))].filter(n=>!onOrderName.has(n)&&!ready.some(o=>o.fabric===n));
+ // IN PRODUCTION: patterns in runs that are scheduled and not finished
+ const prodRunsL=RUNS.filter(r=>!r.done && r.sched!==false).map(r=>{ const ri=Object.values(items).filter(i=>i.run===r.no); const tot=ri.reduce((a,i)=>a+i.total,0), rem=ri.reduce((a,i)=>a+i.rem,0); const fin=schedL.runDone[r.no]; return {r, pct: tot?Math.round(100*(tot-rem)/tot):0, done: fin!==null&&fin!==undefined&&fin<0}; });
+ const inProd=prodRunsL.filter(x=>!x.done), toLaunch=prodRunsL.filter(x=>x.done && OVR.posted && OVR.posted[x.r.no]!==true).concat(RUNS.filter(r=>r.done && !(OVR.posted&&OVR.posted[r.no]===true)).map(r=>({r,pct:100,done:true})));
+ const nLaunch=toLaunch.length, nProd=inProd.length;
+ const toOrderN=coreRecs.length+recs.length+bisRecs.length;
+
  document.getElementById("fabsummary").innerHTML=`<div class="cosnap">
-  <div class="cs${fabFocus==='order'?' act':''}" data-fabjump="order"><b style="${(coreRecs.length+recs.length)?'color:#C2452D':''}">${coreRecs.length+recs.length}</b><span>to order</span></div>
-  <div class="cs${fabFocus==='intake'?' act':''}" data-fabjump="intake"><b>${incoming.length}</b><span>awaiting intake</span></div>
+  <div class="cs${fabFocus==='order'?' act':''}" data-fabjump="order"><b style="${toOrderN?'color:#C2452D':''}">${toOrderN}</b><span>to order</span></div>
+  <div class="cs${fabFocus==='new'?' act':''}" data-fabjump="new"><b>${newNames.length}</b><span>new designs</span></div>
+  <div class="cs${fabFocus==='intake'?' act':''}" data-fabjump="intake"><b>${incoming.length}</b><span>on order</span></div>
   <div class="cs${fabFocus==='ready'?' act':''}" data-fabjump="ready"><b style="${(ready.length+coreReady.length)?'color:#0F8A6D':''}">${ready.length+coreReady.length}</b><span>ready to cut</span></div>
+  <div class="cs${fabFocus==='prod'?' act':''}" data-fabjump="prod"><b>${nProd}</b><span>in production</span></div>
+  <div class="cs${fabFocus==='launch'?' act':''}" data-fabjump="launch"><b style="${nLaunch?'color:#5B50D6':''}">${nLaunch}</b><span>to launch</span></div>
   <div class="cs${fabFocus==='core'?' act':''}" data-fabjump="core"><b style="${lowN?'color:#C2452D':''}">${lowN}</b><span>core low</span></div>
- </div>${fabFocus?`<div style="text-align:center;margin-top:9px"><button class="btn" id="fabshowall">↤ Show all sections</button></div>`:`<div class="fmeta" style="text-align:center;margin-top:7px">Tap a box to focus that section.</div>`}`;
+ </div>${fabFocus?`<div style="text-align:center;margin-top:9px"><button class="btn" id="fabshowall">↤ Show all sections</button></div>`:`<div class="fmeta" style="text-align:center;margin-top:7px">Tap a box to focus that stage. Every card is the same product record — thread, yards on hand and notes are editable right on it.</div>`}`;
 
  let h="";
  const so = id => !fabFocus || fabFocus===id; // section open?
  const secHead = (id,label,count) => `<div class="fabsec sechead" data-fabsec="${id}">${label} <span class="pill2">${count}</span>${(fabFocus&&fabFocus!==id)?'<span class="secshow">show</span>':''}</div>`;
- h+=`<div class="coctl"><button class="btn" id="velrefresh">↻ Refresh inventory &amp; velocity</button><span class="fmeta" style="margin:0">Fresh from Shopify as of ${typeof VEL_ASOF!=="undefined"?VEL_ASOF:"the last sync"} — updates itself every morning.</span></div>`;
- // 1) TO ORDER — visual gallery, action button lives on each card
- h+=secHead("order","▸ To order",coreRecs.length+recs.length);
+ h+=`<div class="coctl"><button class="btn" id="velrefresh">↻ Refresh from Shopify</button><span class="fmeta" style="margin:0">Inventory, velocity, product status &amp; images — fresh as of ${typeof VEL_ASOF!=="undefined"?VEL_ASOF:"the last sync"}; updates itself every morning.</span>${isLead?`<button class="btn" id="fnewdesign" style="margin-left:auto">＋ New design</button>`:""}</div>`;
+
+ // 1) TO ORDER
+ h+=secHead("order","▸ To order",toOrderN);
  if(so("order")){
-  h+=`<div class="fmeta" style="margin:-4px 0 9px">Ranked by weeks of cover — counting hats already in production from runs ${RUNS.filter(r=>!r.done&&r.sched!==false).map(r=>r.no).join(", ")||"in progress"}. Lowest cover (most urgent) first. Velocity is recency-weighted, age- &amp; availability-adjusted. Updated ${VEL_ASOF}.</div>`;
+  h+=`<div class="fmeta" style="margin:-4px 0 9px">Ranked by weeks of cover — counting hats already in production from runs ${RUNS.filter(r=>!r.done&&r.sched!==false).map(r=>r.no).join(", ")||"in progress"}. Waitlist-driven makes are included. Updated ${VEL_ASOF}.</div>`;
   h+=`<div class="fogrid">`;
   h+=`<button class="focard foadd" id="faddorder"><span class="foaddplus">＋</span><span>Add any fabric<br>(search all products)</span></button>`;
   coreRecs.sort((a,b)=>CORE_VEL[b]-CORE_VEL[a]).forEach(c=>{ const need=Math.max(1,Math.ceil((CORE_VEL[c]/4.33*5)/(CB*HATS_PER_YD)));
-   const cth=(OVR.fabric.threadOv||{})[c] || CORE_THREAD[c] || 'white';
-   h+=`<div class="focard">${fabCardImg("Core Solid: "+c)}<div class="fbody"><div class="ftitle">Core Solid: ${c} ${threadEdit("core", c, cth)}</div><div class="fsub">${Math.round(CORE_VEL[c])}/mo · every ~${cadence(CORE_VEL[c])} wk<br>MDG · 25yd bolt ($74) · ~4d · ~${need} bolt${need>1?'s':''}</div></div><div class="factions"><button class="btn go" data-forder="${c}|${need}">Ordered ▸</button></div></div>`; });
-  recs.forEach(c=>{ const pth=(OVR.fabric.threadOv||{})[c.p]||'';
-   h+=`<div class="focard">${fabCardImg(c.p)}<div class="fbody"><div class="ftitle">${c.p}${stockBadge(c.stock)}${bisBadge(c.p)} ${threadEdit("core", c.p, pth)}</div><div class="fsub">${c.v}/mo · ${c.on} on hand${c.inc?` · +${c.inc} in production`:''} · <b>~${c.wk}wk cover</b><br>${c.ven} · ~${LEAD[c.ven]||7}d</div></div><div class="factions"><button class="btn" data-fno="${c.p.replace(/"/g,'&quot;')}" title="Don't reorder" style="flex:0 0 auto">Skip</button><button class="btn go" data-catorder="${c.p.replace(/"/g,'&quot;')}">Ordered ▸</button></div></div>`; });
-  if(!coreRecs.length && !recs.length) h+=`<div class="note">Nothing needs ordering right now. 👍</div>`;
+   h+=productCard("Core Solid: "+c,{sub:`${Math.round(CORE_VEL[c])}/mo · every ~${cadence(CORE_VEL[c])} wk · MDG · 25 yd bolt ($74) · ~4d · ~${need} bolt${need>1?'s':''}`, actions:`<button class="btn go" data-forder="${c}|${need}">Ordered ▸</button>`}); });
+  recs.forEach(c=>{ h+=productCard(c.p,{chips:stockBadge(c.stock), sub:`${c.v}/mo · ${c.on} on hand${c.inc?` · +${c.inc} in production`:''} · <b>~${c.wk}wk cover</b> · ${c.ven} · ~${LEAD[c.ven]||7}d`, actions:`<button class="btn" data-fno="${c.p.replace(/"/g,'&quot;')}" title="Don't reorder this one" style="flex:0 0 auto">✕</button><button class="btn go" data-catorder="${c.p.replace(/"/g,'&quot;')}">Order ▸</button>`}); });
+  bisRecs.forEach(pp=>{ const c=prodCat(pp.p); h+=productCard(pp.p,{chips:`<span class="fbadge" style="background:#FBE8D8;color:#B45309">🔔 ${pp.act} waiting</span>`, sub:`${pp.act} on the waitlist · ${pp.flex+pp.proxy} flexible${c?` · ${c.on} on hand · ${c.ven}`:""}`, actions:`<button class="btn" data-bismake="${pp.p.replace(/"/g,'&quot;')}" title="Make a few from remnant fabric" style="flex:0 0 auto">Remnant</button><button class="btn go" data-catorder="${pp.p.replace(/"/g,'&quot;')}">Order ▸</button>`}); });
+  if(!toOrderN) h+=`<div class="note">Nothing needs ordering right now. 👍</div>`;
   h+=`</div>`;
   if(covered.length) h+=`<div class="note" style="background:#EAF3DE;border-radius:10px;padding:8px 12px;color:#3B6D11">Covered by a run in production: ${covered.map(c=>c.p).join(", ")}.</div>`;
   if(noReorder.size) h+=`<div class="note">Not reordering: ${[...noReorder].join(", ")} · <a href="#" id="fnoreset" style="color:#5B50D6">reset</a></div>`;
-  // UP NEXT — refreshable queue of the next candidates beyond the list above
   if(upPool.length){
    const off = (OVR.fabric.upOff||0) % Math.max(1,upPool.length); const batch = upPool.slice(off, off+5).concat(off+5>upPool.length?upPool.slice(0,(off+5)-upPool.length):[]);
    h+=`<details class="upnext"${OVR.fabric.upOpen?" open":""}><summary>＋ Up next — more to consider (${upPool.length})</summary>
     <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:4px 0 9px"><span class="fmeta" style="margin:0">The next patterns in line by cover. Add to your order, skip, or refresh for 5 more.</span><button class="btn" id="upmore" style="margin-left:auto">↻ Refresh</button></div><div class="fogrid">`;
-   batch.forEach(c=>{ h+=`<div class="focard">${fabCardImg(c.p)}<div class="fbody"><div class="ftitle">${c.p}${stockBadge(c.stock)}${bisBadge(c.p)}</div><div class="fsub">${c.v}/mo · ${c.on} on hand${c.inc?` · +${c.inc} in production`:''} · ~${c.wk}wk cover<br>${c.ven} · ~${LEAD[c.ven]||7}d</div></div><div class="factions"><button class="btn" data-upskip="${c.p.replace(/"/g,'&quot;')}" style="flex:0 0 auto">Skip</button><button class="btn go" data-catorder="${c.p.replace(/"/g,'&quot;')}">Add to order ▸</button></div></div>`; });
+   batch.forEach(c=>{ h+=productCard(c.p,{chips:stockBadge(c.stock), sub:`${c.v}/mo · ${c.on} on hand${c.inc?` · +${c.inc} in production`:''} · ~${c.wk}wk cover · ${c.ven} · ~${LEAD[c.ven]||7}d`, actions:`<button class="btn" data-upskip="${c.p.replace(/"/g,'&quot;')}" style="flex:0 0 auto">Skip</button><button class="btn go" data-catorder="${c.p.replace(/"/g,'&quot;')}">Order ▸</button>`}); });
    h+=`</div></details>`;
   }
  }
 
- // 2) AWAITING INTAKE
- h+=secHead("intake","Awaiting intake",incoming.length);
+ // 2) NEW DESIGNS — a product card from day one: images, thread, notes; order the fabric; create the Shopify draft
+ h+=secHead("new","New designs",newNames.length);
+ if(so("new")){
+  h+=`<div class="fmeta" style="margin:-4px 0 9px">Patterns that don't have a live listing yet — Shopify drafts and designs you've added here. Build the card (📷 images, thread, notes), order the fabric, create the Shopify draft, then cut it into a run. It goes live from the run's Post step.</div>`;
+  if(newNames.length){ h+=`<div class="fogrid">`;
+   newNames.forEach(n=>{ const c=prodCat(n); const nd=(OVR.fabric.newDesigns||{})[n]; const linked=(c&&!c._manual) ? !!shopTarget(n).prod : !!(OVR.shop&&OVR.shop[n]); const ven=(c&&c.ven)||(nd&&nd.ven)||"";
+    h+=productCard(n,{sub:`${ven||"vendor —"}${nd&&nd.created?` · added ${nd.created}`:""}${c&&c.dr?" · hidden on your store until you activate it":""}`, actions:`${(!linked&&isLead)?`<button class="btn" data-pcreate="${n.replace(/"/g,'&quot;')}" style="flex:0 0 auto" title="Create the Shopify draft product">Draft ▸</button>`:""}${nd?`<button class="btn" data-pnewdel="${n.replace(/"/g,'&quot;')}" style="flex:0 0 auto" title="Remove from new designs">✕</button>`:""}<button class="btn go" data-catorder="${n.replace(/"/g,'&quot;')}">Order fabric ▸</button>`}); });
+   h+=`</div>`; }
+  else h+=`<div class="note">No new designs in progress. Tap <b>＋ New design</b> when you buy a new print.</div>`;
+ }
+
+ // 3) ON ORDER / AWAITING INTAKE
+ h+=secHead("intake","On order — awaiting intake",incoming.length);
  if(so("intake")){
   if(incoming.length){ h+=`<div class="fogrid">`; incoming.forEach(o=>{ const arr=o.arrive!==undefined?fmtDay(o.arrive):"—";
-   h+=`<div class="focard">${fabCardImg(o.fabric)}<div class="fbody"><div class="ftitle">${o.fabric} ${threadEdit("order", o.id, o.thread)}</div><div class="fsub">${o.bolts?`${o.bolts} bolt${o.bolts>1?'s':''} (~${o.bolts*(o.boltYd||15)} yd)<br>`:''}${o.vendor||''} · ordered ${fmtDay(o.placed||0)} · arriving ~${arr}</div></div><div class="factions">${(!o.core&&isLead)?`<button class="btn" data-fimg="${o.id}" title="Add fabric swatch photo" style="flex:0 0 auto">${fabImgCount(o.fabric)?("📷 "+fabImgCount(o.fabric)+"/5"):"📷"}</button>`:""}<button class="btn" data-fcancel="${o.id}" style="flex:0 0 auto">Cancel</button><button class="btn go" data-freceive="${o.id}">Receive ▸</button></div></div>`; }); h+=`</div>`; }
+   h+=productCard(o.fabric,{thread:o.thread, sub:`${o.bolts?`${o.bolts} bolt${o.bolts>1?'s':''} (~${o.bolts*(o.boltYd||15)} yd) · `:''}${o.vendor||''} · ordered ${fmtDay(o.placed||0)} · arriving ~${arr}`, actions:`<button class="btn" data-fcancel="${o.id}" title="Cancel this order" style="flex:0 0 auto">✕</button><button class="btn go" data-freceive="${o.id}">Received ▸</button>`}); }); h+=`</div>`; }
   else h+=`<div class="note">Nothing on order.</div>`;
  }
 
- // 3) READY TO CUT  (received print bolts + core colors with yards on hand)
+ // 4) READY TO CUT
  h+=secHead("ready","Ready to cut",ready.length+coreReady.length);
  if(so("ready")){
   if(ready.length||coreReady.length){ h+=`<div class="fogrid">`;
-   ready.forEach(o=>{ const onhand=o.yards||((o.bolts||1)*(o.boltYd||15));
-    h+=`<div class="focard" style="border-color:#9FE1CB"><div style="position:relative">${fabCardImg(o.fabric)}<span class="fbadge" style="position:absolute;top:8px;left:8px;background:#0F8A6D;color:#fff">ready</span></div><div class="fbody"><div class="ftitle">${o.fabric} ${threadEdit("order", o.id, o.thread)}</div><div class="fsub"><b data-fyd="ord|${o.id}" style="cursor:pointer;border-bottom:1px dashed var(--soft)">${Math.round(onhand)} yd</b> on hand · ${o.vendor||''}<br>tap the yards to edit</div></div><div class="factions">${(!o.core&&isLead)?`<button class="btn" data-fimg="${o.id}" title="Add fabric swatch photo" style="flex:0 0 auto">${fabImgCount(o.fabric)?("📷 "+fabImgCount(o.fabric)+"/5"):"📷"}</button>`:""}<button class="btn go" data-fcut="${o.id}">Cut into run ▸</button></div></div>`; });
-   coreReady.forEach(c=>{ const th=(OVR.fabric.threadOv||{})[c]||CORE_THREAD[c]||"white"; const y=OVR.fabric.yards[c]||0;
-    h+=`<div class="focard" style="border-color:#9FE1CB"><div style="position:relative">${fabCardImg("Core Solid: "+c)}<span class="fbadge" style="position:absolute;top:8px;left:8px;background:#0F8A6D;color:#fff">ready</span></div><div class="fbody"><div class="ftitle">Core Solid: ${c} ${threadEdit("core", c, th)}</div><div class="fsub"><b data-fyd="core|${c}" style="cursor:pointer;border-bottom:1px dashed var(--soft)">${Math.round(y)} yd</b> on hand · ${(y/CB).toFixed(1)} bolt<br>tap the yards to edit</div></div><div class="factions"><button class="btn go" data-corecut="${c}">＋ Add to cut ▸</button></div></div>`; });
+   ready.forEach(o=>{ const onhand=o.yards!=null?+o.yards:((o.bolts||1)*(o.boltYd||15));
+    h+=productCard(o.fabric,{thread:o.thread, badge:`<span class="fbadge" style="position:absolute;top:8px;left:8px;background:#0F8A6D;color:#fff">ready</span>`, style:"border-color:#9FE1CB", sub:`${onhand} yd received${o.vendor?` · ${o.vendor}`:""}${o.manual?" · entered by hand":""}`, actions:`<button class="btn go" data-fcut="${o.id}">Add to cut ▸</button>`}); });
+   coreReady.forEach(c=>{ h+=productCard("Core Solid: "+c,{badge:`<span class="fbadge" style="position:absolute;top:8px;left:8px;background:#0F8A6D;color:#fff">ready</span>`, style:"border-color:#9FE1CB", sub:`${Math.round(CORE_VEL[c])}/mo · ~${Math.round(wkCover(c))}wk cover`, actions:`<button class="btn go" data-corecut="${c}">Add to cut ▸</button>`}); });
    h+=`</div>`; }
-  else h+=`<div class="note">Mark incoming fabric received when it arrives, or add core-solid yards in the section below.</div>`;
+  else h+=`<div class="note">Mark incoming fabric received when it arrives, tap a card's yards to enter fabric you already have, or add core-solid yards below.</div>`;
  }
 
- // 4) CORE STOCK (compact)
+ // 5) IN PRODUCTION
+ h+=secHead("prod","In production",nProd);
+ if(so("prod")){
+  if(inProd.length){ inProd.sort((a,b)=>b.r.no-a.r.no).forEach(x=>{ const r=x.r;
+   h+=`<div class="fmeta" style="margin:4px 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="color:var(--ink)">${r.name}</b> · ${x.pct}% of sewing time done <button class="btn" data-openrun="${r.no}" style="min-height:28px;padding:3px 10px;font-size:11.5px;margin-left:auto">Open run ▸</button></div><div class="fogrid">`;
+   (r.lines||[]).forEach(l=>{ const hats=(l.q||[]).reduce((a,b)=>a+b,0); h+=productCard(l.p,{thread:l.thread||r.thread, sub:`${hats} hats in ${r.name}`, extra:`<div class="pbar"><i style="width:${x.pct}%;background:${r.hex}"></i></div>`}); });
+   h+=`</div>`; }); }
+  else h+=`<div class="note">No runs sewing right now.</div>`;
+ }
+
+ // 6) LAUNCH — finished runs whose hats haven't been posted to Shopify yet
+ h+=secHead("launch","Launch — post finished hats",nLaunch);
+ if(so("launch")){
+  if(toLaunch.length){ toLaunch.sort((a,b)=>b.r.no-a.r.no).forEach(x=>{ const r=x.r;
+   h+=`<div class="fmeta" style="margin:4px 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="color:var(--ink)">${r.name}</b> · sewing complete${(r.lines||[]).some(l=>isDraftPat(l.p))?` · <span class="fbadge" style="background:#EFE7D6;color:#8A6D1F">has drafts — activate the listing before posting</span>`:""} <button class="btn go" data-postrun="${r.no}" style="min-height:28px;padding:3px 10px;font-size:11.5px;margin-left:auto">Finish &amp; post ▸</button></div><div class="fogrid">`;
+   (r.lines||[]).forEach(l=>{ const hats=(l.q||[]).reduce((a,b)=>a+b,0); h+=productCard(l.p,{thread:l.thread||r.thread, sub:`${hats} hats made in ${r.name}`}); });
+   h+=`</div>`; }); }
+  else h+=`<div class="note">Nothing waiting to post. 👍</div>`;
+ }
+
+ // 7) CORE STOCK (compact)
  h+=secHead("core","Core solids on hand",Math.round(colors.reduce((s,c)=>s+yd(c),0))+" yd");
  if(so("core")){
   h+=`<div class="fabgrid">`;
   colors.slice().sort((a,b)=>(low(a)?0:1)-(low(b)?0:1)||CORE_VEL[b]-CORE_VEL[a]).forEach(c=>{ const y=yd(c),dem=coreDemand(c),lw=low(c);
-   h+=`<div class="fcard${lw?' low':''}" style="padding:9px 11px"><div class="fn" style="font-size:12.5px"><span class="swdot" style="background:${CORE_HEX[c]};overflow:hidden">${(typeof CORE_IMG!=="undefined"&&CORE_IMG[c])?`<img src="${CORE_IMG[c]}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.remove()">`:""}</span>${c}</div>
+   h+=`<div class="fcard${lw?' low':''}" style="padding:9px 11px"><div class="fn" style="font-size:12.5px"><span class="swdot" style="background:${CORE_HEX[c]};overflow:hidden">${(typeof CORE_IMG!=="undefined"&&CORE_IMG[c])?`<img src="${CORE_IMG[c]}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.remove()">`:""}</span>${c} ${threadEdit("core", c, prodThread("Core Solid: "+c))}</div>
     <div class="fstep" style="margin:5px 0 3px"><button data-fminus="${c}">−</button><b data-fset="${c}" style="font-size:18px">${Math.round(y)}</b><button data-fplus="${c}">+</button><span>yd</span></div>
     <div class="fmeta">${y?`~${Math.round(wkCover(c))}wk · ${(y/CB).toFixed(1)} bolt`:'<b style="color:#C2452D">out</b>'}${dem?` · ${dem} due`:''}</div></div>`; });
   h+=`</div><div class="fmeta" style="margin-top:5px">−/+ adds a 25yd core bolt; tap the number to set exact yards.</div>`;
  }
 
- // 5) CUT HELPER (only when not focused on one section)
+ // 8) CUT HELPER (only when not focused on one section)
  if(!fabFocus) h+=`<div class="fabsec">Cut helper</div><div class="card"><div class="fmeta" style="font-size:12.5px;line-height:1.7"><b>Print 15 yd → ~46:</b> 16 LP·8 CP·8 CTE·8 LTE·2 LS·2 CO·2 CS<br><b>Print 12 yd → ~39:</b> 12 LP·8 CP·7 CTE·6 LTE·2 LS·2 CO·2 CS<br><b>Comfort+ 15 yd → 48:</b> 20 CTE·20 CP·4 CO·4 CS<br><b>Core solid bolt = 25 yd</b> (≈77 hats across styles).</div></div>`;
 
  document.getElementById("fabwrap").innerHTML=h;
+ /* web26 handlers */
+ wireProductCards();
+ const fbh=document.getElementById("fabbis"); if(fbh) fbh.style.display=(fabFocus&&fabFocus!=="bis")?"none":"";
+ document.querySelectorAll("[data-openrun]").forEach(b=>b.onclick=()=>openRun(+b.dataset.openrun));
+ document.querySelectorAll("[data-postrun]").forEach(b=>b.onclick=()=>{ openRun(+b.dataset.postrun); rdTab="post"; renderRD(); });
+ document.querySelectorAll("[data-bismake]").forEach(b=>b.onclick=()=>{ try{ openBisModal(b.dataset.bismake, true); }catch(e){} });
+ document.querySelectorAll("[data-pcreate]").forEach(b=>b.onclick=()=>{ const n=b.dataset.pcreate; const c=prodCat(n); const nd=(OVR.fabric.newDesigns||{})[n]; const prof=/comfort/i.test(n)?"comfortplus":"standard"; cpCreateOne(n,(c&&c.ven)||(nd&&nd.ven)||"",prof,b).then(ok=>{ if(ok) setTimeout(render,600); }); });
+ document.querySelectorAll("[data-pnewdel]").forEach(b=>b.onclick=()=>{ const n=b.dataset.pnewdel; if(!confirm("Remove "+n+" from new designs?")) return; delete OVR.fabric.newDesigns[n]; save(); render(); });
+ const fnd=document.getElementById("fnewdesign"); if(fnd) fnd.onclick=()=>{ const n=(prompt("Name of the new pattern / design:")||"").trim(); if(!n) return; if(prodCat(n)&&!prodCat(n).dr){ boardToast(n+" is already a live product"); return; } const ven=(prompt("Vendor for "+n+":", "MDG")||"").trim(); fabInit(); OVR.fabric.newDesigns[n]={ven, created:new Date().toISOString().slice(0,10)}; if(!prodCat(n)) CATALOG.push({p:n, ven, v:0, on:0, _manual:true}); save(); render(); boardToast("＋ "+n+" added — build its card, then order the fabric"); };
  const adj=(c,d)=>{ OVR.fabric.yards[c]=Math.max(0,Math.round((OVR.fabric.yards[c]||0)+d)); save(); render(); };
  document.querySelectorAll("[data-fplus]").forEach(b=>b.onclick=()=>adj(b.dataset.fplus,CB));
  document.querySelectorAll("[data-fminus]").forEach(b=>b.onclick=()=>adj(b.dataset.fminus,-CB));
@@ -2312,7 +2413,7 @@ function renderCut(){
   if(!availArr.length){ h+=`<div class="note">Nothing to cut yet. On the <b>Fabric</b> page, order or receive a fabric (or add core-solid yards).</div>`; }
   else if(!availOut.length){ h+=`<div class="note">Everything available is already in your cut. Switch to <b>Current cut</b>.</div>`; }
   else { const byT={}; availOut.forEach(it=>{(byT[it.thread]=byT[it.thread]||[]).push(it);}); const ths=Object.keys(byT).sort((a,b)=>byT[b].filter(x=>x.cover<8).length-byT[a].filter(x=>x.cover<8).length||Math.min(...byT[a].map(x=>x.cover))-Math.min(...byT[b].map(x=>x.cover)));
-   const card=it=>`<div class="focard">${fabCardImg(it.name)}<div class="fbody"><div class="ftitle">${it.name} ${tchip(it.thread)}</div><div class="fsub">${it.state} · ${it.boltYd} yd${(it.cover<999&&it.cover>0)?` · ~${it.cover}wk cover`:it.needOrder?' · needs ordering':''}</div></div><div class="factions"><button class="btn go" data-cadd="${it.name.replace(/"/g,'&quot;')}|${(it.ven||'').replace(/"/g,'&quot;')}|${it.thread}|${it.boltYd}">＋ Add to cut</button></div></div>`;
+   const card=it=>productCard(it.name,{thread:it.thread, sub:`${it.state} · ${it.boltYd} yd${(it.cover<999&&it.cover>0)?` · ~${it.cover}wk cover`:it.needOrder?' · needs ordering':''}`, actions:`<button class="btn go" data-cadd="${it.name.replace(/"/g,'&quot;')}|${(it.ven||'').replace(/"/g,'&quot;')}|${it.thread}|${it.boltYd}">＋ Add to cut</button>`});
    ths.forEach((t,ti)=>{ h+=`<div class="fabsec">${ti===0?"▸ ":""}${t.charAt(0).toUpperCase()+t.slice(1)} thread <span class="pill2">${byT[t].length}</span>${ti===0?'<span class="secshow">recommended</span>':''}</div><div class="fogrid">${byT[t].slice().sort((a,b)=>a.cover-b.cover).map(card).join("")}</div>`; });
   }
  } else {
@@ -2334,7 +2435,7 @@ function renderCut(){
   }
   if(OVR.cut.history&&OVR.cut.history.length){ h+=`<div class="fabsec" style="margin-top:16px">Recent cuts</div>`+OVR.cut.history.slice(-6).reverse().map(c=>`<div class="frow"><div class="fi"><b>${c.fabric}</b><span>${c.boltYd} yd · ${Object.entries(c.counts).filter(([k,v])=>v>0).map(([k,v])=>v+" "+k).join(" · ")}</span></div><span class="fmeta">${c.when}</span></div>`).join(""); }
  }
- el.innerHTML=h; wireCutAll();
+ el.innerHTML=h; try{ wireProductCards(); }catch(e){} /* web26 */ wireCutAll();
 }
 function wireCutAll(){
  const find=id=>OVR.cut.sess.find(s=>s.id===id);
@@ -2491,12 +2592,13 @@ function cpOfferDrafts(pats, venBy, after){
 }
 function applyPerms(){
  if(isLead) return;
- ["voxbtn","typebox","resetbtn","clearops","co-add","co-sync","co-refresh","editBtn","newrun","cutpick","cutrec","cutadd","cutclear","cutaccept","cutconfirm","resuggest","bkupBtn","restoreBtn"].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display="none"; });
- ["fabric","cut","bis"].forEach(v=>{ const b=document.querySelector('nav button[data-v="'+v+'"]'); if(b){ b.style.display="none"; if(b.classList.contains("on")){ const bd=document.querySelector('nav button[data-v="board"]'); if(bd) bd.click(); } } });
+ ["voxbtn","typebox","resetbtn","clearops","co-add","co-sync","co-refresh","editBtn","newrun","cutpick","cutrec","cutadd","cutclear","cutaccept","cutconfirm","resuggest","bkupBtn","restoreBtn","fnewdesign"].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display="none"; });
+ ["fabric","cut"].forEach(v=>{ const b=document.querySelector('nav button[data-v="'+v+'"]'); if(b){ b.style.display="none"; if(b.classList.contains("on")){ const bd=document.querySelector('nav button[data-v="board"]'); if(bd) bd.click(); } } });
  document.querySelectorAll("[data-clstart],[data-clend],[data-cldel],[data-cutready]").forEach(e=>{ e.style.pointerEvents="none"; e.style.opacity=".6"; });
  const f = document.querySelector(".coform"); if(f) f.style.display="none";
  document.querySelectorAll(".pcell").forEach(i=>i.disabled=true);
- document.querySelectorAll("[data-fplus],[data-fminus],[data-forder],[data-freceive],[data-fcancel]").forEach(e=>e.style.display="none");
+ document.querySelectorAll("[data-fplus],[data-fminus],[data-forder],[data-freceive],[data-fcancel],[data-pimg],[data-pcreate],[data-pnewdel],[data-postrun]").forEach(e=>e.style.display="none");
+ document.querySelectorAll("[data-pyd]").forEach(e=>{ e.style.cursor="default"; e.style.borderBottom="none"; });
  document.querySelectorAll(".thedit").forEach(e=>{ e.style.pointerEvents="none"; const a=e.querySelector(".thadd"); if(a) a.style.display="none"; });
  document.querySelectorAll("[data-cosched],[data-coedit],[data-comin],[data-coname],[data-comockpick],[data-comockdel],[data-trkschedrun],[data-schedrun]").forEach(e=>e.style.display="none");
  document.querySelectorAll("[data-cpct]").forEach(e=>{ e.style.cursor="default"; e.onclick=null; });
@@ -4003,7 +4105,8 @@ function bisCard(p, kind){
  if(kind==="makes"){ const rem=OVR.bisrem[p.p]||""; 
   mid=`<div class="fsub" style="margin-top:6px">Remnant: <input data-bisrem="${esc}" value="${rem}" inputmode="decimal" style="width:50px;padding:3px 6px;border:1px solid #DDD8CC;border-radius:7px"> yd ≈ <b data-bisest="${esc}">${bisEstHats(rem)}</b> hats</div>`; }
  if(kind==="quick") mid=`<div class="fsub" style="margin-top:6px;color:#0F8A6D">Back in stock — these shoppers can buy right now.</div>`;
- return `<div class="focard">${typeof fabCardImg==="function"?fabCardImg(p.p):""}<div class="fbody"><div class="ftitle">${p.p} ${inv}${und}${wk}</div><div class="fsub"><b>${p.act} waiting</b> · ${p.flex+p.proxy} flexible<br>${bisStyLine(p)}</div>${mid}</div><div class="factions"><button class="btn" data-bisopen="${esc}">👥 Shoppers</button><button class="btn go" data-bisrestock="${esc}">＋ Restock ▸</button></div></div>`;
+ /* web26: same product card as everywhere else */
+ return productCard(p.p,{chips:inv+und+wk, sub:`<b>${p.act} waiting</b> · ${p.flex+p.proxy} flexible · ${bisStyLine(p)}`, extra:mid, actions:`<button class="btn" data-bisopen="${esc}">People &amp; contact</button><button class="btn go" data-bisrestock="${esc}">＋ Restock</button>`});
 }
 function renderBIS(){
  const sumEl=document.getElementById("bissummary"), wrap=document.getElementById("biswrap");
@@ -4063,6 +4166,7 @@ function renderBIS(){
   } else h+=`<div class="note">Nothing yet — mark shoppers "contacted" after you reach out, and purchases get matched automatically.</div>`;
  }
  wrap.innerHTML=h;
+ try{ wireProductCards(); }catch(e){} /* web26 */
  renderBisModal();
  wireBis();
 }

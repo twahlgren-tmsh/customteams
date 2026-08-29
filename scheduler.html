@@ -245,8 +245,11 @@ details.cocard[open] .chev { transform:rotate(90deg); }
 .cotile { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; cursor:pointer; display:flex; flex-direction:column; transition:transform .12s, box-shadow .12s; position:relative; }
 .cotile:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,.09); }
 .cotile.shipped { opacity:.55; }
-.cotile .coimg { height:140px; background:#F0EEE6; display:flex; align-items:center; justify-content:center; color:var(--faint); font-size:12px; overflow:hidden; }
-.cotile .coimg img { width:100%; height:100%; object-fit:cover; display:block; }
+.cotile .coimg { height:170px; background:#F0EEE6; display:flex; align-items:center; justify-content:center; color:var(--faint); font-size:12px; overflow:hidden; }
+.cotile .coimg img { width:100%; height:100%; object-fit:cover; object-position:top; display:block; } /* web22: anchor to the top so the full head view shows */
+.colegend .coico { cursor:pointer; border:1.5px solid transparent; user-select:none; } .colegend .coico.on { border-color:currentColor; box-shadow:0 0 0 2px rgba(0,0,0,.06); } .colegend .coico.off { opacity:.45; }
+.cosep { grid-column:1/-1; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin:10px 0 -4px; border-top:1px solid var(--line); padding-top:10px; }
+#cod details.cocard[open] { opacity:1 !important; } /* web22: previous orders are fully editable in the drawer */
 .cotile .cobody2 { padding:10px 12px 12px; display:flex; flex-direction:column; gap:6px; }
 .cotile .cotitle { font-size:14px; font-weight:750; line-height:1.2; display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
 .cotile .cotitle small { font-weight:600; color:var(--soft); font-size:11px; white-space:nowrap; }
@@ -505,14 +508,14 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web21 (Custom tab is now a card rolodex — tap a card for the full order; customization-type icons; Shopify order notes + timeline comments shown beside the team’s own production notes. Tracker lists planned runs with a ▶ Schedule button; newest run opens by default.)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web22 (Custom tab: mockup thumbnails show the head view; tap the legend icons to filter by customization type (multi-select); previous orders load as you scroll and are fully editable. Supabase library pinned to 2.45.4 + auth timeout so the tool can never boot blank.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-08-29-web21";
+const BUILD="2026-08-29-web22";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -930,6 +933,7 @@ async function bootCloud(){ try{
 const MS_MAP={"Materials ordered":"materials","Cut fabric":"cut","Embroidery finished":"embroidery","Printed logo finished":"printed_logo","Patches sewn":"patch","Sewing":"sewing","Fold & inspect":"packaged","Shipped":"shipped","Delivered":"delivered"};
 /* web7 unified Orders tab state */
 let ALLORD=[], CUSTBY={}, FINBY={}, MATBY={}, CO_VIEW="open", CO_Q="", CO_ANA=false, CO_RANGE="all", COSRC=null;
+let PREVCO=[], CO_TYPEF=new Set(), CO_PAGE=12; /* web22: delivered orders (persistent objects so edits stick), multi-select type filter, scroll paging */
 /* ---------- web10: materials tracking helpers ---------- */
 function detectCarrier(tn){ tn=(tn||"").replace(/[\s-]+/g,"").toUpperCase(); if(!tn) return null;
  if(/^1Z[0-9A-Z]{16}$/.test(tn)) return "UPS";
@@ -1013,8 +1017,10 @@ async function loadOrders(){ if(typeof sb==="undefined") return; try{
   const {data,error}=await sb.from("orders").select("*");
   if(error||!Array.isArray(data)) return;
   ALLORD=data;
-  const mapped=data.map(orderToCustom).filter(c=>c.num && !c._done);
-  CUSTOM=mapped; try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
+  const all=data.map(orderToCustom).filter(c=>c.num);
+  const mapped=all.filter(c=>!c._done);
+  CUSTOM=mapped; PREVCO=all.filter(c=>c._done).sort((a,b)=>String((b._row||{}).order_date||"").localeCompare(String((a._row||{}).order_date||""))); /* web22 */
+  try{ localStorage.setItem(COKEY, JSON.stringify(CUSTOM)); }catch(e){}
   try{ const {data:mt}=await sb.from("materials_tracking").select("*"); if(Array.isArray(mt)){ MATBY={}; mt.forEach(t=>{ const k=String(t.order_number||""); (MATBY[k]=MATBY[k]||[]).push(t); }); } }catch(e){}
   if(isLead){
    try{ const {data:cs}=await sb.from("customers").select("*"); if(Array.isArray(cs)){ CUSTBY={}; cs.forEach(c=>CUSTBY[c.id]=c); } }catch(e){}
@@ -2864,7 +2870,6 @@ function coLeadExtras(o){
 function coCtlBar(){
  return `<div class="coctl" style="gap:8px;flex-wrap:wrap;align-items:center">
   <b style="font-size:15px">Custom orders</b>
-  ${isLead?`<div class="segwrap"><button class="seg${CO_VIEW==="open"?" on":""}" data-cov="open">In progress</button><button class="seg${CO_VIEW==="all"?" on":""}" data-cov="all">All orders</button></div>`:""}
   <input id="cosearch" placeholder="Search orders…" value="${(CO_Q||"").replace(/"/g,"&quot;")}" style="flex:1;min-width:130px;border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;background:var(--card)">
   ${isLead?`<button class="btn${CO_ANA?" go":""}" id="coana-btn">Analytics</button><button class="btn" id="coadd2">＋ Add order</button><button class="btn go" id="cosync2">↻ Sync Shopify</button>`:""}
 </div>`;
@@ -2944,7 +2949,7 @@ function coTypesOf(o){
  return [...new Set(out)];
 }
 function coIcons(o,full){ return `<span class="coicons">${coTypesOf(o).map(k=>`<span class="coico ${k}" title="${COTYPES[k][1]}">${COTYPES[k][0]}${full?" "+COTYPES[k][1]:""}</span>`).join("")}</span>`; }
-function coLegend(){ return `<div class="colegend">Legend: ${Object.keys(COTYPES).map(k=>`<span class="coico ${k}">${COTYPES[k][0]} ${COTYPES[k][1]}</span>`).join("")}</div>`; }
+function coLegend(){ const any=CO_TYPEF.size>0; return `<div class="colegend"><span>${any?"Showing:":"Filter:"}</span>${Object.keys(COTYPES).map(k=>`<span class="coico ${k}${CO_TYPEF.has(k)?" on":(any?" off":"")}" data-cotf="${k}" title="Tap to filter — pick more than one">${COTYPES[k][0]} ${COTYPES[k][1]}</span>`).join("")}${any?`<span class="coico" data-cotf="" style="cursor:pointer">✕ clear</span>`:""}</div>`; }
 let CO_OPEN=null; /* web21: order id open in the drawer */
 function coTile(o,t,chip){
  const pct=t.total?Math.round(100*(t.total-t.rem)/t.total):0;
@@ -2972,18 +2977,19 @@ function renderCustom(){
  const today = new Date(); today.setHours(0,0,0,0);
  /* web7: source list = open orders (default) or full history (lead), filtered by search */
  const q=(CO_Q||"").trim().toLowerCase();
- let src=(isLead && CO_VIEW==="all") ? ALLORD.map(orderToCustom) : CUSTOM.slice();
- if(q) src=src.filter(o=>{ const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; return ((o.name||"")+" "+(o.num||"")+" "+(o.styles||"")+" "+(c.name||"")+" "+(c.email||"")+" "+(c.contact||"")).toLowerCase().includes(q); });
- COSRC=src;
+ /* web22: one continuous list — open orders by deadline, then previous (shipped/delivered) orders newest first, paged as you scroll */
  const odate=o=>((o._row||{}).order_date||"");
+ const matchQ=o=>{ if(!q) return true; const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; return ((o.name||"")+" "+(o.num||"")+" "+(o.styles||"")+" "+(c.name||"")+" "+(c.email||"")+" "+(c.contact||"")).toLowerCase().includes(q); };
+ const matchT=o=>{ if(!CO_TYPEF.size) return true; const ts=coTypesOf(o); return [...CO_TYPEF].some(k=>ts.indexOf(k)>=0); };
+ const openL=CUSTOM.filter(o=>!shipped(o)&&matchQ(o)&&matchT(o)).sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
+ const prevAll=CUSTOM.filter(o=>shipped(o)).concat(PREVCO).filter(o=>matchQ(o)&&matchT(o)).sort((a,b)=>odate(b).localeCompare(odate(a)));
+ const prevL=prevAll.slice(0, CO_PAGE);
+ const morePrev=prevAll.length-prevL.length;
+ const src=openL.concat(prevL); const firstPrevId=prevL.length?prevL[0].id:null;
+ COSRC=src;
+ if(CO_OPEN && !src.some(o=>String(o.id)===String(CO_OPEN))){ const extra=CUSTOM.concat(PREVCO).find(o=>String(o.id)===String(CO_OPEN)); if(extra) src.push(extra); } /* keep the open drawer alive even if filtered out */
  let tiles="", drawerHTML="";
- const rows = src.sort((a,b)=>{
-   if(isLead&&CO_VIEW==="all") return odate(b).localeCompare(odate(a));
-   const fa=shipped(a)?1:0, fb=shipped(b)?1:0;
-   if(fa!==fb) return fa-fb;                                  // finished orders sink to the bottom
-   if(fa===1) return odate(b).localeCompare(odate(a));        // finished: by when the order was placed (newest first)
-   return (a.due||"9999").localeCompare(b.due||"9999");       // open: by deadline
- }).map((o,ri)=>{
+ const rows = src.map((o,ri)=>{
   const t = coTime(o);
   const steps = stepsFor(o);
   o.ms = o.ms || {};
@@ -2994,11 +3000,12 @@ function renderCustom(){
    : dleft<0 ? `<span class="duechip" style="background:#C2452D;color:#fff">${-dleft}d OVERDUE</span>`
    : dleft<=3 ? `<span class="duechip" style="background:#FAEEDA;color:#854F0B">DUE ${dleft}d</span>`
    : `<span class="duechip" style="background:#F0EEE6;color:#55534C">${dleft}d left</span>`;
+  if(o.id===firstPrevId) tiles += `<div class="cosep">Previous orders · ${prevAll.length}</div>`;
   tiles += coTile(o,t,chip); /* web21: snapshot card */
   if(String(o.id)!==String(CO_OPEN)) return ""; /* web21: only the open order renders its full detail (in the drawer) */
   let nextIdx = steps.findIndex(s=>!o.ms[s]);
   const tl = steps.map((s,i)=>`<div class="cstep${o.ms[s]?" on":""}${i===nextIdx&&!shipped(o)?" next":""}" data-cms="${o.id}" data-step="${s}"><div class="cring">${o.ms[s]?"✓":""}</div><span>${s}</span></div>`).join("");
-  return `<details class="cocard" data-coid="${o.id}" open style="${shipped(o)?"opacity:.7":""}">
+  return `<details class="cocard" data-coid="${o.id}" open>
    <summary class="cosum">
     <span class="cobadge"><b>${t.hats||"?"}</b><span>hats</span></span>
     <span class="coname"><b>${(o.name||"").replace(/</g,"&lt;")}</b> ${coIcons(o,true)}${isLead?`<button class="conameedit" data-coname="${o.id}" title="Edit internal order name" style="border:none;background:none;cursor:pointer;color:#6f8c8f;font-size:12px;padding:0 4px">✎</button>`:""}<small>${o.styles||"styles not set — tap Edit"}</small></span>
@@ -3052,7 +3059,7 @@ function renderCustom(){
   </details>`;
  }).join("");
  drawerHTML = rows;
- document.getElementById("colist").innerHTML = coCtlBar() + coLegend() + (tiles ? `<div class="cogrid">${tiles}</div>` : `<div class="empty">${q?"No orders match your search.":"No custom orders yet."}</div>`) + `
+ document.getElementById("colist").innerHTML = coCtlBar() + coLegend() + (tiles ? `<div class="cogrid">${tiles}</div>` : `<div class="empty">${(q||CO_TYPEF.size)?"No orders match.":"No custom orders yet."}</div>`) + (morePrev>0?`<div id="comore" class="empty" style="padding:14px;text-align:center">Loading more… <button class="btn" data-comore="1">Show ${Math.min(12,morePrev)} more</button> <span style="color:var(--faint)">(${morePrev} older orders)</span></div>`:"") + `
   <div class="coform" style="align-items:center;gap:10px">
    <span style="font-size:12.5px;color:#6f8c8f">Orders sync automatically from Shopify each morning — a timeline comment “Internal Name: …” names them for you.</span>
   </div>`;
@@ -3062,6 +3069,12 @@ function renderCustom(){
  else { cw.classList.remove("open"); cd.innerHTML=""; if(CO_OPEN) CO_OPEN=null; }
  if(!cw._wired){ cw._wired=true; cw.addEventListener("click",e=>{ if(e.target===cw){ CO_OPEN=null; cw.classList.remove("open"); } }); }
  document.querySelectorAll("[data-coopen]").forEach(el=>el.onclick=()=>{ CO_OPEN=el.dataset.coopen; renderCustom(); });
+ /* web22: legend chips = multi-select type filter */
+ document.querySelectorAll("[data-cotf]").forEach(el=>el.onclick=()=>{ const k=el.dataset.cotf; if(!k) CO_TYPEF.clear(); else if(CO_TYPEF.has(k)) CO_TYPEF.delete(k); else CO_TYPEF.add(k); CO_PAGE=12; renderCustom(); });
+ /* web22: previous orders page in as you scroll (or tap Show more) */
+ const _more=document.getElementById("comore");
+ if(_more){ const go=()=>{ CO_PAGE+=12; renderCustom(); }; const _mb=_more.querySelector("[data-comore]"); if(_mb) _mb.onclick=go;
+  try{ if(window._coIO) window._coIO.disconnect(); window._coIO=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)){ window._coIO.disconnect(); go(); } },{rootMargin:"300px"}); window._coIO.observe(_more); }catch(e){} }
  var _cs=document.getElementById("co-sync"); if(_cs) _cs.onclick = ()=>{
   const code = JSON.stringify(CUSTOM.map(o=>({num:o.num, name:o.name, done:Object.keys(o.ms||{}).filter(k=>o.ms[k])})));
   try { navigator.clipboard.writeText("Sync custom orders: " + code); } catch(e){ prompt("Copy this for Claude:", code); }
@@ -3164,7 +3177,7 @@ function renderCustom(){
  renderCoAna();
  document.querySelectorAll("[data-cov]").forEach(b=>b.onclick=()=>{ CO_VIEW=b.dataset.cov; renderCustom(); });
  const _cq=document.getElementById("cosearch");
- if(_cq){ _cq.oninput=()=>{ CO_Q=_cq.value; clearTimeout(window._coqT); window._coqT=setTimeout(()=>{ renderCustom(); const s=document.getElementById("cosearch"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} } },300); }; }
+ if(_cq){ _cq.oninput=()=>{ CO_Q=_cq.value; CO_PAGE=12; clearTimeout(window._coqT); window._coqT=setTimeout(()=>{ renderCustom(); const s=document.getElementById("cosearch"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} } },300); }; }
  const _cab=document.getElementById("coana-btn"); if(_cab) _cab.onclick=()=>{ CO_ANA=!CO_ANA; renderCustom(); };
  const _cad=document.getElementById("coadd2"); if(_cad) _cad.onclick=coAddOrder;
  const _csy=document.getElementById("cosync2"); if(_csy) _csy.onclick=()=>coSyncShopify(_csy);

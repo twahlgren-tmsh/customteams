@@ -240,6 +240,34 @@ details.cocard[open] .chev { transform:rotate(90deg); }
 .cotime b { display:block; font-size:15px; color:var(--ink); }
 .coemb { width:74px; border:1px solid var(--line); border-radius:9px; padding:7px 8px; font-size:12.5px; text-align:center; }
 .duechip { font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:99px; }
+/* web21: Orders tab rolodex — snapshot cards, tap for the full order in a drawer */
+.cogrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; margin-top:8px; }
+.cotile { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; cursor:pointer; display:flex; flex-direction:column; transition:transform .12s, box-shadow .12s; position:relative; }
+.cotile:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,.09); }
+.cotile.shipped { opacity:.55; }
+.cotile .coimg { height:140px; background:#F0EEE6; display:flex; align-items:center; justify-content:center; color:var(--faint); font-size:12px; overflow:hidden; }
+.cotile .coimg img { width:100%; height:100%; object-fit:cover; display:block; }
+.cotile .cobody2 { padding:10px 12px 12px; display:flex; flex-direction:column; gap:6px; }
+.cotile .cotitle { font-size:14px; font-weight:750; line-height:1.2; display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+.cotile .cotitle small { font-weight:600; color:var(--soft); font-size:11px; white-space:nowrap; }
+.cotile .cometa { font-size:11.5px; color:var(--soft); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.cotile .cometa b { color:var(--ink); font-size:13px; }
+.cotile .cobar { height:5px; background:#EDEAE2; border-radius:99px; overflow:hidden; }
+.cotile .cobar i { display:block; height:100%; background:var(--accent,#045863); }
+.coicons { display:flex; gap:4px; flex-wrap:wrap; }
+.coico { font-size:11px; font-weight:700; padding:2px 7px; border-radius:99px; background:#F0EEE6; color:#55534C; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
+.coico.emb { background:#E3EEF9; color:#1F4E88; } .coico.print { background:#F3E6F7; color:#6B2E85; } .coico.logo { background:#FCEBD9; color:#8A4A0B; }
+.coico.blank { background:#EFEFEF; color:#555; } .coico.whole { background:#E6F3E6; color:#2F6B2F; } .coico.patch { background:#FBE7E4; color:#9A3324; }
+.colegend { display:flex; gap:6px; flex-wrap:wrap; font-size:11px; color:var(--soft); align-items:center; margin:4px 0 2px; }
+#cowrap { position:fixed; inset:0; background:rgba(35,33,28,.45); z-index:205; overflow:auto; padding:3vh 3vw; display:none; }
+#cowrap.open { display:block; }
+#cod { background:var(--bg); border-radius:22px; max-width:980px; margin:0 auto; padding:14px 16px 26px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+#cod details.cocard { margin:0; } #cod details.cocard > summary { cursor:default; } #cod .cocard .chev { display:none; }
+.cohdr { display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-bottom:8px; }
+.conotes { margin-top:10px; border-top:1px solid var(--line); padding-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.conotes .nbox { background:#F6F4ED; border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:12.5px; line-height:1.45; white-space:pre-wrap; max-height:220px; overflow:auto; }
+.conotes .nlbl { display:block; font-size:10.5px; color:#7A766B; font-weight:600; margin-bottom:4px; }
+@media (max-width:640px){ .conotes { grid-template-columns:1fr; } #cowrap{ padding:0; } #cod{ border-radius:0; min-height:100vh; } }
 .coform { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
 .coform input { border:1.5px solid var(--line); border-radius:10px; padding:9px 11px; font-size:13px; background:var(--card); }
 .cotl { display:flex; width:100%; padding:8px 0 2px; }
@@ -435,7 +463,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="opslog"></div>
 <nav>
   <button class="on" data-v="board"><span class="nico">🗓</span>Board</button>
-  <button data-v="custom"><span class="nico">🧵</span>Orders</button>
+  <button data-v="custom"><span class="nico">🧵</span>Custom</button>
   <button data-v="runs"><span class="nico">🧢</span>Runs</button>
   <button data-v="tracker"><span class="nico">✅</span>Tracker</button>
   <button data-v="fabric"><span class="nico">🪡</span>Fabric</button>
@@ -475,15 +503,16 @@ nav a.navlink:hover{ background:var(--tmsoft); }
   <div id="biswrap"></div>
 </section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
+<div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-12 · web20 (Draft Shopify products now show when adding fabric — order &amp; cut a restock while the listing stays hidden. Drafts stay out of the reorder list, and Finish &amp; post warns you to reactivate before uploading stock.)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web21 (Custom tab is now a card rolodex — tap a card for the full order; customization-type icons; Shopify order notes + timeline comments shown beside the team’s own production notes. Tracker lists planned runs with a ▶ Schedule button; newest run opens by default.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : undefined;
-const BUILD="2026-08-12-web20";
+const BUILD="2026-08-29-web21";
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -834,7 +863,7 @@ const seg = s => s[0]==="L" ? "L" : "C";
 const segKey = (step,style) => (step===19||step===10) ? "A" : seg(style);
 const tint = (hex,a) => hex + a;
 function atomKey(run,style,i){ return run+"|"+style+"|"+i; }
-function allAtoms(){ const out=[]; for(const r of RUNS){ if(r.done || r.sched===false) continue; for(const st in r.qty){ SUBS[st].forEach((s,i)=>out.push({run:r.no,style:st,i,name:s[0],min:s[1],step:s[2],qty:r.qty[st],mult:r.mult})); } } return out; }
+function allAtoms(){ const out=[]; for(const r of RUNS){ if(r.done) continue; const pl=r.sched===false; /* web21: planned runs get atoms too (flagged) so the Tracker can list their steps; buildUnits keeps them off the board */ for(const st in r.qty){ SUBS[st].forEach((s,i)=>out.push({run:r.no,style:st,i,name:s[0],min:s[1],step:s[2],qty:r.qty[st],mult:r.mult,planned:pl})); } } return out; }
 let ATOMS = [];
 rebuildRuns();
 function seedDone(){
@@ -929,7 +958,7 @@ function matTrackPanel(o){
      <button class="btn" data-mtdel="${t.id}" style="margin-left:auto;padding:2px 8px;min-height:0;font-size:11px">✕</button>
    </div>`; }).join("") || `<div style="font-size:12px;color:var(--soft);padding:5px 0">No materials tracked yet.</div>`;
  return `<div class="comattrack" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
-   <div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dark);font-weight:700;margin-bottom:4px">\U0001F4E6 Materials tracking</div>
+   <div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dark);font-weight:700;margin-bottom:4px">📦 Materials tracking</div>
    ${list}
    <div class="mtadd" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
      <input data-mtnew="${o.id}|material" placeholder="Material (fabric, patches…)" style="flex:1;min-width:110px;border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:12px">
@@ -947,7 +976,8 @@ function orderToCustom(o){
  const types=o.order_type||[];
  const isEmb=types.some(t=>/embro/i.test(t))||o.has_digitizing===true;
  const isPL=o.has_printed_logo===true;
- const isPatch=/patch/i.test(o.internal_name||"");
+ const isPatch=/patch/i.test(o.internal_name||"")||types.some(t=>/patch/i.test(t));
+ const isPrint=types.some(t=>/print/i.test(t)); const isWhole=types.some(t=>/wholesale/i.test(t)); /* web21: card type icons */
  const shippedRow=dn("shipped")||dn("delivered")||/shipped|delivered/i.test(o.status||"");
  const deliveredRow=dn("delivered")||/delivered/i.test(o.status||"");
  const ms={};
@@ -976,7 +1006,8 @@ function orderToCustom(o){
   patchPct:(rpct.patch!=null?rpct.patch:(dn("patch")?100:0)),
   schedSew:!!rsch.sew, schedEmb:!!rsch.emb, schedPL:!!rsch.pl, schedPatch:!!rsch.patch,
   note:((types.join(" · "))||"")+(o.scrub_color?(" · "+o.scrub_color):""),
-  scrub:o.scrub_color||"", logo:o.logo||"", ribbon:o.ribbon||"", sthread:o.sewing_thread||"", ethread:o.embroidery_thread||"", place:o.placement||"", font:o.font_option||"", pnotes:o.notes||"", mockup:o.mockup_url||"" };
+  scrub:o.scrub_color||"", logo:o.logo||"", ribbon:o.ribbon||"", sthread:o.sewing_thread||"", ethread:o.embroidery_thread||"", place:o.placement||"", font:o.font_option||"", pnotes:o.notes||"", mockup:o.mockup_url||"",
+  print:isPrint?1:0, whole:isWhole?1:0, snote:o.shopify_note||"", scomments:o.shopify_comments||"", hats0:o.total_hats||0 };
 }
 async function loadOrders(){ if(typeof sb==="undefined") return; try{
   const {data,error}=await sb.from("orders").select("*");
@@ -1201,7 +1232,7 @@ function buildItems(){
  const map = {};
  ATOMS.forEach(a=>{
   const k = a.run+"|"+a.step+"|"+segKey(a.step,a.style);
-  if(!map[k]) map[k] = {key:k,run:a.run,step:a.step,seg:segKey(a.step,a.style),total:0,rem:0,styles:new Set()};
+  if(!map[k]) map[k] = {key:k,run:a.run,step:a.step,seg:segKey(a.step,a.style),total:0,rem:0,styles:new Set(),planned:!!a.planned};
   const m = a.min*a.qty*a.mult;
   map[k].total += m; map[k].styles.add(a.style);
   if(!DONE[atomKey(a.run,a.style,a.i)]) map[k].rem += m;
@@ -1248,7 +1279,7 @@ function subUnitsOf(it){
 function buildUnits(items){
  const units = [];
  Object.values(items).forEach(it=>{
-  if(it.rem<=1) return;
+  if(it.rem<=1 || it.planned) return; /* web21: planned (unscheduled) runs never become board blocks */
   const det = (OVR.detach[it.key]||[]).filter(n=>subRem(it,n)>1);
   let parentRem = it.rem;
   det.forEach(n=>{ const m=subRem(it,n); parentRem-=m; units.push({key:it.key+"::"+n,base:it.key,run:it.run,step:it.step,seg:it.seg,sub:n,rem:m}); });
@@ -1382,7 +1413,7 @@ function schedule(items){
  }
  const runDone = {}, sewDone = {};
  RUNS.forEach(r=>{
-  const all = Object.entries(bases).filter(x=>x[1].run===r.no && items[x[0]].rem>1).map(x=>x[1]);
+  const all = r.sched===false ? [] : Object.entries(bases).filter(x=>x[1].run===r.no && items[x[0]].rem>1).map(x=>x[1]);
   const sew = all.filter(b=>b.step!==11);
   const fin = xs => !xs.length ? -1 : (xs.every(b=>b.left<=1) ? Math.max(...xs.map(b=>b.finT<=0?-1:Math.floor(b.finT/1440))) : null);
   runDone[r.no]=fin(all); sewDone[r.no]=fin(sew);
@@ -2453,7 +2484,7 @@ function applyPerms(){
  document.querySelectorAll(".pcell").forEach(i=>i.disabled=true);
  document.querySelectorAll("[data-fplus],[data-fminus],[data-forder],[data-freceive],[data-fcancel]").forEach(e=>e.style.display="none");
  document.querySelectorAll(".thedit").forEach(e=>{ e.style.pointerEvents="none"; const a=e.querySelector(".thadd"); if(a) a.style.display="none"; });
- document.querySelectorAll("[data-cosched],[data-coedit],[data-comin],[data-coname],[data-comockpick],[data-comockdel]").forEach(e=>e.style.display="none");
+ document.querySelectorAll("[data-cosched],[data-coedit],[data-comin],[data-coname],[data-comockpick],[data-comockdel],[data-trkschedrun],[data-schedrun]").forEach(e=>e.style.display="none");
  document.querySelectorAll("[data-cpct]").forEach(e=>{ e.style.cursor="default"; e.onclick=null; });
  document.querySelectorAll(".tblk").forEach(e=>{ e.style.cursor="default"; });
 }
@@ -2832,11 +2863,11 @@ function coLeadExtras(o){
 }
 function coCtlBar(){
  return `<div class="coctl" style="gap:8px;flex-wrap:wrap;align-items:center">
-  <b style="font-size:15px">Orders</b>
+  <b style="font-size:15px">Custom orders</b>
   ${isLead?`<div class="segwrap"><button class="seg${CO_VIEW==="open"?" on":""}" data-cov="open">In progress</button><button class="seg${CO_VIEW==="all"?" on":""}" data-cov="all">All orders</button></div>`:""}
   <input id="cosearch" placeholder="Search orders…" value="${(CO_Q||"").replace(/"/g,"&quot;")}" style="flex:1;min-width:130px;border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;background:var(--card)">
   ${isLead?`<button class="btn${CO_ANA?" go":""}" id="coana-btn">Analytics</button><button class="btn" id="coadd2">＋ Add order</button><button class="btn go" id="cosync2">↻ Sync Shopify</button>`:""}
-  <button class="btn" id="coexpand">Expand all</button></div>`;
+</div>`;
 }
 function renderCoAna(){
  const el=document.getElementById("coana"); if(!el) return;
@@ -2888,6 +2919,47 @@ async function coEditCust(id){ const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o
  }catch(e){}
  renderCustom(); }
 
+/* web21: customization-type icons for the Orders rolodex. An order can carry more than one. */
+const COTYPES={emb:["🧵","Embroidery"],print:["🎨","Printed fabric"],logo:["🏷️","Printed logo"],blank:["⬜","Blank hats"],whole:["📦","Wholesale"],patch:["🩹","Patches"]};
+function coTypesOf(o){
+ const st=stepsFor(o); const out=[];
+ /* The order form's "Customization Type:" line is the best signal (printed-logo orders are sold on
+    wholesale/embroidery SKUs, so order_type alone over-reports Embroidery + Wholesale). */
+ const m=(o.snote||"").match(/customization\s*type\s*:\s*([^\n]+)/i); const ct=m?m[1].trim():"";
+ if(ct){
+  const first=ct.split("|")[0];
+  if(/fabric/i.test(ct) || (/print/i.test(first) && !/logo|text|letter|element|name/i.test(first))) out.push("print");
+  if(/embroid|letter/i.test(ct)) out.push("emb");
+  if(/print/i.test(ct) && /logo|text|element|name/i.test(ct) && !/fabric/i.test(first)) out.push("logo");
+  if(/patch/i.test(ct)) out.push("patch");
+  if(/blank|no custom/i.test(ct)) out.push("blank");
+ } else {
+  if(st.indexOf("Embroidery finished")>=0) out.push("emb");
+  if(o.print) out.push("print");
+  if(st.indexOf("Printed logo finished")>=0) out.push("logo");
+  if(st.indexOf("Patches sewn")>=0) out.push("patch");
+ }
+ if(o.whole && !out.length) out.push("whole"); /* wholesale = plain hats sold on the CSH SKU with no customization */
+ if(!out.length) out.push("blank");
+ return [...new Set(out)];
+}
+function coIcons(o,full){ return `<span class="coicons">${coTypesOf(o).map(k=>`<span class="coico ${k}" title="${COTYPES[k][1]}">${COTYPES[k][0]}${full?" "+COTYPES[k][1]:""}</span>`).join("")}</span>`; }
+function coLegend(){ return `<div class="colegend">Legend: ${Object.keys(COTYPES).map(k=>`<span class="coico ${k}">${COTYPES[k][0]} ${COTYPES[k][1]}</span>`).join("")}</div>`; }
+let CO_OPEN=null; /* web21: order id open in the drawer */
+function coTile(o,t,chip){
+ const pct=t.total?Math.round(100*(t.total-t.rem)/t.total):0;
+ const hats=t.hats||o.hats0||0;
+ const dueTxt=o.due?new Date(o.due+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"";
+ return `<div class="cotile${shipped(o)?" shipped":""}" data-coopen="${o.id}">
+  <div class="coimg">${o.mockup?`<img src="${o.mockup}" alt="" loading="lazy" onerror="this.parentNode.textContent='no mockup'">`:"no mockup yet"}</div>
+  <div class="cobody2">
+   <div class="cotitle"><span>${(o.name||"").replace(/</g,"&lt;")}</span><small>#${o.num||""}</small></div>
+   <div class="cometa"><span><b>${hats}</b> hats</span>${o.styles?`<span>${o.styles}</span>`:""}${dueTxt?`<span>due ${dueTxt}</span>`:""}</div>
+   <div class="cometa">${coIcons(o)}${chip}</div>
+   <div class="cobar" title="${pct}% of production time complete"><i style="width:${pct}%"></i></div>
+   <div class="cometa" style="font-size:11px">Sew ${o.sewPct||0}%${t.hasE?` · Emb ${o.embPct||0}%`:""}${t.hasPL?` · Logo ${o.plPct||0}%`:""}${t.hasPatch?` · Patch ${o.patchPct||0}%`:""}</div>
+  </div></div>`;
+}
 function renderCustom(){
  const open = CUSTOM.filter(o=>!shipped(o));
  const sewL = open.reduce((s,o)=>s+coTime(o).sewRem,0);
@@ -2903,8 +2975,8 @@ function renderCustom(){
  let src=(isLead && CO_VIEW==="all") ? ALLORD.map(orderToCustom) : CUSTOM.slice();
  if(q) src=src.filter(o=>{ const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; return ((o.name||"")+" "+(o.num||"")+" "+(o.styles||"")+" "+(c.name||"")+" "+(c.email||"")+" "+(c.contact||"")).toLowerCase().includes(q); });
  COSRC=src;
- const openIds=new Set([...document.querySelectorAll("details.cocard[open]")].map(d=>d.dataset.coid));
  const odate=o=>((o._row||{}).order_date||"");
+ let tiles="", drawerHTML="";
  const rows = src.sort((a,b)=>{
    if(isLead&&CO_VIEW==="all") return odate(b).localeCompare(odate(a));
    const fa=shipped(a)?1:0, fb=shipped(b)?1:0;
@@ -2922,12 +2994,14 @@ function renderCustom(){
    : dleft<0 ? `<span class="duechip" style="background:#C2452D;color:#fff">${-dleft}d OVERDUE</span>`
    : dleft<=3 ? `<span class="duechip" style="background:#FAEEDA;color:#854F0B">DUE ${dleft}d</span>`
    : `<span class="duechip" style="background:#F0EEE6;color:#55534C">${dleft}d left</span>`;
+  tiles += coTile(o,t,chip); /* web21: snapshot card */
+  if(String(o.id)!==String(CO_OPEN)) return ""; /* web21: only the open order renders its full detail (in the drawer) */
   let nextIdx = steps.findIndex(s=>!o.ms[s]);
   const tl = steps.map((s,i)=>`<div class="cstep${o.ms[s]?" on":""}${i===nextIdx&&!shipped(o)?" next":""}" data-cms="${o.id}" data-step="${s}"><div class="cring">${o.ms[s]?"✓":""}</div><span>${s}</span></div>`).join("");
-  return `<details class="cocard" data-coid="${o.id}" style="${shipped(o)?"opacity:.5":""}">
+  return `<details class="cocard" data-coid="${o.id}" open style="${shipped(o)?"opacity:.7":""}">
    <summary class="cosum">
     <span class="cobadge"><b>${t.hats||"?"}</b><span>hats</span></span>
-    <span class="coname"><b>${(o.name||"").replace(/</g,"&lt;")}</b>${isLead?`<button class="conameedit" data-coname="${o.id}" title="Edit internal order name" style="border:none;background:none;cursor:pointer;color:#6f8c8f;font-size:12px;padding:0 4px">✎</button>`:""}<small>${o.styles||"styles not set — tap Edit"}</small></span>
+    <span class="coname"><b>${(o.name||"").replace(/</g,"&lt;")}</b> ${coIcons(o,true)}${isLead?`<button class="conameedit" data-coname="${o.id}" title="Edit internal order name" style="border:none;background:none;cursor:pointer;color:#6f8c8f;font-size:12px;padding:0 4px">✎</button>`:""}<small>${o.styles||"styles not set — tap Edit"}</small></span>
     ${chip}
     <span class="copct">Sew ${o.sewPct||0}%${t.hasE?` · Emb ${o.embPct||0}%`:""}${t.hasPL?` · Logo ${o.plPct||0}%`:""}${t.hasPatch?` · Patch ${o.patchPct||0}%`:""}</span>
     <span class="chev">▶</span>
@@ -2935,7 +3009,6 @@ function renderCustom(){
    <div class="cobody">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">
      <div class="cotime"><b>${fmtH(t.rem)} left</b>of ${fmtH(t.total)}</div>
-     <button class="btn" data-coedit="${o.id}">Edit</button>
     </div>
     <div class="cobars">
      ${coDecoBar(o,t,"sew")}
@@ -2965,7 +3038,11 @@ function renderCustom(){
        ${prodField("Font",o.id,"font",o.font)}
       </div>
      </div>
-     <label style="display:block;margin-top:8px;font-size:10.5px;color:#7A766B;font-weight:600">Production notes · embroidery details · sizing requests</label>
+     <div class="conotes">
+      <div><span class="nlbl">Order notes from Shopify (customer's order form)</span><div class="nbox">${o.snote?o.snote.replace(/</g,"&lt;"):`<span style="color:var(--faint)">No order note on Shopify${o._db?" — pulls in on the next sync":""}.</span>`}</div></div>
+      <div><span class="nlbl">Shopify timeline comments (internal)</span><div class="nbox">${o.scomments?o.scomments.replace(/</g,"&lt;"):`<span style="color:var(--faint)">No staff comments on the Shopify timeline yet.</span>`}</div></div>
+     </div>
+     <label style="display:block;margin-top:10px;font-size:10.5px;color:#7A766B;font-weight:600">Team production notes · embroidery details · sizing requests (ours — not synced from Shopify)</label>
      <textarea class="coprodnote" data-prod="${o.id}|pnotes" rows="3" oninput="this.style.height='auto';this.style.height=Math.max(this.scrollHeight,72)+'px'" onfocus="this.style.minHeight='130px'" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:13px;line-height:1.45;resize:vertical;min-height:64px" placeholder="Add embroidery text, sizing requests, special instructions…">${(o.pnotes||"").replace(/</g,"&lt;")}</textarea>
      <span class="prodsaved" data-saved="${o.id}" style="font-size:11px;color:#3B6D11;opacity:0;transition:opacity .3s">Saved ✓</span>
     </div>
@@ -2974,11 +3051,17 @@ function renderCustom(){
    </div>
   </details>`;
  }).join("");
- document.getElementById("colist").innerHTML = coCtlBar() + (rows || `<div class="empty">${q?"No orders match your search.":"No custom orders yet."}</div>`) + `
+ drawerHTML = rows;
+ document.getElementById("colist").innerHTML = coCtlBar() + coLegend() + (tiles ? `<div class="cogrid">${tiles}</div>` : `<div class="empty">${q?"No orders match your search.":"No custom orders yet."}</div>`) + `
   <div class="coform" style="align-items:center;gap:10px">
    <span style="font-size:12.5px;color:#6f8c8f">Orders sync automatically from Shopify each morning — a timeline comment “Internal Name: …” names them for you.</span>
   </div>`;
- openIds.forEach(id=>{ const d=document.querySelector('details.cocard[data-coid="'+id+'"]'); if(d) d.open=true; });
+ /* web21: drawer with the open order's full detail */
+ const cw=document.getElementById("cowrap"), cd=document.getElementById("cod");
+ if(CO_OPEN && drawerHTML){ const st=cw.scrollTop; cd.innerHTML=`<div class="cohdr"><button class="btn" id="coclose">✕ Close</button></div>`+drawerHTML; cw.classList.add("open"); cw.scrollTop=st; const cc=document.getElementById("coclose"); if(cc) cc.onclick=()=>{ CO_OPEN=null; cw.classList.remove("open"); }; }
+ else { cw.classList.remove("open"); cd.innerHTML=""; if(CO_OPEN) CO_OPEN=null; }
+ if(!cw._wired){ cw._wired=true; cw.addEventListener("click",e=>{ if(e.target===cw){ CO_OPEN=null; cw.classList.remove("open"); } }); }
+ document.querySelectorAll("[data-coopen]").forEach(el=>el.onclick=()=>{ CO_OPEN=el.dataset.coopen; renderCustom(); });
  var _cs=document.getElementById("co-sync"); if(_cs) _cs.onclick = ()=>{
   const code = JSON.stringify(CUSTOM.map(o=>({num:o.num, name:o.name, done:Object.keys(o.ms||{}).filter(k=>o.ms[k])})));
   try { navigator.clipboard.writeText("Sync custom orders: " + code); } catch(e){ prompt("Copy this for Claude:", code); }
@@ -3071,7 +3154,7 @@ function renderCustom(){
  document.querySelectorAll("[data-comockfile]").forEach(inp=>inp.onchange=()=>{ const o=(COSRC||CUSTOM).find(x=>x.id===inp.dataset.comockfile); if(!o) return; const file=inp.files&&inp.files[0]; if(!file) return; coReadImage(file,url=>{ coSaveMockup(o,url); renderCustom(); }); });
  document.querySelectorAll("[data-comockdel]").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const o=(COSRC||CUSTOM).find(x=>x.id===b.dataset.comockdel); if(!o) return; if(!confirm("Remove this mockup?")) return; coSaveMockup(o,""); renderCustom(); });
  if(!window._coPasteWired){ window._coPasteWired=true; document.addEventListener("paste", ev=>{
-   const card=document.querySelector('#colist details.cocard[open]'); if(!card) return;
+   const card=document.querySelector('#cod details.cocard[open]'); if(!card) return;
    const its=(ev.clipboardData&&ev.clipboardData.items)||[]; let file=null;
    for(const it of its){ if(it.type&&it.type.indexOf("image")===0){ file=it.getAsFile(); break; } }
    if(!file) return; const o=(COSRC||CUSTOM).find(x=>x.id===card.dataset.coid); if(!o) return;
@@ -3385,7 +3468,8 @@ document.getElementById("nrwrap").addEventListener("click", e=>{ if(e.target.id=
 let trkOpen = new Set(); // tracker run cards open this visit (in-memory); collapses again when you leave & return to the tab
 function renderTracker(items){
  const el = document.getElementById("trackwrap");
- el.innerHTML = RUNS.filter(r=>r.sched!==false).slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0) || b.no-a.no).map((r,idx)=>{ /* web8: completed sink+gray, newest on top, still editable */
+ const _tkList = RUNS.slice().sort((a,b)=>(a.done?1:0)-(b.done?1:0) || b.no-a.no); /* web21: planned runs are listed too (they used to be silently hidden) */
+ el.innerHTML = _tkList.map((r,idx)=>{ /* web8: completed sink+gray, newest on top, still editable */
   const ri = Object.values(items).filter(i=>i.run===r.no);
   const order = [16,1,2,3,17,9,8,4,12,5,13,15,6,7,19,14,10,11];
   const fin = i => i.rem<=1 ? 1 : 0; // finished steps sink to the bottom
@@ -3412,9 +3496,10 @@ function renderTracker(items){
     <div class="subs" id="${id}">${subRows}</div>
    </div>`;
   }).join("");
-  return `<details class="tkcard" data-trk="${r.no}"${trkOpen.has(r.no)?" open":""} style="${r.done?"opacity:.5;filter:grayscale(.3)":""}"><summary><span class="dot" style="background:${r.done?"#9BB59B":r.hex}"></span><span class="tkhead"><h2>${r.name}</h2></span><span class="tksum">${r.done?"✓ completed":pct+"% · "+fmtH(rem)+" left"}</span><span class="chev">▶</span></summary>${rows}</details>`;
+  return `<details class="tkcard" data-trk="${r.no}"${trkOpen.has(r.no)?" open":""} style="${r.done?"opacity:.5;filter:grayscale(.3)":""}"><summary><span class="dot" style="background:${r.done?"#9BB59B":r.hex}"></span><span class="tkhead"><h2>${r.name}</h2></span><span class="tksum">${r.done?"✓ completed":pct+"% · "+fmtH(rem)+" left"}</span>${r.sched===false?`<span class="duechip" style="background:#FAEEDA;color:#854F0B;margin-left:8px">PLANNED</span>`:""}<span class="chev">▶</span></summary>${r.sched===false?`<div class="empty" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px">This run is planned but not scheduled yet, so it has no blocks on the Board and no timers. You can still tick steps off here.<button class="btn go" data-trkschedrun="${r.no}">▶ Schedule this run</button></div>`:""}${rows}</details>`;
  }).join("");
  el.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.toggle).classList.toggle("open"));
+ el.querySelectorAll("[data-trkschedrun]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const x=XRUNS.find(x=>x.no===+b.dataset.trkschedrun); if(x){ x.sched=true; saveRuns(); rebuildRuns(); OVR.log.push(`Scheduled run ${x.no}`); save(); render(); boardToast("▶ Run "+x.no+" scheduled — it's on the Board now"); } }); /* web21 */
  el.querySelectorAll("details[data-trk]").forEach(d=>d.addEventListener("toggle",()=>{ if(d.open) trkOpen.add(+d.dataset.trk); else trkOpen.delete(+d.dataset.trk); }));
  el.querySelectorAll("[data-markrun]").forEach(b=>b.onclick=()=>{
   const run=+b.dataset.markrun, step=+b.dataset.markstep, sg=b.dataset.markseg, to=b.dataset.to==="1";
@@ -4048,7 +4133,7 @@ document.querySelectorAll("nav button").forEach(t=>t.onclick=()=>{
  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===t));
  document.querySelectorAll("section").forEach(s=>s.classList.remove("on"));
  document.getElementById("view-"+t.dataset.v).classList.add("on");
- if(t.dataset.v==="tracker"){ trkOpen.clear(); document.querySelectorAll('#view-tracker details[data-trk]').forEach(d=>d.open=false); }
+ if(t.dataset.v==="tracker"){ trkOpen.clear(); document.querySelectorAll('#view-tracker details[data-trk]').forEach(d=>d.open=false); try{ const first=RUNS.slice().sort((a,b)=>b.no-a.no).find(r=>!r.done); if(first){ trkOpen.add(first.no); const d=document.querySelector('#view-tracker details[data-trk="'+first.no+'"]'); if(d) d.open=true; } }catch(e){} } /* web21: newest active run opens by default */
 });
 /* web6: deep links from the order app (/scheduler.html#runs etc.) */
 (function(){ const h=(location.hash||"").replace("#",""); if(h && document.getElementById("view-"+h)){ const b=document.querySelector('nav button[data-v="'+h+'"]'); if(b) b.click(); } })();

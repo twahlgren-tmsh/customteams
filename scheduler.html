@@ -508,7 +508,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web23 (Boot hardening: no cross-tab auth lock + sign-in timeout, so a stuck tab can never blank the tool. Custom tab: head-view thumbnails, multi-select type filter, previous orders load as you scroll and are fully editable.)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web24 (Boots instantly from your saved sign-in even when the Supabase auth service is slow — no more blank tool. Custom tab: head-view thumbnails, multi-select type filter, previous orders load as you scroll and are fully editable.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
@@ -516,7 +516,8 @@ const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
 const sb = (typeof supabase!=='undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { lock: (_name, _timeout, fn) => fn() } }) : undefined;
-const BUILD="2026-08-29-web23";
+const BUILD="2026-08-29-web24";
+function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 let ACCESS_TOKEN=null;
 const SUBS = {
  LP:[["Serge tops",.298,1],["Serge bottoms",.401,1],["Trim tops",.18,2],["Trim bottoms",.59,2],["Understitch tops",.34,3],["Understitch bottoms",.48,3],["Logo",.921,4],["Sew ribbon",1.34,12],["Serge scrunchies",1.689,5],["Case scrunchie",.736,11],["Serge top/bot",1.24,6],["Attachment",2.43,11]],
@@ -4166,12 +4167,18 @@ document.getElementById("dnext").onclick = ()=>document.getElementById("daystrip
 function startApp(){ if(APP_STARTED) return; APP_STARTED=true;
  var lg=document.getElementById("login"); if(lg) lg.style.display="none";
  (async()=>{ try{
-   /* web21: never let a hung auth call blank the tool — 6s timeout, then fall back to the stored session / direct auth endpoint */
-   const withTO=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("auth timeout")),ms))]);
-   let user=null;
-   try{ user=(await withTO(sb.auth.getUser(),6000)).data.user; }
-   catch(e){ try{ const tok=JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); if(tok&&tok.access_token){ const r=await fetch(SUPABASE_URL+"/auth/v1/user",{headers:{apikey:SUPABASE_ANON,Authorization:"Bearer "+tok.access_token}}); if(r.ok) user=await r.json(); } }catch(e2){} }
-   window._uid=user&&user.id; const {data:prof}=await sb.from("profiles").select("role").eq("id",user.id).maybeSingle(); isLead=!!(prof&&prof.role==="lead"); }catch(e){ isLead=true; }
+   /* web24: the Supabase AUTH service was answering in 1–4 minutes (2026-08-29) and the tool sat blank waiting on it.
+      Boot no longer touches the auth server: the user id comes from the stored JWT, and the role from a direct
+      REST call (fast) with a timeout. sb.auth still refreshes the token in the background. */
+   const withTO=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))]);
+   const tok=sbStoredSession();
+   let uid=null; try{ uid=JSON.parse(atob((tok.access_token.split(".")[1]||"").replace(/-/g,"+").replace(/_/g,"/"))).sub||null; }catch(e){}
+   if(!uid){ try{ uid=((await withTO(sb.auth.getUser(),6000)).data.user||{}).id||null; }catch(e){} }
+   window._uid=uid;
+   let role=null;
+   try{ const r=await withTO(fetch(SUPABASE_URL+"/rest/v1/profiles?select=role&id=eq."+encodeURIComponent(uid),{headers:{apikey:SUPABASE_ANON,Authorization:"Bearer "+((tok&&tok.access_token)||SUPABASE_ANON)}}),8000); const j=await r.json(); if(Array.isArray(j)&&j[0]) role=j[0].role; }catch(e){}
+   if(role===null){ try{ const {data:prof}=await withTO(sb.from("profiles").select("role").eq("id",uid).maybeSingle(),8000); role=prof&&prof.role; }catch(e){} }
+   isLead = role===null ? true : role==="lead"; }catch(e){ isLead=true; }
   await bootCloud(); await loadOrders(); await loadTimeEntries(); await loadBIS(); /* web9 tracker · web15 back-in-stock */
   try{ sb.channel("orders-live").on("postgres_changes",{event:"*",schema:"public",table:"orders"},()=>{ if(Date.now()-_selfWrite<2500) return; loadOrders(); }).subscribe(); }catch(e){}
   try{ sb.channel("te-live").on("postgres_changes",{event:"*",schema:"public",table:"time_entries"},()=>{ if(Date.now()-_teSelf<2000) return; loadTimeEntries().then(render); }).subscribe(); }catch(e){} /* web9: everyone sees running timers live */
@@ -4184,11 +4191,16 @@ function startApp(){ if(APP_STARTED) return; APP_STARTED=true;
 }
 if(typeof sb!=="undefined"){
  sb.auth.onAuthStateChange((ev,s)=>{ ACCESS_TOKEN=s?s.access_token:null; if(s) startApp(); else if(APP_STARTED) location.reload(); });
- /* web23: boot can never hang — 6s timeout on getSession, then fall back to the stored session, else show the login */
+ /* web24: boot from the stored session instantly (no auth-server round trip). Only when there is no usable
+    stored session do we ask sb.auth (which may need the auth server) — with a timeout and a visible status. */
  (async()=>{ let session=null;
-  try{ session=(await Promise.race([sb.auth.getSession(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("getSession timeout")),6000))])).data.session; }
-  catch(e){ try{ const tok=JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); if(tok&&tok.access_token&&tok.expires_at*1000>Date.now()+30000) session=tok; }catch(e2){} }
-  if(session){ ACCESS_TOKEN=session.access_token; startApp(); } else if(!APP_STARTED){ var lg=document.getElementById("login"); if(lg) lg.style.display="flex"; }
+  const tok=sbStoredSession();
+  if(tok&&tok.access_token&&tok.expires_at*1000>Date.now()+30000){ ACCESS_TOKEN=tok.access_token; startApp(); return; }
+  var lg=document.getElementById("login"), le=document.getElementById("liErr");
+  const slow=setTimeout(()=>{ if(!APP_STARTED&&lg){ lg.style.display="flex"; if(le) le.textContent="Reconnecting to the sign-in service… this can take a minute. You can also sign in again below."; } },4000);
+  try{ session=(await Promise.race([sb.auth.getSession(), new Promise((_,rej)=>setTimeout(()=>rej(new Error("getSession timeout")),90000))])).data.session; }catch(e){}
+  clearTimeout(slow);
+  if(session){ ACCESS_TOKEN=session.access_token; startApp(); } else if(!APP_STARTED){ if(lg) lg.style.display="flex"; if(le) le.textContent=""; }
  })();
  var _li=document.getElementById("liBtn"); if(_li) _li.onclick=async()=>{ document.getElementById("liErr").textContent=""; const {error}=await sb.auth.signInWithPassword({email:document.getElementById("liEmail").value.trim(),password:document.getElementById("liPass").value}); if(error) document.getElementById("liErr").textContent=error.message; };
  var _lp=document.getElementById("liPass"); if(_lp) _lp.addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("liBtn").click(); });

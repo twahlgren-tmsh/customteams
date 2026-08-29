@@ -513,14 +513,14 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web26 (Fabric tab is now the whole product pipeline — To order → New designs → On order → Ready to cut → In production → Launch, with waitlist demand folded in from the old Back in Stock tab. One product card everywhere: thread, yards on hand and notes are editable on the card; ↻ Refresh from Shopify also updates changed product photos.)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web27 (Fabric tab is now the whole product pipeline — To order → New designs → On order → Ready to cut → In production → Launch, with waitlist demand folded in from the old Back in Stock tab. One product card everywhere: thread, yards on hand and notes are editable on the card; ↻ Refresh from Shopify also updates changed product photos.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-08-29-web26";
+const BUILD="2026-08-29-web27";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -1883,10 +1883,14 @@ function renderFabric(){
  const recNames=new Set(recs.map(c=>c.p));
  const bisRecs=bisSug.filter(p=>!recNames.has(p.p) && !noReorder.has(p.p) && !onOrderName.has(p.p));
  // NEW DESIGNS: Shopify drafts, brand-new catalog entries, and designs added by hand here
- const newNames=[...new Set([].concat(CATALOG.filter(c=>c.dr).map(c=>c.p), Object.keys(OVR.fabric.newDesigns||{})))].filter(n=>!onOrderName.has(n)&&!ready.some(o=>o.fabric===n));
+ /* Shopify has 100+ old drafts — only show the ones you're actually working on: added here, on order, ready, or in a planned run. The rest stay searchable in "Add any fabric". */
+ const activePat=new Set([].concat((OVR.fabric.orders||[]).filter(o=>!o.cut).map(o=>o.fabric), RUNS.filter(r=>!r.done).flatMap(r=>(r.lines||[]).map(l=>l.p))));
+ const draftsAll=CATALOG.filter(c=>c.dr).map(c=>c.p);
+ const newNames=[...new Set([].concat(draftsAll.filter(n=>activePat.has(n)), Object.keys(OVR.fabric.newDesigns||{})))].filter(n=>!onOrderName.has(n)&&!ready.some(o=>o.fabric===n));
  // IN PRODUCTION: patterns in runs that are scheduled and not finished
  const prodRunsL=RUNS.filter(r=>!r.done && r.sched!==false).map(r=>{ const ri=Object.values(items).filter(i=>i.run===r.no); const tot=ri.reduce((a,i)=>a+i.total,0), rem=ri.reduce((a,i)=>a+i.rem,0); const fin=schedL.runDone[r.no]; return {r, pct: tot?Math.round(100*(tot-rem)/tot):0, done: fin!==null&&fin!==undefined&&fin<0}; });
- const inProd=prodRunsL.filter(x=>!x.done), toLaunch=prodRunsL.filter(x=>x.done && OVR.posted && OVR.posted[x.r.no]!==true).concat(RUNS.filter(r=>r.done && !(OVR.posted&&OVR.posted[r.no]===true)).map(r=>({r,pct:100,done:true})));
+ const isTool=r=>XRUNS.some(x=>x.no===r.no); /* built-in history runs were posted long ago — never list them under Launch */
+ const inProd=prodRunsL.filter(x=>!x.done), toLaunch=prodRunsL.filter(x=>x.done && !(OVR.posted&&OVR.posted[x.r.no]===true)).concat(RUNS.filter(r=>r.done && isTool(r) && !(OVR.posted&&OVR.posted[r.no]===true)).map(r=>({r,pct:100,done:true})));
  const nLaunch=toLaunch.length, nProd=inProd.length;
  const toOrderN=coreRecs.length+recs.length+bisRecs.length;
 
@@ -1937,6 +1941,7 @@ function renderFabric(){
     h+=productCard(n,{sub:`${ven||"vendor —"}${nd&&nd.created?` · added ${nd.created}`:""}${c&&c.dr?" · hidden on your store until you activate it":""}`, actions:`${(!linked&&isLead)?`<button class="btn" data-pcreate="${n.replace(/"/g,'&quot;')}" style="flex:0 0 auto" title="Create the Shopify draft product">Draft ▸</button>`:""}${nd?`<button class="btn" data-pnewdel="${n.replace(/"/g,'&quot;')}" style="flex:0 0 auto" title="Remove from new designs">✕</button>`:""}<button class="btn go" data-catorder="${n.replace(/"/g,'&quot;')}">Order fabric ▸</button>`}); });
    h+=`</div>`; }
   else h+=`<div class="note">No new designs in progress. Tap <b>＋ New design</b> when you buy a new print.</div>`;
+  if(draftsAll.length) h+=`<div class="fmeta" style="margin-top:6px">${draftsAll.length} draft products on Shopify are not shown here — they appear when you order fabric for one (use <b>＋ Add any fabric</b> and search the drafts).</div>`;
  }
 
  // 3) ON ORDER / AWAITING INTAKE

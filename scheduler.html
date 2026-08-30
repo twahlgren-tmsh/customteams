@@ -359,6 +359,10 @@ table.fin .neg{ color:#C2452D; } table.fin .pos{ color:#0F8A6D; }
 .finsub{ color:var(--soft); font-size:11px; font-weight:400; }
 .finrp{ border:0; background:transparent; cursor:pointer; font-size:14px; color:var(--soft); padding:4px 8px; }
 .finrp:hover{ color:var(--dark,#23211C); }
+.finest{ margin-top:8px; padding:10px 12px; border:1px dashed var(--line); border-radius:12px; background:var(--bg); }
+.finestgrid{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+.finestgrid label{ display:flex; flex-direction:column; font-size:10.5px; color:var(--soft); font-weight:600; gap:2px; }
+.finestgrid input{ width:110px; border:1px solid var(--line); border-radius:8px; padding:6px 8px; font:inherit; font-size:13px; color:var(--ink); background:var(--card); text-align:right; }
 .findates{ display:inline-flex; gap:6px; align-items:center; font-size:12px; color:var(--soft); }
 .findates input{ border:1.5px solid var(--line); border-radius:9px; padding:6px 8px; font:inherit; font-size:12.5px; background:var(--card); color:var(--ink); }
 @media (max-width:640px){ .finwrap{ max-height:none; } table.fin{ min-width:960px; } }
@@ -551,7 +555,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-08-30-web31";
+const BUILD="2026-08-30-web32";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -958,6 +962,7 @@ function applyRemote(key,val,skipRender){
  else if(key==="tmsh-fablive"){ window.FAB_LIVE=val; try{ applyFabLive(); }catch(e){} } /* web8: morning fabric sync */
  else if(key==="tmsh-bis"){ window.BIS_DIG=val; try{ renderBIS(); }catch(e){} } /* web15: back-in-stock demand digest */
  else if(key==="tmsh-rates"){ RATES=Object.assign({sew:16,emb:17,zeroFor:["Taylor"]}, val||{}); } /* web9: tracker pay rates */
+ else if(key==="tmsh-finest"){ FIN_EST=Object.assign({},FIN_EST_DEFAULT, val||{}); } /* web32: labor estimate rates */
  else if(key===PKEY) PAIR=val||{};
  else if(key===RKEY && Array.isArray(val)){ XRUNS=val; try{ if(typeof rebuildRuns==="function") rebuildRuns(); }catch(e){} }
  else return;
@@ -1124,6 +1129,10 @@ function pushCustomAll(){
 
 /* ---------- web9: native time tracker (replaces Clockify) ---------- */
 let RATES={sew:16,emb:17,zeroFor:["Taylor"]}; // overwritten by sched_state key tmsh-rates at boot
+/* web32: labor estimate model (Finance tab) — from Clockify history 2025-01→2026-05: embroidery ≈ $21.92 + $3.36/hat (r²=.84, n=15),
+   custom print ≈ $19.88 + $1.87/hat (r²=.85, n=37). Printed logo / patches have no logged history yet → add-ons from the tracker time model. Editable in Finance → ⚙. */
+const FIN_EST_DEFAULT={setup:20,sew:1.90,emb:1.50,pl:0.45,patch:2.00};
+let FIN_EST=Object.assign({},FIN_EST_DEFAULT); // overwritten by sched_state key tmsh-finest
 let TE_ALL=[], TE_OPEN={}, _teSelf=0;
 function rateFor(person,kind){ if((RATES.zeroFor||[]).indexOf(person)>=0) return 0; return (kind==="emb"||kind==="pl")?(RATES.emb!=null?RATES.emb:17):(RATES.sew!=null?RATES.sew:16); }
 function teKindOf(step){ return (step===4||step===14)?"emb":"sew"; } // logo/embroidery steps bill at the emb rate
@@ -2989,7 +2998,7 @@ function coMoney(v){ const n=parseFloat(v); return (v==null||isNaN(n))?"—":"$"
 function coLeadExtras(o){
  const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; const f=FINBY[r.id]||{};
  const num=v=>{ const n=parseFloat(v); return isNaN(n)?null:n; };
- const inv=num(f.invoice_total), lab=(function(){ const l=num(f.labor_cost); if(l!=null) return l; try{ const t=teLabor(e=>e.order_num===String(o.num||o.id)); return t.min>=1?t.cost:0; }catch(e){ return 0; } })(), mat=num(f.materials_cost)||0, shc=num(f.shipping_cost)||0; /* web30: labor falls back to tracked time */
+ const inv=num(f.invoice_total), lab=(function(){ try{ return finLabor(r,f).value||0; }catch(e){ return num(f.labor_cost)||0; } })(), mat=num(f.materials_cost)||0, shc=num(f.shipping_cost)||0; /* web32: entered > tracked > estimate */
  const profit=inv==null?null:inv-lab-mat-shc;
  const margin=(profit!=null&&inv)?Math.round(profit/inv*100)+"%":"—";
  const lst='display:flex;flex-direction:column;font-size:10.5px;color:#6f8c8f;font-weight:600;gap:2px';
@@ -3034,7 +3043,7 @@ function renderCoAna(){
  el.querySelectorAll("[data-corange]").forEach(b=>b.onclick=()=>{ CO_RANGE=b.dataset.corange; renderCoAna(); });
 }
 /* ---------- web30: Finance tab (lead only) — stats + spreadsheet-style per-order table ---------- */
-let FIN_RANGE="ytd", FIN_FROM="", FIN_TO="", FIN_Q="", FIN_SORT="date", FIN_DIR=-1;
+let FIN_RANGE="ytd", FIN_FROM="", FIN_TO="", FIN_Q="", FIN_SORT="date", FIN_DIR=-1, FIN_ESTOPEN=false;
 function finNum(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
 function finYmd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function finRange(){ /* → [from,to] as yyyy-mm-dd (null = open) */
@@ -3049,15 +3058,38 @@ function finRange(){ /* → [from,to] as yyyy-mm-dd (null = open) */
 function finRow(o){
  const f=FINBY[o.id]||{}; const hats=finNum(o.total_hats)||0;
  const inv=finNum(f.invoice_total), mat=finNum(f.materials_cost), shc=finNum(f.shipping_charged), shp=finNum(f.shipping_cost);
- let trk=null, trkMin=0; try{ const t=teLabor(e=>e.order_num===String(o.order_number||"").replace(/^#/,"")); if(t.min>=1){ trk=Math.round(t.cost*100)/100; trkMin=t.min; } }catch(e){}
- const labOv=finNum(f.labor_cost); const lab=labOv!=null?labOv:trk; const labAuto=labOv==null&&trk!=null;
+ const L=finLabor(o,f); const trk=L.trk, trkMin=L.trkMin, est=L.est, labOv=L.entered, lab=L.value, labSrc=L.src, labAuto=labSrc!=="entered"&&lab!=null;
  const cost=(mat||0)+(lab||0)+(shp||0);
  const profit=inv==null?null:Math.round((inv-cost)*100)/100;
  const margin=(profit!=null&&inv)?profit/inv*100:null;
  const perHat=(profit!=null&&hats)?profit/hats:null;
  const c=CUSTBY[o.customer_id]||{};
- return {o,hats,inv,mat,shc,shp,lab,labOv,labAuto,trk,trkMin,cost,profit,margin,perHat,
+ return {o,hats,inv,mat,shc,shp,lab,labOv,labAuto,labSrc,trk,trkMin,est,cost,profit,margin,perHat,
   name:o.internal_name||("Order "+(o.order_number||"")), cust:c.name||"", date:o.order_date||"", num:String(o.order_number||"").replace(/^#/,""), status:o.status||""};
+}
+/* web32: labor estimate + precedence. entered (order_financials.labor_cost) > tracked time > estimate.
+   Open orders: tracked time is partial, so the larger of tracked vs estimate shows until the order ships. */
+function finEstimate(o){
+ const hats=finNum(o.total_hats)||0; if(!hats) return null;
+ const so=(o.step_opts&&typeof o.step_opts==="object")?o.step_opts:{}; const has=(k,auto)=>Object.prototype.hasOwnProperty.call(so,k)?!!so[k]:auto;
+ const types=o.order_type||[];
+ const emb=has("Embroidery finished", types.some(t=>/embro/i.test(t))||o.has_digitizing===true);
+ const pl=has("Printed logo finished", o.has_printed_logo===true);
+ const patch=has("Patches sewn", /patch/i.test(o.internal_name||"")||types.some(t=>/patch/i.test(t)));
+ const E=FIN_EST; const per=(finNum(E.sew)||0)+(emb?finNum(E.emb)||0:0)+(pl?finNum(E.pl)||0:0)+(patch?finNum(E.patch)||0:0);
+ return Math.round(((finNum(E.setup)||0)+hats*per)*100)/100;
+}
+function finLabor(o,f){
+ f=f||FINBY[o.id]||{};
+ let trk=null, trkMin=0; try{ const t=teLabor(e=>e.order_num===String(o.order_number||"").replace(/^#/,"")); if(t.min>=1){ trk=Math.round(t.cost*100)/100; trkMin=t.min; } }catch(e){}
+ const est=finEstimate(o); const entered=finNum(f.labor_cost);
+ const done=/shipped|delivered/i.test(o.status||"")||!!(o.milestones&&((o.milestones.shipped||{}).done||(o.milestones.delivered||{}).done));
+ let value=null, src="none";
+ if(entered!=null){ value=entered; src="entered"; }
+ else if(trk!=null&&(done||est==null||trk>=est)){ value=trk; src="tracked"; }
+ else if(est!=null){ value=est; src=trk!=null?"estimate+":"estimate"; }
+ else if(trk!=null){ value=trk; src="tracked"; }
+ return {value,src,entered,trk,trkMin,est};
 }
 function finEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
 function finRows(){
@@ -3084,7 +3116,14 @@ function renderFin(){
  const today=finYmd(new Date());
  st.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b>Finance — lead only</b><div class="segwrap">${chips}</div><span class="findates"><input type="date" id="finfrom" value="${from||""}" title="From"> to <input type="date" id="finto" value="${to||today}" title="To"></span></div>
   <div class="cosnap finstat">${cs("orders",rows.length)+cs("hats",hats.toLocaleString())+cs("revenue",money(inv))+cs("materials",money(mat))+cs("labor",money(lab))+cs("shipping net",money(shc-shp))+cs("profit",money(profit),profit<0?"neg":"")+cs("margin",pct(margin),margin!=null&&margin<0?"neg":"")+cs("profit / hat",hats?money(profit/hats):"—")+cs("avg order",invd.length?money(inv/invd.length):"—")}</div>
-  ${rows.length-invd.length?`<div class="finsub" style="margin-top:6px">${rows.length-invd.length} order${rows.length-invd.length===1?"":"s"} in this range ${rows.length-invd.length===1?"has":"have"} no invoice total yet — not counted in profit or margin.</div>`:""}`;
+  ${(function(){ const nE=rows.filter(r=>/estimate/.test(r.labSrc)).length, nT=rows.filter(r=>r.labSrc==="tracked").length, nN=rows.filter(r=>r.lab==null).length, nI=rows.length-invd.length; const bits=[]; if(nE) bits.push(`${nE} labor ≈ estimated`); if(nT) bits.push(`${nT} labor ⏱ tracked`); if(nN) bits.push(`${nN} no labor figure`); if(nI) bits.push(`${nI} without an invoice total (not in profit/margin)`); return bits.length?`<div class="finsub" style="margin-top:6px">${bits.join(" · ")}</div>`:""; })()}
+  <div style="margin-top:8px"><button class="btn" id="finestbtn" style="padding:5px 12px;min-height:0;font-size:12px">⚙ Labor estimate${FIN_ESTOPEN?" ▴":" ▾"}</button></div>
+  ${FIN_ESTOPEN?`<div class="finest" id="finest">
+   <div class="finsub" style="margin-bottom:6px">Estimated labor = <b>setup</b> + hats × (<b>sew &amp; cut</b> + add-ons for each decoration on the order). Defaults come from your Clockify history: embroidery ≈ $21.92 + $3.36/hat (15 orders), custom print ≈ $19.88 + $1.87/hat (37 orders). Printed logo and patches had no logged history yet, so those add-ons come from the tracker's time model — adjust them as real time gets logged.</div>
+   <div class="finestgrid">${[["setup","Setup $ / order"],["sew","Sew & cut $ / hat"],["emb","+ Embroidery $ / hat"],["pl","+ Printed logo $ / hat"],["patch","+ Patches $ / hat"]].map(([k,l])=>`<label>${l}<input class="finestv" inputmode="decimal" data-finest="${k}" value="${(finNum(FIN_EST[k])||0).toFixed(2)}"></label>`).join("")}
+    <div class="finsub" style="align-self:end;padding-bottom:6px">e.g. 25 embroidered hats ≈ ${coMoney((finNum(FIN_EST.setup)||0)+25*((finNum(FIN_EST.sew)||0)+(finNum(FIN_EST.emb)||0)))} · 25 printed-fabric hats ≈ ${coMoney((finNum(FIN_EST.setup)||0)+25*(finNum(FIN_EST.sew)||0))} <button class="btn" id="finestreset" style="padding:3px 10px;min-height:0;font-size:11px;margin-left:6px">Reset to defaults</button></div>
+   </div>
+  </div>`:""}`;
  const arrow=k=>FIN_SORT===k?(FIN_DIR<0?" ↓":" ↑"):"";
  const th=(k,l,left)=>`<th class="${left?"l":""}${FIN_SORT===k?" on":""}" data-fsort="${k}">${l}${arrow(k)}</th>`;
  const fmtD=d=>d?new Date(d.slice(0,10)+"T12:00:00").toLocaleDateString("en-US",{month:"numeric",day:"numeric",year:"2-digit"}):"";
@@ -3098,7 +3137,7 @@ function renderFin(){
   ${ro(r.hats||"")}
   ${ed(r,"invoice_total",r.inv)}
   ${ed(r,"materials_cost",r.mat)}
-  ${ed(r,"labor_cost",r.labOv,r.trk!=null?r.trk.toFixed(2)+" ⏱":"")}
+  ${ed(r,"labor_cost",r.labOv,r.labSrc==="tracked"?r.lab.toFixed(2)+" ⏱":(r.labSrc==="estimate"||r.labSrc==="estimate+")?r.lab.toFixed(2)+" ≈":"")}
   ${ed(r,"shipping_charged",r.shc)}
   ${ed(r,"shipping_cost",r.shp)}
   ${ro(r.profit==null?"—":money(r.profit),sign(r.profit))}
@@ -3110,11 +3149,14 @@ function renderFin(){
  <div class="finwrap"><table class="fin"><thead><tr>${th("order","Order",1)}${th("name","Name / customer",1)}${th("date","Date",1)}${th("hats","Hats")}${th("inv","Invoice")}${th("mat","Materials")}${th("lab","Labor")}${th("shc","Ship coll.")}${th("shp","Ship cost")}${th("profit","Profit")}${th("margin","Margin")}${th("perhat","$ / hat")}<th></th></tr></thead>
  <tbody>${body||`<tr><td class="l" colspan="13" style="padding:18px;color:var(--soft)">No orders in this range.</td></tr>`}</tbody>
  <tfoot><tr class="tot"><td class="l" colspan="3">Totals</td><td class="n">${hats.toLocaleString()}</td><td class="n">${money(inv)}</td><td class="n">${money(mat)}</td><td class="n">${money(lab)}</td><td class="n">${money(shc)}</td><td class="n">${money(shp)}</td><td class="n ${sign(profit)}">${money(profit)}</td><td class="n">${pct(margin)}</td><td class="n">${hats?money(profit/hats):"—"}</td><td></td></tr></tfoot></table></div>
- <div class="finsub" style="padding:8px 14px 12px">Labor shown in italics is auto-filled from time tracked in StitchLab — type a value to override it, clear the cell to go back to auto. Profit = Invoice − Materials − Labor − Ship cost. Invoice, shipping and materials fill from Shopify when an order first syncs; ↻ re-pulls them for one order.</div>`;
+ <div class="finsub" style="padding:8px 14px 12px">Labor in italics is auto-filled: <b>⏱</b> = time tracked in StitchLab, <b>≈</b> = estimate (setup + per-hat rates, ⚙ above) used until time is logged — on open orders the larger of the two shows until the order ships. Type a value to override, clear the cell to go back to auto. Profit = Invoice − Materials − Labor − Ship cost. Invoice, shipping and materials fill from Shopify when an order first syncs; ↻ re-pulls them for one order.</div>`;
  wireFin();
 }
 function wireFin(){
  document.querySelectorAll("[data-frange]").forEach(b=>b.onclick=()=>{ FIN_RANGE=b.dataset.frange; renderFin(); });
+ const eb=document.getElementById("finestbtn"); if(eb) eb.onclick=()=>{ FIN_ESTOPEN=!FIN_ESTOPEN; renderFin(); };
+ document.querySelectorAll("input.finestv").forEach(i=>{ i.onfocus=()=>{ try{ i.select(); }catch(e){} }; i.onchange=()=>{ const v=parseFloat(String(i.value).replace(/[^0-9.]/g,"")); if(isNaN(v)){ renderFin(); return; } FIN_EST[i.dataset.finest]=Math.round(v*100)/100; cloudSave("tmsh-finest",FIN_EST); const act=document.activeElement; const keep=act&&act.dataset?act.dataset.finest:null; renderFin(); if(keep){ const b=document.querySelector('input.finestv[data-finest="'+keep+'"]'); if(b) b.focus(); } }; });
+ const er=document.getElementById("finestreset"); if(er) er.onclick=()=>{ FIN_EST=Object.assign({},FIN_EST_DEFAULT); cloudSave("tmsh-finest",FIN_EST); renderFin(); };
  const ff=document.getElementById("finfrom"), ft=document.getElementById("finto");
  const custom=()=>{ FIN_RANGE="custom"; FIN_FROM=ff.value||""; FIN_TO=ft.value||""; renderFin(); };
  if(ff) ff.onchange=custom; if(ft) ft.onchange=custom;
@@ -3155,7 +3197,7 @@ function wireFin(){
   const esc=v=>{ v=v==null?"":String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
   const f2=v=>v==null?"":v.toFixed(2);
   const lines=[["Order","Name","Customer","Date","Status","Hats","Invoice","Materials","Labor","Labor source","Ship collected","Ship cost","Profit","Margin %","Profit per hat"].join(",")];
-  rows.forEach(r=>lines.push([r.num,r.name,r.cust,r.date,r.status,r.hats,f2(r.inv),f2(r.mat),f2(r.lab),r.labAuto?"tracked time":(r.labOv!=null?"entered":""),f2(r.shc),f2(r.shp),f2(r.profit),r.margin==null?"":r.margin.toFixed(1),f2(r.perHat)].map(esc).join(",")));
+  rows.forEach(r=>lines.push([r.num,r.name,r.cust,r.date,r.status,r.hats,f2(r.inv),f2(r.mat),f2(r.lab),r.labSrc==="entered"?"entered":r.labSrc==="tracked"?"tracked time":/estimate/.test(r.labSrc)?"estimate":"",f2(r.shc),f2(r.shp),f2(r.profit),r.margin==null?"":r.margin.toFixed(1),f2(r.perHat)].map(esc).join(",")));
   const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="stitchlab-finance-"+(from||"start")+"_"+(to||finYmd(new Date()))+".csv"; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
  };
 }

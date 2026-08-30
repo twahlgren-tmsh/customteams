@@ -336,6 +336,32 @@ details.cocard[open] .chev { transform:rotate(90deg); }
 .chat { position:relative; }
 .chwm { position:absolute; top:3px; right:6px; font-size:10.5px; font-weight:700; color:var(--faint); }
 section { display:none; } section.on { display:block; }
+/* ---------- web30: Financial tab (lead only) ---------- */
+#fintable{ padding:0; overflow:hidden; }
+.finctl{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); }
+.finctl input#finq{ flex:1; min-width:130px; border:1.5px solid var(--line); border-radius:999px; padding:8px 14px; font:inherit; font-size:13px; background:var(--card); }
+.finwrap{ overflow:auto; max-height:72vh; }
+table.fin{ border-collapse:separate; border-spacing:0; width:100%; font-size:12.5px; min-width:1080px; }
+table.fin th{ position:sticky; top:0; z-index:2; background:var(--tmsoft,#EEEBE3); color:var(--dark,#23211C); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; padding:8px 8px; text-align:right; white-space:nowrap; cursor:pointer; user-select:none; border-bottom:1px solid var(--line); }
+table.fin th.l, table.fin td.l{ text-align:left; }
+table.fin th.on{ text-decoration:underline; }
+table.fin td{ padding:0; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; vertical-align:middle; }
+table.fin td.l, table.fin td.ro{ padding:6px 8px; }
+table.fin td.n, table.fin input.finc{ font-variant-numeric:tabular-nums; }
+table.fin tbody tr:hover td{ background:#FBFAF6; }
+table.fin input.finc{ width:100%; min-width:92px; box-sizing:border-box; border:0; background:transparent; padding:8px 8px; font:inherit; font-size:12.5px; text-align:right; color:var(--ink); outline:none; border-radius:0; }
+table.fin input.finc:focus{ background:#fff; box-shadow:inset 0 0 0 2px var(--dark,#23211C); }
+table.fin input.finc::placeholder{ color:var(--soft); font-style:italic; }
+table.fin tr.tot td{ font-weight:700; background:var(--bg); position:sticky; bottom:0; z-index:1; border-top:2px solid var(--line); border-bottom:0; padding:8px 8px; }
+table.fin .neg{ color:#C2452D; } table.fin .pos{ color:#0F8A6D; }
+.finstat .cs{ cursor:default; } .finstat .cs:hover{ background:transparent; } .finstat .cs b.neg{ color:#C2452D; }
+.finname{ cursor:pointer; font-weight:700; } .finname:hover{ text-decoration:underline; }
+.finsub{ color:var(--soft); font-size:11px; font-weight:400; }
+.finrp{ border:0; background:transparent; cursor:pointer; font-size:14px; color:var(--soft); padding:4px 8px; }
+.finrp:hover{ color:var(--dark,#23211C); }
+.findates{ display:inline-flex; gap:6px; align-items:center; font-size:12px; color:var(--soft); }
+.findates input{ border:1.5px solid var(--line); border-radius:9px; padding:6px 8px; font:inherit; font-size:12.5px; background:var(--card); color:var(--ink); }
+@media (max-width:640px){ .finwrap{ max-height:none; } table.fin{ min-width:960px; } }
 @media (min-width:700px){ .tiles{grid-template-columns:repeat(4,1fr);} }
 
 /* ---------- Taylor Made brand shell (web6) ---------- */
@@ -480,6 +506,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
   <button data-v="tracker"><span class="nico">✅</span>Tracker</button>
   <button data-v="fabric"><span class="nico">🪡</span>Fabric</button>
   <button data-v="cut"><span class="nico">✂️</span>Cut</button>
+  <button data-v="fin"><span class="nico">💲</span>Finance</button>
 </nav>
 
 <section id="view-board" class="on">
@@ -510,6 +537,10 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <section id="view-cut">
   <div id="cutwrap"></div>
 </section>
+<section id="view-fin">
+  <div class="card" id="finstats"></div>
+  <div class="card" id="fintable"></div>
+</section>
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
@@ -520,7 +551,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-08-30-web29";
+const BUILD="2026-08-30-web30";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -1514,7 +1545,7 @@ function render(){
  const _cop=document.getElementById("copill"); if(_cop) _cop.onclick=()=>{ const b=document.querySelector('nav button[data-v="custom"]'); if(b) b.click(); };
  LAST = {items, sched};
  persistBoard(sched);
- renderOps(); renderDays(sched); renderBoard(items,sched); renderHome(sched); renderRuns(items,sched); renderTracker(items); renderCustom(); renderFabric(); renderCut(); renderBIS();
+ renderOps(); renderDays(sched); renderBoard(items,sched); renderHome(sched); renderRuns(items,sched); renderTracker(items); renderCustom(); renderFabric(); renderCut(); renderBIS(); renderFin();
  applyPerms();
  if(rdRun!==null) renderRD();
 }
@@ -2599,7 +2630,7 @@ function cpOfferDrafts(pats, venBy, after){
 function applyPerms(){
  if(isLead) return;
  ["voxbtn","typebox","resetbtn","clearops","co-add","co-sync","co-refresh","editBtn","newrun","cutpick","cutrec","cutadd","cutclear","cutaccept","cutconfirm","resuggest","bkupBtn","restoreBtn","fnewdesign"].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display="none"; });
- ["fabric","cut"].forEach(v=>{ const b=document.querySelector('nav button[data-v="'+v+'"]'); if(b){ b.style.display="none"; if(b.classList.contains("on")){ const bd=document.querySelector('nav button[data-v="board"]'); if(bd) bd.click(); } } });
+ ["fabric","cut","fin"].forEach(v=>{ const b=document.querySelector('nav button[data-v="'+v+'"]'); if(b){ b.style.display="none"; if(b.classList.contains("on")){ const bd=document.querySelector('nav button[data-v="board"]'); if(bd) bd.click(); } } });
  document.querySelectorAll("[data-clstart],[data-clend],[data-cldel],[data-cutready]").forEach(e=>{ e.style.pointerEvents="none"; e.style.opacity=".6"; });
  const f = document.querySelector(".coform"); if(f) f.style.display="none";
  document.querySelectorAll(".pcell").forEach(i=>i.disabled=true);
@@ -2958,29 +2989,19 @@ function coMoney(v){ const n=parseFloat(v); return (v==null||isNaN(n))?"—":"$"
 function coLeadExtras(o){
  const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; const f=FINBY[r.id]||{};
  const num=v=>{ const n=parseFloat(v); return isNaN(n)?null:n; };
- const inv=num(f.invoice_total), lab=num(f.labor_cost)||0, mat=num(f.materials_cost)||0, shc=num(f.shipping_cost)||0;
+ const inv=num(f.invoice_total), lab=(function(){ const l=num(f.labor_cost); if(l!=null) return l; try{ const t=teLabor(e=>e.order_num===String(o.num||o.id)); return t.min>=1?t.cost:0; }catch(e){ return 0; } })(), mat=num(f.materials_cost)||0, shc=num(f.shipping_cost)||0; /* web30: labor falls back to tracked time */
  const profit=inv==null?null:inv-lab-mat-shc;
  const margin=(profit!=null&&inv)?Math.round(profit/inv*100)+"%":"—";
  const lst='display:flex;flex-direction:column;font-size:10.5px;color:#6f8c8f;font-weight:600;gap:2px';
  const ist='border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:13px;font-weight:400;color:var(--ink)';
  const df=(l,col,v)=>`<label style="${lst}">${l}<input type="date" class="codate" data-codate="${o.id}|${col}" value="${(v||"").slice(0,10)}" style="${ist}"></label>`;
- const ff=(l,col,v)=>`<label style="${lst}">${l}<input type="number" step="0.01" class="cofin" data-cofin="${o.id}|${col}" value="${v==null?"":v}" style="${ist}"></label>`;
  return `<div class="colead" style="margin-top:10px;border-top:1px dashed var(--line);padding-top:10px">
-  <div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dark);font-weight:700;margin-bottom:6px">Lead only — customer · dates · financials</div>
+  <div style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dark);font-weight:700;margin-bottom:6px">Lead only — customer · dates</div>
   <div style="font-size:13px;margin-bottom:8px"><b>${(c.name||"no customer linked")}</b>${c.contact?" · "+c.contact:""}${c.email?` · <a href="mailto:${c.email}">${c.email}</a>`:""} <button class="btn" style="padding:3px 10px;min-height:0;font-size:11px" data-coecust="${o.id}">edit</button></div>
   <div class="codategrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;margin-bottom:8px">
    ${df("Customer deadline","deadline",r.deadline)}${df("Goal completion","internal_deadline",r.internal_deadline)}${df("Est. ship","est_ship",r.est_ship)}
   </div>
-  <div class="cofingrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;align-items:end">
-   ${ff("Invoice","invoice_total",f.invoice_total)}${ff("Materials","materials_cost",f.materials_cost)}${ff("Labor","labor_cost",f.labor_cost)}${ff("Ship collected","shipping_charged",f.shipping_charged)}${ff("Ship cost","shipping_cost",f.shipping_cost)}
-   <div style="font-size:12.5px;padding-bottom:4px"><b>Profit ${coMoney(profit)}</b><br><span style="color:var(--soft)">Margin ${margin}</span></div>
-  </div>
-  ${(function(){ /* web9: in-tool tracked labor replaces the Clockify pull */
-   try{ const trk=teLabor(e=>e.order_num===String(o.num||o.id));
-    if(trk.min<1) return "";
-    const stale = lab===0 || Math.abs(lab-trk.cost)>=0.5;
-    return `<div style="font-size:12px;margin-top:9px;color:var(--soft)">⏱ Tracked in-tool: <b style="color:var(--ink)">${fmtMin(trk.min)} · $${trk.cost.toFixed(2)}</b>${stale?` <button class="btn" style="padding:3px 10px;min-height:0;font-size:11px" data-couse="${o.id}|${trk.cost.toFixed(2)}">use as labor cost</button>`:` <span style="color:#0F8A6D;font-weight:700">= labor ✓</span>`}</div>`;
-   }catch(e){ return ""; } })()}
+  <div style="font-size:12.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="color:var(--soft)">Invoice ${coMoney(inv)} · Profit <b style="color:var(--ink)">${coMoney(profit)}</b> · Margin ${margin}</span><button class="btn" style="padding:3px 10px;min-height:0;font-size:11px" data-cofinance="${(o.num||"").replace(/"/g,"&quot;")}">💲 Open in Finance</button></div>
  </div>`;
 }
 function coCtlBar(){
@@ -3006,13 +3027,137 @@ function renderCoAna(){
  const td=[],dd=[];
  ord.forEach(o=>{ if(o.order_date&&o.ship_date){ const a=(new Date(o.ship_date)-new Date(o.order_date))/864e5; if(a>=0&&a<400) td.push(a); } if(o.order_date&&o.delivered_date){ const b=(new Date(o.delivered_date)-new Date(o.order_date))/864e5; if(b>=0&&b<400) dd.push(b); } });
  const avg=a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):null;
- let inv=0,prof=0,invN=0;
- ord.forEach(o=>{ const f=FINBY[o.id]||{}; const i=num(f.invoice_total); if(i!=null){ inv+=i; invN++; prof+=i-(num(f.labor_cost)||0)-(num(f.materials_cost)||0)-(num(f.shipping_cost)||0); } });
  const chips=[["30","30 days"],["90","90 days"],["ytd","YTD"],["365","1 year"],["all","All time"]].map(([k,l])=>`<button class="seg${CO_RANGE===k?" on":""}" data-corange="${k}">${l}</button>`).join("");
  const cs=(l,v)=>`<div class="cs"><b>${v}</b><span>${l}</span></div>`;
  el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b>Analytics — lead only</b><div class="segwrap">${chips}</div></div>
-  <div class="cosnap">${cs("orders",ord.length)+cs("customers",custs)+cs("repeat",rep)+cs("hats",hats)+cs("avg → shipped",avg(td)==null?"—":avg(td)+"d")+cs("avg → delivered",avg(dd)==null?"—":avg(dd)+"d")+cs("invoiced",coMoney(inv))+cs("profit",coMoney(prof))+cs("avg margin",inv?Math.round(prof/inv*100)+"%":"—")}</div>`;
+  <div class="cosnap">${cs("orders",ord.length)+cs("customers",custs)+cs("repeat",rep)+cs("hats",hats)+cs("avg → shipped",avg(td)==null?"—":avg(td)+"d")+cs("avg → delivered",avg(dd)==null?"—":avg(dd)+"d")}</div><div class="finsub" style="margin-top:6px">Revenue, costs and margins now live in the 💲 Finance tab.</div>`;
  el.querySelectorAll("[data-corange]").forEach(b=>b.onclick=()=>{ CO_RANGE=b.dataset.corange; renderCoAna(); });
+}
+/* ---------- web30: Finance tab (lead only) — stats + spreadsheet-style per-order table ---------- */
+let FIN_RANGE="ytd", FIN_FROM="", FIN_TO="", FIN_Q="", FIN_SORT="date", FIN_DIR=-1;
+function finNum(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
+function finYmd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function finRange(){ /* → [from,to] as yyyy-mm-dd (null = open) */
+ const now=new Date(); const t0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+ if(FIN_RANGE==="custom") return [FIN_FROM||null, FIN_TO||null];
+ if(FIN_RANGE==="all") return [null,null];
+ if(FIN_RANGE==="ytd") return [now.getFullYear()+"-01-01",null];
+ if(FIN_RANGE==="lastyear") return [(now.getFullYear()-1)+"-01-01",(now.getFullYear()-1)+"-12-31"];
+ if(FIN_RANGE==="month") return [finYmd(new Date(now.getFullYear(),now.getMonth(),1)),null];
+ const days=parseInt(FIN_RANGE,10)||30; return [finYmd(new Date(t0-days*864e5)),null];
+}
+function finRow(o){
+ const f=FINBY[o.id]||{}; const hats=finNum(o.total_hats)||0;
+ const inv=finNum(f.invoice_total), mat=finNum(f.materials_cost), shc=finNum(f.shipping_charged), shp=finNum(f.shipping_cost);
+ let trk=null, trkMin=0; try{ const t=teLabor(e=>e.order_num===String(o.order_number||"").replace(/^#/,"")); if(t.min>=1){ trk=Math.round(t.cost*100)/100; trkMin=t.min; } }catch(e){}
+ const labOv=finNum(f.labor_cost); const lab=labOv!=null?labOv:trk; const labAuto=labOv==null&&trk!=null;
+ const cost=(mat||0)+(lab||0)+(shp||0);
+ const profit=inv==null?null:Math.round((inv-cost)*100)/100;
+ const margin=(profit!=null&&inv)?profit/inv*100:null;
+ const perHat=(profit!=null&&hats)?profit/hats:null;
+ const c=CUSTBY[o.customer_id]||{};
+ return {o,hats,inv,mat,shc,shp,lab,labOv,labAuto,trk,trkMin,cost,profit,margin,perHat,
+  name:o.internal_name||("Order "+(o.order_number||"")), cust:c.name||"", date:o.order_date||"", num:String(o.order_number||"").replace(/^#/,""), status:o.status||""};
+}
+function finEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+function finRows(){
+ const [from,to]=finRange(); const q=(FIN_Q||"").trim().toLowerCase();
+ let rows=ALLORD.filter(o=>{ const d=(o.order_date||"").slice(0,10); if(from&&(!d||d<from)) return false; if(to&&(!d||d>to)) return false; return true; }).map(finRow);
+ if(q) rows=rows.filter(r=>(r.name+" "+r.cust+" "+r.num).toLowerCase().includes(q));
+ const keys={date:r=>r.date,order:r=>r.num,name:r=>r.name.toLowerCase(),cust:r=>r.cust.toLowerCase(),hats:r=>r.hats,inv:r=>r.inv,mat:r=>r.mat,lab:r=>r.lab,shc:r=>r.shc,shp:r=>r.shp,profit:r=>r.profit,margin:r=>r.margin,perhat:r=>r.perHat};
+ const key=keys[FIN_SORT]||keys.date;
+ rows.sort((a,b)=>{ const x=key(a),y=key(b); if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1; return (x<y?-1:x>y?1:0)*FIN_DIR || String(b.date).localeCompare(String(a.date)); });
+ return rows;
+}
+function renderFin(){
+ const st=document.getElementById("finstats"), tb=document.getElementById("fintable"); if(!st||!tb) return;
+ if(typeof isLead!=="undefined" && !isLead){ st.innerHTML=""; tb.innerHTML=""; return; }
+ const rows=finRows(); const [from,to]=finRange();
+ const sum=k=>rows.reduce((s,r)=>s+(r[k]||0),0);
+ const invd=rows.filter(r=>r.inv!=null);
+ const inv=sum("inv"), mat=sum("mat"), lab=sum("lab"), shc=sum("shc"), shp=sum("shp"), hats=sum("hats");
+ const profit=invd.reduce((s,r)=>s+(r.profit||0),0);
+ const margin=inv?profit/inv*100:null;
+ const money=v=>{ const n=parseFloat(v); return (v==null||isNaN(n))?"—":(n<0?"−":"")+coMoney(Math.abs(n)); }, pct=v=>v==null?"—":Math.round(v)+"%";
+ const chips=[["30","30 days"],["90","90 days"],["month","This month"],["ytd","YTD"],["lastyear","Last year"],["365","1 year"],["all","All time"]].map(([k,l])=>`<button class="seg${FIN_RANGE===k?" on":""}" data-frange="${k}">${l}</button>`).join("");
+ const cs=(l,v,cls)=>`<div class="cs"><b class="${cls||""}">${v}</b><span>${l}</span></div>`;
+ const today=finYmd(new Date());
+ st.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b>Finance — lead only</b><div class="segwrap">${chips}</div><span class="findates"><input type="date" id="finfrom" value="${from||""}" title="From"> to <input type="date" id="finto" value="${to||today}" title="To"></span></div>
+  <div class="cosnap finstat">${cs("orders",rows.length)+cs("hats",hats.toLocaleString())+cs("revenue",money(inv))+cs("materials",money(mat))+cs("labor",money(lab))+cs("shipping net",money(shc-shp))+cs("profit",money(profit),profit<0?"neg":"")+cs("margin",pct(margin),margin!=null&&margin<0?"neg":"")+cs("profit / hat",hats?money(profit/hats):"—")+cs("avg order",invd.length?money(inv/invd.length):"—")}</div>
+  ${rows.length-invd.length?`<div class="finsub" style="margin-top:6px">${rows.length-invd.length} order${rows.length-invd.length===1?"":"s"} in this range ${rows.length-invd.length===1?"has":"have"} no invoice total yet — not counted in profit or margin.</div>`:""}`;
+ const arrow=k=>FIN_SORT===k?(FIN_DIR<0?" ↓":" ↑"):"";
+ const th=(k,l,left)=>`<th class="${left?"l":""}${FIN_SORT===k?" on":""}" data-fsort="${k}">${l}${arrow(k)}</th>`;
+ const fmtD=d=>d?new Date(d.slice(0,10)+"T12:00:00").toLocaleDateString("en-US",{month:"numeric",day:"numeric",year:"2-digit"}):"";
+ const ed=(r,col,val,ph)=>`<td><input class="finc" inputmode="decimal" data-finc="${r.o.id}|${col}" value="${val==null?"":val.toFixed(2)}" placeholder="${ph||""}"></td>`;
+ const ro=(v,cls)=>`<td class="ro n ${cls||""}">${v}</td>`;
+ const sign=v=>v==null?"":(v<0?"neg":"pos");
+ const body=rows.map(r=>`<tr data-finrow="${r.o.id}">
+  <td class="l n">${finEsc(r.num)}<div class="finsub">${finEsc(r.status)}</div></td>
+  <td class="l"><span class="finname" data-finopen="${finEsc(r.num)}">${finEsc(r.name)}</span><div class="finsub">${finEsc(r.cust)}</div></td>
+  <td class="l n">${fmtD(r.date)}</td>
+  ${ro(r.hats||"")}
+  ${ed(r,"invoice_total",r.inv)}
+  ${ed(r,"materials_cost",r.mat)}
+  ${ed(r,"labor_cost",r.labOv,r.trk!=null?r.trk.toFixed(2)+" ⏱":"")}
+  ${ed(r,"shipping_charged",r.shc)}
+  ${ed(r,"shipping_cost",r.shp)}
+  ${ro(r.profit==null?"—":money(r.profit),sign(r.profit))}
+  ${ro(pct(r.margin),sign(r.margin))}
+  ${ro(r.perHat==null?"—":money(r.perHat),sign(r.perHat))}
+  <td><button class="finrp" data-finrp="${finEsc(r.num)}" title="Re-pull invoice, shipping & materials from Shopify">↻</button></td>
+ </tr>`).join("");
+ tb.innerHTML=`<div class="finctl"><b style="font-size:15px">Per order</b><input id="finq" placeholder="Search orders…" value="${finEsc(FIN_Q)}"><span class="finsub">${rows.length} order${rows.length===1?"":"s"}</span><span style="flex:1"></span><button class="btn" id="fincsv">⤓ CSV</button><button class="btn go" id="finsync">↻ Sync Shopify</button></div>
+ <div class="finwrap"><table class="fin"><thead><tr>${th("order","Order",1)}${th("name","Name / customer",1)}${th("date","Date",1)}${th("hats","Hats")}${th("inv","Invoice")}${th("mat","Materials")}${th("lab","Labor")}${th("shc","Ship coll.")}${th("shp","Ship cost")}${th("profit","Profit")}${th("margin","Margin")}${th("perhat","$ / hat")}<th></th></tr></thead>
+ <tbody>${body||`<tr><td class="l" colspan="13" style="padding:18px;color:var(--soft)">No orders in this range.</td></tr>`}</tbody>
+ <tfoot><tr class="tot"><td class="l" colspan="3">Totals</td><td class="n">${hats.toLocaleString()}</td><td class="n">${money(inv)}</td><td class="n">${money(mat)}</td><td class="n">${money(lab)}</td><td class="n">${money(shc)}</td><td class="n">${money(shp)}</td><td class="n ${sign(profit)}">${money(profit)}</td><td class="n">${pct(margin)}</td><td class="n">${hats?money(profit/hats):"—"}</td><td></td></tr></tfoot></table></div>
+ <div class="finsub" style="padding:8px 14px 12px">Labor shown in italics is auto-filled from time tracked in StitchLab — type a value to override it, clear the cell to go back to auto. Profit = Invoice − Materials − Labor − Ship cost. Invoice, shipping and materials fill from Shopify when an order first syncs; ↻ re-pulls them for one order.</div>`;
+ wireFin();
+}
+function wireFin(){
+ document.querySelectorAll("[data-frange]").forEach(b=>b.onclick=()=>{ FIN_RANGE=b.dataset.frange; renderFin(); });
+ const ff=document.getElementById("finfrom"), ft=document.getElementById("finto");
+ const custom=()=>{ FIN_RANGE="custom"; FIN_FROM=ff.value||""; FIN_TO=ft.value||""; renderFin(); };
+ if(ff) ff.onchange=custom; if(ft) ft.onchange=custom;
+ const q=document.getElementById("finq");
+ if(q){ q.oninput=()=>{ FIN_Q=q.value; clearTimeout(window._finqT); window._finqT=setTimeout(()=>{ renderFin(); const s=document.getElementById("finq"); if(s){ s.focus(); try{ s.setSelectionRange(s.value.length,s.value.length); }catch(e){} } },300); }; }
+ document.querySelectorAll("th[data-fsort]").forEach(h=>h.onclick=()=>{ const k=h.dataset.fsort; if(FIN_SORT===k) FIN_DIR=-FIN_DIR; else { FIN_SORT=k; FIN_DIR=(k==="name"||k==="cust")?1:-1; } renderFin(); });
+ document.querySelectorAll("input.finc").forEach(i=>{
+  i.onfocus=()=>{ try{ i.select(); }catch(e){} };
+  i.onkeydown=e=>{ /* spreadsheet feel: Enter / arrows move down & up within the column */
+   if(e.key!=="Enter"&&e.key!=="ArrowDown"&&e.key!=="ArrowUp") return;
+   e.preventDefault(); const col=i.dataset.finc.split("|")[1];
+   const all=[...document.querySelectorAll('input.finc[data-finc$="|'+col+'"]')]; const at=all.indexOf(i);
+   const nx=all[at+(e.key==="ArrowUp"?-1:1)]; if(nx) nx.focus(); else i.blur(); /* blur fires the native change → save */
+  };
+  i.onchange=async()=>{
+   const [oid,col]=i.dataset.finc.split("|"); const raw=i.value.replace(/[^0-9.\-]/g,""); const v=raw===""?null:parseFloat(raw);
+   if(raw!==""&&isNaN(v)){ renderFin(); return; }
+   FINBY[oid]=Object.assign(FINBY[oid]||{order_id:oid},{[col]:v});
+   try{ const {error}=await sb.from("order_financials").upsert({order_id:oid,[col]:v},{onConflict:"order_id"}); if(error) throw error; }
+   catch(e){ boardToast("Couldn't save — "+(e.message||e)); }
+   const act=document.activeElement; const keep=act&&act.classList&&act.classList.contains("finc")?act.dataset.finc:null;
+   renderFin();
+   if(keep){ const back=document.querySelector('input.finc[data-finc="'+keep+'"]'); if(back) back.focus(); }
+  };
+ });
+ document.querySelectorAll("[data-finopen]").forEach(el=>el.onclick=()=>{ CO_OPEN=el.dataset.finopen; const nb=document.querySelector('nav button[data-v="custom"]'); if(nb) nb.click(); renderCustom(); });
+ document.querySelectorAll("[data-finrp]").forEach(b=>b.onclick=async()=>{ /* re-pull one order's money fields from Shopify (sync-orders v21 mode:repull) */
+  const num=b.dataset.finrp; b.disabled=true; b.textContent="…";
+  try{ const {data,error}=await sb.functions.invoke("sync-orders",{body:{mode:"repull",order_number:num}});
+   if(error) throw error; const r=(data&&data.repulled&&data.repulled[0])||null;
+   await loadOrders();
+   boardToast(r?`Order ${num} re-pulled — invoice ${coMoney(r.invoice)}, ship ${coMoney(r.shipping_charged)}${r.shipping_cost!=null?" / cost "+coMoney(r.shipping_cost):""}, materials ${coMoney(r.materials)} ✓`:`Order ${num}: nothing came back from Shopify (under 5 hats, or not found)`);
+  }catch(e){ boardToast("Re-pull failed — "+(e.message||e)); renderFin(); }
+ });
+ const sy=document.getElementById("finsync"); if(sy) sy.onclick=()=>coSyncShopify(sy);
+ const cv=document.getElementById("fincsv"); if(cv) cv.onclick=()=>{
+  const rows=finRows(); const [from,to]=finRange();
+  const esc=v=>{ v=v==null?"":String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const f2=v=>v==null?"":v.toFixed(2);
+  const lines=[["Order","Name","Customer","Date","Status","Hats","Invoice","Materials","Labor","Labor source","Ship collected","Ship cost","Profit","Margin %","Profit per hat"].join(",")];
+  rows.forEach(r=>lines.push([r.num,r.name,r.cust,r.date,r.status,r.hats,f2(r.inv),f2(r.mat),f2(r.lab),r.labAuto?"tracked time":(r.labOv!=null?"entered":""),f2(r.shc),f2(r.shp),f2(r.profit),r.margin==null?"":r.margin.toFixed(1),f2(r.perHat)].map(esc).join(",")));
+  const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="stitchlab-finance-"+(from||"start")+"_"+(to||finYmd(new Date()))+".csv"; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
+ };
 }
 async function coAddOrder(){ if(!isLead) return;
  const onum=(prompt("Shopify order # (or a unique id):")||"").trim(); if(!onum) return;
@@ -3300,13 +3445,9 @@ function renderCustom(){
  const _csy=document.getElementById("cosync2"); if(_csy) _csy.onclick=()=>coSyncShopify(_csy);
  document.querySelectorAll("[data-coecust]").forEach(b=>b.onclick=()=>coEditCust(b.dataset.coecust));
  document.querySelectorAll(".codate").forEach(i=>i.onchange=async()=>{ const [id,col]=i.dataset.codate.split("|"); const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o||!o._row) return; o._row[col]=i.value||null; _selfWrite=Date.now(); try{ await sb.from("orders").update({[col]:i.value||null, updated_at:new Date().toISOString()}).eq("id",o._row.id); }catch(e){} });
- document.querySelectorAll(".cofin").forEach(i=>i.onchange=async()=>{ const [id,col]=i.dataset.cofin.split("|"); const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o||!o._row) return; const v=i.value===""?null:parseFloat(i.value); FINBY[o._row.id]=Object.assign(FINBY[o._row.id]||{order_id:o._row.id},{[col]:v}); try{ await sb.from("order_financials").upsert(Object.assign({order_id:o._row.id},{[col]:v}), {onConflict:"order_id"}); }catch(e){} renderCustom(); });
- document.querySelectorAll("[data-couse]").forEach(b=>b.onclick=async()=>{ /* web9: one-tap tracked-time → labor cost */
-  const [id,v]=b.dataset.couse.split("|"); const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o||!o._row) return;
-  const val=parseFloat(v); if(isNaN(val)) return;
-  FINBY[o._row.id]=Object.assign(FINBY[o._row.id]||{order_id:o._row.id},{labor_cost:val});
-  try{ await sb.from("order_financials").upsert({order_id:o._row.id, labor_cost:val},{onConflict:"order_id"}); }catch(e){}
-  renderCustom(); boardToast("Labor cost set from tracked time ✓");
+ document.querySelectorAll("[data-cofinance]").forEach(b=>b.onclick=()=>{ /* web30: finances live in the Finance tab */
+  FIN_Q=b.dataset.cofinance||""; FIN_RANGE="all"; CO_OPEN=null; const cw=document.getElementById("cowrap"); if(cw) cw.classList.remove("open");
+  const nb=document.querySelector('nav button[data-v="fin"]'); if(nb) nb.click(); renderFin();
  });
 }
 

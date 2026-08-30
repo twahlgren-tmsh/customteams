@@ -59,6 +59,14 @@
   .tagchip.exclude{border-color:var(--coral); background:var(--coral-soft); color:var(--coral); text-decoration:none;}
   .tagchip .x{font-weight:800; opacity:.65; padding:0 1px;}
   .tagchip .x:hover{opacity:1;}
+  /* wms24 */
+  .ithumb{width:46px; height:46px; object-fit:cover; border-radius:8px; border:1px solid var(--line); flex:none; background:var(--bg);}
+  .shortChip{font-size:11px; font-weight:800; color:var(--coral); border:1px solid var(--coral); background:var(--coral-soft); border-radius:99px; padding:2px 8px; margin-left:8px; white-space:nowrap;}
+  .unvBtn{font-size:11.5px; font-weight:700; padding:6px 10px; border-radius:8px; background:var(--card); border:1.5px solid var(--line); color:var(--dim);}
+  .unvBtn:hover{border-color:var(--coral); color:var(--coral);}
+  #auditStrip{background:var(--warn-soft); border:1.5px solid var(--warn); color:var(--warn); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:13.5px; font-weight:700; cursor:pointer;}
+  #auditList .vrow{border-color:var(--warn);}
+  .auditStatus{font-size:10.5px; font-weight:800; letter-spacing:.4px; color:var(--dim); border:1px solid var(--line); border-radius:99px; padding:2px 8px;}
   .selbar{display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
   .selbar label{font-size:13px; color:var(--dim); display:flex; gap:6px; align-items:center;}
   .primaryBtn{background:var(--teal); color:#fff; padding:11px 18px; font-size:14px; font-weight:700;}
@@ -229,7 +237,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms23</span>
+    <span class="build">wms24</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -290,6 +298,7 @@
         <button id="undoBtn">&#8630; Undo last</button>
         <button id="skipBtn">&#9197; Skip — come back later</button>
         <button id="sessPrintBtn" style="background:var(--teal-soft);color:var(--teal-dark);border:1.5px solid var(--teal);">&#128424; Queue this order's labels</button>
+        <button id="checkAllBtn" style="background:var(--ok-soft);color:var(--ok);border:1.5px solid var(--ok);" title="Mark every item checked without scanning — for orders you already bagged">&#10003;&#10003; Check entire order</button>
         <button id="cancelBtn">Cancel session</button>
       </div>
     </div>
@@ -297,6 +306,8 @@
 
   <!-- ============ PRINT ============ -->
   <div id="tab-print" class="wrap hidden">
+    <div id="auditStrip" class="hidden"></div>
+    <div id="auditList" class="hidden"></div>
     <div class="secHead"><h3>Print queue</h3><span class="sp"></span>
       <button class="ghostBtn" id="prodPullBtn">&#8681; From production</button>
       <button class="primaryBtn" id="printPendingBtn">&#128424; Print queue</button>
@@ -761,13 +772,25 @@ async function loadCatalog(){
   catalog = [];
   for(let i=0;;i+=1000){
     const {data,error} = await sb.from("catalog_variants")
-      .select("variant_id,sku,barcode,variant_title,product_title,product_status,inventory_quantity")
+      .select("variant_id,product_id,sku,barcode,variant_title,product_title,product_status,inventory_quantity,inventory_on_hand,requires_shipping,is_gift_card,synced_at")
       .neq("product_status","ARCHIVED").order("product_title").order("variant_title").range(i,i+999);
     if(error) throw error;
     catalog.push(...data);
     if(data.length<1000) break;
   }
+  markSyncAge();
   return catalog;
+}
+/* wms24: show catalog age on the Sync button; go coral when stale (>26h) */
+function markSyncAge(){
+  const t = catalog && catalog.length ? Math.max(...catalog.map(v=> new Date(v.synced_at||0).getTime())) : 0;
+  if(!t) return;
+  const h = (Date.now()-t)/36e5;
+  const age = h<1 ? Math.max(1,Math.round(h*60))+"m" : (h<48 ? Math.round(h)+"h" : Math.round(h/24)+"d");
+  const b = $("syncBtn");
+  b.title = "Catalog last synced "+age+" ago (auto-syncs nightly). Click to re-pull now.";
+  b.style.color = h>26 ? "var(--coral)" : "";
+  b.style.borderColor = h>26 ? "var(--coral)" : "";
 }
 
 /* ---------- wms23: free-text tag include/exclude filter (Pick + Pack) ---------- */
@@ -917,7 +940,7 @@ function openPickDetail(orderId){
 $("pdCloseBtn").onclick = ()=> $("pdOverlay").classList.add("hidden");
 
 /* pick list build */
-$("pickListBtn").onclick = ()=>{
+$("pickListBtn").onclick = async ()=>{
   const orders = toPick.filter(o=>selected.has(o.orderId));
   if(!orders.length) return;
   const agg = new Map();
@@ -925,11 +948,22 @@ $("pickListBtn").onclick = ()=>{
     for(const it of o.items){
       if(!it.requiresShipping || it.unfulfilledQty<=0) continue;
       const key = it.variantId || it.sku || it.title;
-      if(!agg.has(key)) agg.set(key,{ sku:it.sku, title:it.title, variant:it.variantTitle,
+      if(!agg.has(key)) agg.set(key,{ variantId:it.variantId||null, sku:it.sku, title:it.title, variant:it.variantTitle,
         bin:binOf(it.sku), qty:0, orders:new Set() });
       const a = agg.get(key); a.qty += it.unfulfilledQty; a.orders.add(o.number);
     }
   }
+  /* wms24: quiet stock check — flag a line ONLY when the shelf can't cover it */
+  let onHand = new Map();
+  try{
+    await loadCatalog();
+    catalog.forEach(v=>{ if(v.inventory_on_hand!=null) onHand.set(String(v.variant_id), v.inventory_on_hand); });
+  }catch(_e){ /* no flags if the catalog can't load — never block the list */ }
+  const shortChip = (r)=>{
+    if(!r.variantId || !onHand.has(String(r.variantId))) return "";
+    const oh = onHand.get(String(r.variantId));
+    return oh < r.qty ? '<span class="shortChip">&#9888; only '+oh+' on hand</span>' : "";
+  };
   const groups = {};
   [...agg.values()].forEach(a=>{ (groups[a.bin]=groups[a.bin]||[]).push(a); });
   const bins = Object.keys(groups).sort(binSort);
@@ -939,7 +973,7 @@ $("pickListBtn").onclick = ()=>{
     const n = rows.reduce((s,r)=>s+r.qty,0);
     html += '<div class="groupHead"><span class="b">'+esc(binLabel(b))+'</span><span class="n">'+n+' items</span></div>';
     html += rows.map(r=>'<div class="prow"><span class="q">'+r.qty+'×</span><span class="sk">'+esc(r.sku||"—")+'</span>'
-      + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant||"")+'</span></span>'
+      + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant||"")+'</span>'+shortChip(r)+'</span>'
       + (r.orders.size>1?'<span class="vt">'+r.orders.size+' orders</span>':"")+'</div>').join("");
   }
   $("plSub").textContent = orders.length+" orders · "+[...agg.values()].reduce((s,a)=>s+a.qty,0)
@@ -956,7 +990,8 @@ $("plPrintBtn").onclick = ()=>{
     + ".groupHead .b{font-size:15px;font-weight:800}.groupHead .n{font-size:11px;color:#666}"
     + ".prow{display:flex;gap:10px;padding:5px 2px;border-bottom:1px dashed #ccc;font-size:12.5px;align-items:center}"
     + ".prow .q{font-weight:800;min-width:38px}.prow .sk{font-family:monospace;min-width:110px;font-size:11px;color:#555}"
-    + ".prow .ti{flex:1}.prow .vt{color:#666;font-size:11px}");
+    + ".prow .ti{flex:1}.prow .vt{color:#666;font-size:11px}"
+    + ".shortChip{font-size:10px;font-weight:800;color:#c0392b;border:1px solid #c0392b;border-radius:99px;padding:1px 6px;margin-left:6px;white-space:nowrap}");
 };
 
 /* ================= PACK TAB ================= */
@@ -993,6 +1028,7 @@ function packCard(o, greyed){
     + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+' · placed '+fmtTime(o.createdAt)+'</div>'
     + '<div class="chips">'+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
     + noteChipsHtml(o)+(greyed?"":giftChipHtml(o))+'</div></div>'
+    + (greyed?'<button class="unvBtn" onclick="event.stopPropagation();unverifyOrder(\''+o.orderId+'\')" title="Send back to the pack queue to be re-checked">&#8617; Un-verify</button>':"")
     + '<div class="ocount"><b>'+units+'</b>items</div></div>';
 }
 function renderPack(){
@@ -1035,6 +1071,7 @@ async function openOrder(i){
     const key = it.barcode || ("line:"+it.lineId);
     if(!map.has(key)) map.set(key,{ key, barcode:it.barcode, title:it.title, variant:it.variantTitle,
       sku:it.sku, bin:binOf(it.sku), need:0, got:0, manual:!it.barcode, archived:it.productStatus==="ARCHIVED",
+      image:it.imageUrl||null,
       embroideryColor:it.embroideryColor||null, embroideryText:it.embroideryText||null });
     map.get(key).need += it.qty;
   }
@@ -1080,6 +1117,7 @@ function renderItems(){
     const done = it.got>=it.need;
     return '<div class="irow'+(done?" done":"")+'" id="row'+idx+'">'
       + '<div class="iqty">'+it.got+'<small>/'+it.need+'</small></div>'
+      + (it.image?'<img class="ithumb" src="'+esc(it.image)+'" alt="" loading="lazy">':"")
       + '<div class="ititle"><div class="t">'+esc(it.title)+embSwatchHtml(it)+'</div>'
       + (it.variant?'<div class="v">'+esc(it.variant)+'</div>':"")
       + '<div class="s">'+esc(it.sku||"no SKU")+(it.archived?' · <span style="color:var(--warn)">archived</span>':"")+'</div></div>'
@@ -1209,6 +1247,39 @@ $("sessPrintBtn").onclick = async ()=>{
 };
 $("doneBtn").onclick = ()=> advanceAfterVerify();
 
+/* wms24: mark the WHOLE order checked without scanning — for orders bagged
+   before scanning in a rush. Logged as result "bulk_confirm" (one row per
+   line) and flagged on the session, so Stats can always tell a trust-check
+   from a real scan-verify. Un-verify (below) is the escape hatch. */
+$("checkAllBtn").onclick = async ()=>{
+  if(!cur) return;
+  const left = cur.items.reduce((s,it)=> s + Math.max(0, it.need-it.got), 0);
+  if(!left){ setMsg("scanMsg","Everything is already checked.","warn"); return; }
+  if(!confirm("Mark all "+left+" remaining item"+(left===1?"":"s")+" on order "+cur.order.number+" as checked WITHOUT scanning?")) return;
+  cur.bulk = true;
+  for(const it of cur.items){
+    if(it.got>=it.need) continue;
+    it.got = it.need;
+    await logScan(null, it, "bulk_confirm");
+  }
+  renderItems();
+  setMsg("scanMsg","✓✓ Whole order marked checked (no scans).","ok");
+  await saveProgress();
+  checkComplete();
+};
+
+/* wms24: un-verify a verified order (mis-tap of Check-entire-order, or a bag
+   you want to re-check). The verified session is cancelled so the order
+   returns to the pack queue with fresh progress. */
+async function unverifyOrder(orderId){
+  const o = toPack.find(x=>x.orderId===orderId);
+  if(!confirm("Un-verify order "+(o?o.number:orderId)+"? It moves back into the pack queue to be checked again.")) return;
+  const { error } = await sb.from("pack_sessions").update({ status:"cancelled" })
+    .eq("shopify_order_id", orderId).eq("status","verified");
+  if(error){ alert("Could not un-verify: "+error.message); return; }
+  loadQueue();
+}
+
 async function logScan(barcode,it,result){
   const { data:{ user } } = await sb.auth.getUser();
   await sb.from("pack_scans").insert({ session_id:cur.session.id, barcode,
@@ -1218,7 +1289,7 @@ async function saveProgress(){
   const progress={};
   cur.items.forEach(it=>progress[it.key]=it.got);
   await sb.from("pack_sessions").update({
-    items:{ progress, lines:cur.items.map(({key,title,sku,need,got})=>({key,title,sku,need,got})) },
+    items:{ progress, bulkConfirmed:!!cur.bulk, lines:cur.items.map(({key,title,sku,need,got})=>({key,title,sku,need,got})) },
   }).eq("id",cur.session.id);
 }
 async function checkComplete(){
@@ -1226,9 +1297,9 @@ async function checkComplete(){
   await sb.from("pack_sessions").update({status:"verified",verified_at:new Date().toISOString()}).eq("id",cur.session.id);
   sessionsByOrder[cur.order.orderId] = {shopify_order_id:cur.order.orderId, status:"verified"};
   sndDone();
-  $("doneTitle").textContent="Order "+cur.order.number+" verified";
+  $("doneTitle").textContent="Order "+cur.order.number+(cur.bulk?" checked (no scans)":" verified");
   const remaining = cycle.filter(id=> sessionsByOrder[id]?.status!=="verified").length;
-  $("doneSub").textContent=cur.items.reduce((a,b)=>a+b.need,0)+" items checked."
+  $("doneSub").textContent=cur.items.reduce((a,b)=>a+b.need,0)+(cur.bulk?" items marked checked without scanning.":" items checked.")
     + (cycle.length ? (remaining? " Next order in cycle coming up… ("+remaining+" left)" : " Cycle complete! 🎉") : "");
   $("doneOverlay").classList.remove("hidden");
   const orderIdForTag = cur.order.orderId;
@@ -1266,7 +1337,65 @@ async function renderPrintBins(){
   await loadCatalog();
   const bins = [...new Set(catalog.filter(realVariant).map(v=>binOf(v.sku)))].sort(binSort);
   $("printBins").innerHTML = bins.map(b=>'<button class="binChip'+(printBinsSel.has(b)?" on":"")+'" onclick="togglePrintBin(\''+b+'\')">'+esc(b)+'</button>').join("");
+  renderAudit();
   renderPrintCatalog();
+}
+
+/* wms24: missing-barcode audit. A variant with no barcode can never appear
+   in Print or be scan-verified — this catches new products automatically.
+   Scope: ACTIVE, needs shipping, not a gift card, has a SKU, and not the
+   custom listings (CESH/CSH/CPSH service variants never get labels). */
+let auditOpen = false;
+function auditRows(){
+  if(!catalog) return [];
+  return catalog.filter(v=> !v.barcode && v.sku && v.product_status==="ACTIVE"
+    && v.requires_shipping!==false && !v.is_gift_card
+    && !["CESH","CSH","CPSH"].includes(v.product_title||""));
+}
+function renderAudit(){
+  const rows = auditRows();
+  if(!rows.length){ $("auditStrip").classList.add("hidden"); $("auditList").classList.add("hidden"); auditOpen=false; return; }
+  $("auditStrip").classList.remove("hidden");
+  $("auditStrip").innerHTML = "&#9888; "+rows.length+" active product"+(rows.length===1?" has":"s have")
+    +" no barcode — they can't be printed or scanned. <u>"+(auditOpen?"Hide":"Review")+"</u>";
+  $("auditStrip").onclick = ()=>{ auditOpen=!auditOpen; renderAudit(); };
+  if(!auditOpen){ $("auditList").classList.add("hidden"); return; }
+  $("auditList").classList.remove("hidden");
+  $("auditList").innerHTML =
+    '<div style="text-align:right;margin-bottom:8px;"><button class="primaryBtn" style="padding:8px 14px;font-size:12.5px" onclick="assignAllBarcodes()">Assign all ('+rows.length+')</button></div>'
+    + rows.slice(0,100).map(v=>
+      '<div class="vrow"><div class="ti"><div>'+esc(v.product_title)+' <span style="color:var(--dim);font-size:12px">'+esc(v.variant_title||"")+'</span></div>'
+      + '<div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--dim)">'+esc(v.sku||"")+'</div></div>'
+      + '<span class="auditStatus">NO BARCODE</span>'
+      + '<button class="ghostBtn" style="padding:8px 13px;font-size:12.5px" id="ab'+v.variant_id+'" onclick="assignBarcode(\''+v.variant_id+'\')">Assign</button></div>'
+    ).join("")
+    + (rows.length>100 ? '<div class="empty">…and '+(rows.length-100)+' more — use Assign all.</div>' : "");
+}
+async function assignBarcode(variantId){
+  const btn = $("ab"+variantId);
+  if(btn){ btn.disabled=true; btn.textContent="…"; }
+  try{
+    const { data, error } = await sb.functions.invoke("assign-barcode", { body:{ variant_id: variantId } });
+    if(error || data?.error) throw new Error(data?.error || error.message);
+    const v = catalog.find(x=>String(x.variant_id)===String(variantId));
+    if(v) v.barcode = String(variantId);
+    renderAudit(); renderPrintCatalog();
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent="Failed"; setTimeout(()=>btn.textContent="Assign",2500); }
+    alert("Could not assign barcode: "+(e.message||e));
+  }
+}
+async function assignAllBarcodes(){
+  const rows = auditRows();
+  if(!rows.length) return;
+  if(!confirm("Assign barcodes to all "+rows.length+" variants? Each gets a unique numeric barcode written to Shopify.")) return;
+  try{
+    const { data, error } = await sb.functions.invoke("assign-barcode", { body:{ bulk: 1 } });
+    if(error || data?.error) throw new Error(data?.error || error.message);
+    rows.forEach(v=>{ v.barcode = String(v.variant_id); });
+    renderAudit(); renderPrintCatalog();
+    alert("Assigned "+ (data?.assigned ?? rows.length) +" barcode(s)."+((data?.errors||[]).length?" Some failed — reopen the audit to retry.":""));
+  }catch(e){ alert("Bulk assign failed: "+(e.message||e)); }
 }
 function togglePrintBin(b){
   printBinsSel.has(b)?printBinsSel.delete(b):printBinsSel.add(b);

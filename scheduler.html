@@ -513,14 +513,14 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-29 · web28 (Fabric tab is now the whole product pipeline — To order → New designs → On order → Ready to cut → In production → Launch, with waitlist demand folded in from the old Back in Stock tab. One product card everywhere: thread, yards on hand and notes are editable on the card; ↻ Refresh from Shopify also updates changed product photos.)</span></div>
+<div class="foot">Drag any block onto a teammate or a day to move it, or drop it above/below another task in the same day to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-30 · web29 (Ponytail photo is the card image; Daisies on Teal / Blue / Pink are separate products; To order has a Show-more button instead of Up next; New designs only lists prints you add by hand.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-08-29-web28";
+const BUILD="2026-08-30-web29";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -863,7 +863,7 @@ const CORE_IMG = {
 };
 function tileColor(name){ if(SOLIDHEX[name]) return SOLIDHEX[name]; let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))%360; return `hsl(${h},45%,78%)`; }
 function inits(name){ return name.replace("Core Solid: ","").replace(/\(Comfort\+\)/i,"").split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
-function swImg(name, big){ if(/^core solid/i.test(name)){ const c=name.replace(/^core solid:\s*/i,"").trim(); const f2=(typeof CORE_IMG!=="undefined")&&CORE_IMG[c]; if(f2) return `<img src="${f2}" loading="lazy" onerror="this.remove()">`; } if(typeof OVR!=="undefined"&&OVR.fabimg&&OVR.fabimg[name]){ const _fv=OVR.fabimg[name]; const _fu=(typeof _fv==="string")?_fv:(_fv.sw||_fv.p||_fv.te||_fv.o||_fv.s); if(_fu) return `<img src="${_fu}" loading="lazy" onerror="this.remove()">`; } let f=null; if(typeof OVR!=="undefined" && OVR.shop && OVR.shop[name]!==undefined){ const v=OVR.shop[name]; let lk=null; if(v && typeof v==="object"){ if(!v.none) lk=v.prod; } else if(typeof v==="string" && v) lk=v; if(lk){ const b=lk.replace(/ Scrub Hat$/,""); f=SWATCH[lk]||SWATCH[b]; } } if(!f) f=SWATCH[name]; if(!f && typeof shopTarget==="function"){ try{ const pr=shopTarget(name).prod; if(pr) f=SWATCH[pr]||SWATCH[pr.replace(/ Scrub Hat$/,"")]; }catch(e){} } if(!f) return ""; const src = /^https?:/.test(f) ? f : CDN + (big ? f.replace(/_96x96(?=\.webp)/,"_400x400") : f); return `<img src="${src}" loading="lazy" onerror="this.remove()">`; }
+function swImg(name, big){ if(/^core solid/i.test(name)){ const c=name.replace(/^core solid:\s*/i,"").trim(); const f2=(typeof CORE_IMG!=="undefined")&&CORE_IMG[c]; if(f2) return `<img src="${f2}" loading="lazy" onerror="this.remove()">`; } if(typeof OVR!=="undefined"&&OVR.fabimg&&OVR.fabimg[name]){ const _fv=OVR.fabimg[name]; const _fu=(typeof _fv==="string")?_fv:(_fv.p||_fv.te||_fv.o||_fv.s||_fv.sw); /* web29: ponytail is the main image; swatch is the fallback */ if(_fu) return `<img src="${_fu}" loading="lazy" onerror="this.remove()">`; } let f=null; if(typeof OVR!=="undefined" && OVR.shop && OVR.shop[name]!==undefined){ const v=OVR.shop[name]; let lk=null; if(v && typeof v==="object"){ if(!v.none) lk=v.prod; } else if(typeof v==="string" && v) lk=v; if(lk){ const b=lk.replace(/ Scrub Hat$/,""); f=SWATCH[lk]||SWATCH[b]; } } if(!f) f=SWATCH[name]; if(!f && typeof shopTarget==="function"){ try{ const pr=shopTarget(name).prod; if(pr) f=SWATCH[pr]||SWATCH[pr.replace(/ Scrub Hat$/,"")]; }catch(e){} } if(!f) return ""; const src = /^https?:/.test(f) ? f : CDN + (big ? f.replace(/_96x96(?=\.webp)/,"_400x400") : f); return `<img src="${src}" loading="lazy" onerror="this.remove()">`; }
 /* web8: once linked, show the Shopify product's name instead of the typed pattern name (colorway products keep the typed name) */
 function dispName(p){ try{ if(typeof shopTarget==="function"){ const t=shopTarget(p); if(t&&t.prod&&!t.color){ const n=String(t.prod).replace(/ Scrub Hat$/i,"").trim(); if(n) return n; } } }catch(e){} return p; }
 function swatchHtml(name, big){
@@ -1563,13 +1563,17 @@ let VEL_ASOF = "Jun 22, 2026"; /* web8: overwritten by the morning fabric sync (
 function applyFabLive(){
  const f=window.FAB_LIVE; if(!f||!Array.isArray(f.products)) return;
  if(f.asof) VEL_ASOF=f.asof;
+ /* web29: colorway products (Daisies on Teal / Blue / Pink) arrive as one record per color with `parent` — retire the aggregate parent entry and link each color to the Shopify product */
+ try{ const parents=new Set(f.products.filter(pr=>pr.parent).map(pr=>pr.parent)); if(parents.size&&typeof CATALOG!=="undefined"){ for(let i=CATALOG.length-1;i>=0;i--){ if(parents.has(CATALOG[i].p) && !f.products.some(pr=>pr.p===CATALOG[i].p)) CATALOG.splice(i,1); } }
+  f.products.forEach(pr=>{ if(pr.parent && typeof SHOPMAP!=="undefined" && !SHOPMAP[pr.p]) SHOPMAP[pr.p]={prod:pr.parent+" Scrub Hat", color:pr.p}; }); }catch(e){}
  f.products.forEach(pr=>{
   try{
    const c=(typeof CATALOG!=="undefined")&&CATALOG.find(x=>x.p===pr.p);
    if(c){ c.on=pr.on; if(pr.v!=null) c.v=pr.v; if(pr.ven&&!c.ven) c.ven=pr.ven; if(pr.dr) c.dr=1; else delete c.dr; if(pr.dc) c.dc=1; } /* web20: dr = draft on Shopify (hidden listing, still restockable) */
-   else if(typeof CATALOG!=="undefined"){ CATALOG.push({p:pr.p, ven:pr.ven||"", v:pr.v!=null?pr.v:0, on:pr.on||0, _new:true, ...(pr.dr?{dr:1}:{}), ...(pr.dc?{dc:1}:{})}); } /* web8: NEW Shopify products join the catalog (so pairing finds them) */
+   else if(typeof CATALOG!=="undefined"){ CATALOG.push({p:pr.p, ven:pr.ven||"", v:pr.v!=null?pr.v:0, on:pr.on||0, _new:true, ...(pr.parent?{parent:pr.parent}:{}), ...(pr.dr?{dr:1}:{}), ...(pr.dc?{dc:1}:{})}); }
+   if(c && pr.parent) c.parent=pr.parent; /* web8: NEW Shopify products join the catalog (so pairing finds them) */
    if(pr.img && typeof SWATCH!=="undefined") SWATCH[pr.p]=pr.img; /* web26: always take Shopify's current image so a changed listing photo shows here (manual uploads in OVR.fabimg still win) */
-   if(typeof CSTYLE!=="undefined"&&CSTYLE[pr.p]&&Array.isArray(pr.styles)) CSTYLE[pr.p].o=pr.styles.slice();
+   if(typeof CSTYLE!=="undefined"&&Array.isArray(pr.styles)){ if(!CSTYLE[pr.p]) CSTYLE[pr.p]={o:[0,0,0,0,0,0,0],v:[0,0,0,0,0,0,0]}; CSTYLE[pr.p].o=pr.styles.slice(); }
   }catch(e){}
  });
  try{ if(f.core&&typeof CORE_STYLE!=="undefined"){ Object.keys(f.core).forEach(cl=>{ if(CORE_STYLE[cl]&&Array.isArray(f.core[cl].o)) CORE_STYLE[cl].o=f.core[cl].o.slice(); }); } }catch(e){}
@@ -1734,7 +1738,9 @@ function fabInit(){ if(!OVR.fabric) OVR.fabric={}; if(!OVR.fabric.yards) OVR.fab
 /* ---------- web26: ONE product record per pattern / core color, shared by every tab ---------- */
 function prodIsCore(name){ return /^core solid/i.test(name||""); }
 function prodCoreColor(name){ return String(name||"").replace(/^core solid:\s*/i,"").trim(); }
-function prodCat(name){ if(typeof CATALOG==="undefined"||!name) return null; return CATALOG.find(x=>x.p===name)||CATALOG.find(x=>cnorm(x.p)===cnorm(name))||null; }
+function prodCat(name){ if(typeof CATALOG==="undefined"||!name) return null; const hit=CATALOG.find(x=>x.p===name)||CATALOG.find(x=>cnorm(x.p)===cnorm(name)); if(hit) return hit;
+ const kids=CATALOG.filter(x=>x.parent===name); if(kids.length) return {p:name, ven:kids[0].ven, v:Math.round(kids.reduce((a,c)=>a+(c.v||0),0)*10)/10, on:kids.reduce((a,c)=>a+(c.on||0),0), _parent:true, dr:kids.every(c=>c.dr)?1:0, dc:kids.every(c=>c.dc)?1:0}; /* web29: a colorway parent (e.g. "Daisies") reads as the sum of its colors */
+ return null; }
 function prodThread(name){ const ov=(OVR.fabric&&OVR.fabric.threadOv)||{}; if(prodIsCore(name)){ const c=prodCoreColor(name); return ov[c]||ov[name]||CORE_THREAD[c]||"white"; } return ov[name]||""; }
 function prodNotes(name){ return ((OVR.fabric&&OVR.fabric.notes)||{})[name]||""; }
 function prodReadyOrders(name){ return ((OVR.fabric&&OVR.fabric.orders)||[]).filter(o=>o.fabric===name&&o.received&&!o.cut); }
@@ -1846,6 +1852,7 @@ async function pullImages(btn){
  }catch(e){ btn.disabled=false; btn.textContent="Couldn't reach Shopify"; setTimeout(()=>btn.textContent=old,3000); }
 }
 let fabFocus = null; // null = show all; else "order"|"intake"|"ready"|"core" focuses one section
+let fabMoreN = 0; /* web29: extra "to order" candidates shown */
 function renderFabric(){
  fabInit();
  const colors=Object.keys(CORE_VEL);
@@ -1883,10 +1890,7 @@ function renderFabric(){
  const recNames=new Set(recs.map(c=>c.p));
  const bisRecs=bisSug.filter(p=>!recNames.has(p.p) && !noReorder.has(p.p) && !onOrderName.has(p.p));
  // NEW DESIGNS: Shopify drafts, brand-new catalog entries, and designs added by hand here
- /* Shopify has 100+ old drafts — only show the ones you're actually working on: added here, on order, ready, or in a planned run. The rest stay searchable in "Add any fabric". */
- const activePat=new Set([].concat((OVR.fabric.orders||[]).filter(o=>!o.cut).map(o=>o.fabric), RUNS.filter(r=>!r.done).flatMap(r=>(r.lines||[]).map(l=>l.p))));
- const draftsAll=CATALOG.filter(c=>c.dr).map(c=>c.p);
- const newNames=[...new Set([].concat(draftsAll.filter(n=>activePat.has(n)), Object.keys(OVR.fabric.newDesigns||{})))].filter(n=>!onOrderName.has(n)&&!ready.some(o=>o.fabric===n));
+ const newNames=Object.keys(OVR.fabric.newDesigns||{}).filter(n=>!onOrderName.has(n)&&!ready.some(o=>o.fabric===n)); /* web29: only designs you added here — old Shopify drafts are just restocks, they get the "draft" chip wherever they appear */
  // IN PRODUCTION: patterns in runs that are scheduled and not finished
  const prodRunsL=RUNS.filter(r=>!r.done && r.sched!==false).map(r=>{ const ri=Object.values(items).filter(i=>i.run===r.no); const tot=ri.reduce((a,i)=>a+i.total,0), rem=ri.reduce((a,i)=>a+i.rem,0); const fin=schedL.runDone[r.no]; return {r, pct: tot?Math.round(100*(tot-rem)/tot):0, done: fin!==null&&fin!==undefined&&fin<0}; });
  const isTool=r=>XRUNS.some(x=>x.no===r.no); /* built-in history runs were posted long ago — never list them under Launch */
@@ -1896,7 +1900,7 @@ function renderFabric(){
 
  document.getElementById("fabsummary").innerHTML=`<div class="cosnap">
   <div class="cs${fabFocus==='order'?' act':''}" data-fabjump="order"><b style="${toOrderN?'color:#C2452D':''}">${toOrderN}</b><span>to order</span></div>
-  <div class="cs${fabFocus==='new'?' act':''}" data-fabjump="new"><b>${newNames.length}</b><span>new designs</span></div>
+  ${newNames.length?`<div class="cs${fabFocus==='new'?' act':''}" data-fabjump="new"><b>${newNames.length}</b><span>new designs</span></div>`:""}
   <div class="cs${fabFocus==='intake'?' act':''}" data-fabjump="intake"><b>${incoming.length}</b><span>on order</span></div>
   <div class="cs${fabFocus==='ready'?' act':''}" data-fabjump="ready"><b style="${(ready.length+coreReady.length)?'color:#0F8A6D':''}">${ready.length+coreReady.length}</b><span>ready to cut</span></div>
   <div class="cs${fabFocus==='prod'?' act':''}" data-fabjump="prod"><b>${nProd}</b><span>in production</span></div>
@@ -1923,25 +1927,23 @@ function renderFabric(){
   h+=`</div>`;
   if(covered.length) h+=`<div class="note" style="background:#EAF3DE;border-radius:10px;padding:8px 12px;color:#3B6D11">Covered by a run in production: ${covered.map(c=>c.p).join(", ")}.</div>`;
   if(noReorder.size) h+=`<div class="note">Not reordering: ${[...noReorder].join(", ")} · <a href="#" id="fnoreset" style="color:#5B50D6">reset</a></div>`;
-  if(upPool.length){
-   const off = (OVR.fabric.upOff||0) % Math.max(1,upPool.length); const batch = upPool.slice(off, off+5).concat(off+5>upPool.length?upPool.slice(0,(off+5)-upPool.length):[]);
-   h+=`<details class="upnext"${OVR.fabric.upOpen?" open":""}><summary>＋ Up next — more to consider (${upPool.length})</summary>
-    <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:4px 0 9px"><span class="fmeta" style="margin:0">The next patterns in line by cover. Add to your order, skip, or refresh for 5 more.</span><button class="btn" id="upmore" style="margin-left:auto">↻ Refresh</button></div><div class="fogrid">`;
-   batch.forEach(c=>{ h+=productCard(c.p,{chips:stockBadge(c.stock), sub:`${c.v}/mo · ${c.on} on hand${c.inc?` · +${c.inc} in production`:''} · ~${c.wk}wk cover · ${c.ven} · ~${LEAD[c.ven]||7}d`, actions:`<button class="btn" data-upskip="${c.p.replace(/"/g,'&quot;')}" style="flex:0 0 auto">Skip</button><button class="btn go" data-catorder="${c.p.replace(/"/g,'&quot;')}">Order ▸</button>`}); });
-   h+=`</div></details>`;
-  }
+  /* web29: "Up next" is gone — a Show more button appends the next candidates (by cover) right under the list */
+  const moreN=fabMoreN||0; const more=upPool.slice(0, moreN);
+  if(more.length){ h+=`<div class="fmeta" style="margin:10px 0 6px">More to consider — next in line by weeks of cover</div><div class="fogrid">`;
+   more.forEach(c=>{ h+=productCard(c.p,{chips:stockBadge(c.stock), sub:`${c.v}/mo · ${c.on} on hand${c.inc?` · +${c.inc} in production`:''} · ~${c.wk}wk cover · ${c.ven} · ~${LEAD[c.ven]||7}d`, actions:`<button class="btn" data-upskip="${c.p.replace(/"/g,'&quot;')}" style="flex:0 0 auto">Skip</button><button class="btn go" data-catorder="${c.p.replace(/"/g,'&quot;')}">Order ▸</button>`}); });
+   h+=`</div>`; }
+  if(upPool.length>moreN) h+=`<div style="text-align:center;margin:8px 0 4px"><button class="btn" id="fabmore">Show ${Math.min(10,upPool.length-moreN)} more options <span class="pill2">${upPool.length-moreN} left</span></button></div>`;
  }
 
  // 2) NEW DESIGNS — a product card from day one: images, thread, notes; order the fabric; create the Shopify draft
- h+=secHead("new","New designs",newNames.length);
- if(so("new")){
-  h+=`<div class="fmeta" style="margin:-4px 0 9px">Patterns that don't have a live listing yet — Shopify drafts and designs you've added here. Build the card (📷 images, thread, notes), order the fabric, create the Shopify draft, then cut it into a run. It goes live from the run's Post step.</div>`;
+ if(newNames.length) h+=secHead("new","New designs",newNames.length);
+ if(newNames.length && so("new")){
+  h+=`<div class="fmeta" style="margin:-4px 0 9px">Brand-new prints you've added with ＋ New design. Build the card (📷 images, thread, notes), order the fabric, create the Shopify draft, then cut it into a run. It goes live from the run's Post step.</div>`;
   if(newNames.length){ h+=`<div class="fogrid">`;
    newNames.forEach(n=>{ const c=prodCat(n); const nd=(OVR.fabric.newDesigns||{})[n]; const linked=(c&&!c._manual) ? !!shopTarget(n).prod : !!(OVR.shop&&OVR.shop[n]); const ven=(c&&c.ven)||(nd&&nd.ven)||"";
     h+=productCard(n,{sub:`${ven||"vendor —"}${nd&&nd.created?` · added ${nd.created}`:""}${c&&c.dr?" · hidden on your store until you activate it":""}`, actions:`${(!linked&&isLead)?`<button class="btn" data-pcreate="${n.replace(/"/g,'&quot;')}" style="flex:0 0 auto" title="Create the Shopify draft product">Draft ▸</button>`:""}${nd?`<button class="btn" data-pnewdel="${n.replace(/"/g,'&quot;')}" style="flex:0 0 auto" title="Remove from new designs">✕</button>`:""}<button class="btn go" data-catorder="${n.replace(/"/g,'&quot;')}">Order fabric ▸</button>`}); });
    h+=`</div>`; }
   else h+=`<div class="note">No new designs in progress. Tap <b>＋ New design</b> when you buy a new print.</div>`;
-  if(draftsAll.length) h+=`<div class="fmeta" style="margin-top:6px">${draftsAll.length} draft products on Shopify are not shown here — they appear when you order fabric for one (use <b>＋ Add any fabric</b> and search the drafts).</div>`;
  }
 
  // 3) ON ORDER / AWAITING INTAKE
@@ -2025,8 +2027,7 @@ function renderFabric(){
  const fnr=document.getElementById("fnoreset"); if(fnr) fnr.onclick=(e)=>{ e.preventDefault(); OVR.fabric.noReorder=[]; save(); render(); };
  const ao=document.getElementById("faddorder"); if(ao) ao.onclick=()=>openFabricPicker();
  document.querySelectorAll("[data-upskip]").forEach(b=>b.onclick=()=>{ OVR.fabric.upOpen=true; OVR.fabric.upSkip=[...new Set([...(OVR.fabric.upSkip||[]),b.dataset.upskip])]; save(); render(); });
- const um=document.getElementById("upmore"); if(um) um.onclick=()=>{ OVR.fabric.upOpen=true; OVR.fabric.upOff=((OVR.fabric.upOff||0)+5); save(); render(); };
- const upd=document.querySelector("details.upnext"); if(upd) upd.addEventListener("toggle",()=>{ OVR.fabric.upOpen=upd.open; save(); });
+ const fm=document.getElementById("fabmore"); if(fm) fm.onclick=()=>{ fabMoreN=(fabMoreN||0)+10; render(); }; /* web29 */
  const vr=document.getElementById("velrefresh"); if(vr) vr.onclick=async()=>{ /* web8: live refresh via sync-fabric */
   vr.disabled=true; const o=vr.textContent; vr.textContent="↻ Refreshing…";
   try{ const {data,error}=await sb.functions.invoke("sync-fabric"); if(error||!data||!data.ok){ if(typeof boardToast==="function") boardToast("Refresh failed — try again"); } else if(typeof boardToast==="function") boardToast(`✓ Fresh from Shopify (${data.prints} prints, ${data.coreColors} colors)`); }catch(e){}

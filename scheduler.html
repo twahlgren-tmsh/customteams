@@ -354,7 +354,7 @@ table.fin input.finc:focus{ background:#fff; box-shadow:inset 0 0 0 2px var(--da
 table.fin input.finc::placeholder{ color:var(--soft); font-style:italic; }
 table.fin tr.tot td{ font-weight:700; background:var(--bg); position:sticky; bottom:0; z-index:1; border-top:2px solid var(--line); border-bottom:0; padding:8px 8px; }
 table.fin .neg{ color:#C2452D; } table.fin .pos{ color:#0F8A6D; }
-.finstat .cs{ cursor:default; } .finstat .cs:hover{ background:transparent; } .finstat .cs b.neg{ color:#C2452D; }
+.cosnap.finstat{ grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); } .finstat .cs b{ font-size:clamp(17px,1.6vw,22px); letter-spacing:-.3px; white-space:nowrap; } .finstat .cs{ cursor:default; padding:7px 4px; } .finstat .cs:hover{ background:transparent; } .finstat .cs b.neg{ color:#C2452D; }
 .finname{ cursor:pointer; font-weight:700; } .finname:hover{ text-decoration:underline; }
 .finsub{ color:var(--soft); font-size:11px; font-weight:400; }
 .finrp{ border:0; background:transparent; cursor:pointer; font-size:14px; color:var(--soft); padding:4px 8px; }
@@ -551,7 +551,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-08-30-web30";
+const BUILD="2026-08-30-web31";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the

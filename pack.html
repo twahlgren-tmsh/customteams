@@ -53,6 +53,12 @@
   .toolbar input[type=date]{padding:9px; border-radius:10px; border:1px solid var(--line); font-size:13px; background:var(--card); color:var(--dim);}
   .fchip{padding:8px 14px; border-radius:99px; border:1.5px solid var(--line); background:var(--card); color:var(--dim); font-size:13px; font-weight:600;}
   .fchip.on{background:var(--coral); border-color:var(--coral); color:#fff;}
+  /* wms23: free-text tag include/exclude filter */
+  .tagbar input[type=text]{flex:1; min-width:220px; padding:9px 13px; border-radius:10px; border:1px solid var(--line); font-size:13px; background:var(--card);}
+  .tagchip{font-size:12px; padding:6px 11px; border-radius:99px; border:1.5px solid var(--teal); background:var(--teal-soft); color:var(--teal-dark); font-weight:700; cursor:pointer; display:inline-flex; gap:7px; align-items:center;}
+  .tagchip.exclude{border-color:var(--coral); background:var(--coral-soft); color:var(--coral); text-decoration:none;}
+  .tagchip .x{font-weight:800; opacity:.65; padding:0 1px;}
+  .tagchip .x:hover{opacity:1;}
   .selbar{display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
   .selbar label{font-size:13px; color:var(--dim); display:flex; gap:6px; align-items:center;}
   .primaryBtn{background:var(--teal); color:#fff; padding:11px 18px; font-size:14px; font-weight:700;}
@@ -223,7 +229,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms22</span>
+    <span class="build">wms23</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -237,6 +243,10 @@
       <button class="fchip" data-flag="buttons">Buttons</button>
       <button class="fchip" data-flag="embroidery">Embroidery</button>
       <button class="fchip" data-flag="magnets">Mask Magnets</button>
+    </div>
+    <div class="toolbar tagbar">
+      <input type="text" id="pickTagInput" list="tagOptions" placeholder='Tag filter — type a tag + Enter · start with "-" to exclude (e.g. -presale) · click a chip to flip it'>
+      <span id="pickTagChips" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
     </div>
     <div class="selbar">
       <label><input type="checkbox" id="selAll"> Select all shown</label>
@@ -254,6 +264,11 @@
       <div class="toolbar">
         <input type="search" id="packSearch" placeholder="Search fulfilled orders…">
       </div>
+      <div class="toolbar tagbar">
+        <input type="text" id="packTagInput" list="tagOptions" placeholder='Tag filter — type a tag + Enter · start with "-" to exclude (e.g. -presale)'>
+        <span id="packTagChips" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
+      </div>
+      <datalist id="tagOptions"></datalist>
       <div class="selbar">
         <label><input type="checkbox" id="packSelAll"> Select all to pack</label>
         <span id="cycleCount" style="font-size:13px;color:var(--dim)"></span>
@@ -705,6 +720,7 @@ async function loadQueue(silent){
     sessionsByOrder = {};
     (sess.data||[]).forEach(s=>{ if(!sessionsByOrder[s.shopify_order_id]) sessionsByOrder[s.shopify_order_id]=s; });
     giftLoyaltyIds = new Set((giftIds.data||[]).map(r=>String(r.customer_id)));
+    refreshTagOptions();
     renderPick(); renderPack();
     autoEvalGifts();   // wms19: run the VIP criteria on the fresh queue so new orders self-flag
   }catch(e){
@@ -754,6 +770,65 @@ async function loadCatalog(){
   return catalog;
 }
 
+/* ---------- wms23: free-text tag include/exclude filter (Pick + Pack) ---------- */
+/* Each filter is {tag, exclude:boolean}. An order passes when it has EVERY include
+   tag and NONE of the exclude tags (case-insensitive). */
+let pickTagFilters = [], packTagFilters = [];
+const tagLc = (t)=>(t||"").trim().toLowerCase();
+function tagsPass(o, filters){
+  if(!filters.length) return true;
+  const have = new Set((o.tags||[]).map(tagLc));
+  return filters.every(f=> f.exclude ? !have.has(f.tag) : have.has(f.tag));
+}
+function addTagFilter(filters, raw){
+  let t = (raw||"").trim(), exclude = false;
+  if(t.startsWith("-")){ exclude = true; t = t.slice(1).trim(); }
+  t = tagLc(t);
+  if(!t) return false;
+  const dup = filters.find(f=>f.tag===t);
+  if(dup){ dup.exclude = exclude; } else { filters.push({tag:t, exclude}); }
+  return true;
+}
+function renderTagChips(chipsId, filters, rerender){
+  $(chipsId).innerHTML = filters.map((f,i)=>
+    '<span class="tagchip'+(f.exclude?" exclude":"")+'" title="Click to switch to '+(f.exclude?"WITH":"WITHOUT")+' this tag" '
+    + 'onclick="tagChipToggle(\''+chipsId+'\','+i+')">'
+    + (f.exclude?"without: ":"with: ")+esc(f.tag)
+    + '<span class="x" title="Remove" onclick="event.stopPropagation();tagChipRemove(\''+chipsId+'\','+i+')">&times;</span></span>'
+  ).join("");
+}
+const TAGBARS = {
+  pickTagChips:{ filters:()=>pickTagFilters, rerender:()=>renderPick() },
+  packTagChips:{ filters:()=>packTagFilters, rerender:()=>renderPack() },
+};
+function tagChipToggle(chipsId,i){
+  const tb=TAGBARS[chipsId]; const f=tb.filters()[i]; if(!f) return;
+  f.exclude=!f.exclude; renderTagChips(chipsId,tb.filters(),tb.rerender); tb.rerender();
+}
+function tagChipRemove(chipsId,i){
+  const tb=TAGBARS[chipsId]; tb.filters().splice(i,1);
+  renderTagChips(chipsId,tb.filters(),tb.rerender); tb.rerender();
+}
+function tagbarWire(inputId, chipsId){
+  $(inputId).addEventListener("keydown", e=>{
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    const tb=TAGBARS[chipsId];
+    if(addTagFilter(tb.filters(), e.target.value)){
+      e.target.value="";
+      renderTagChips(chipsId,tb.filters(),tb.rerender); tb.rerender();
+    }
+  });
+}
+tagbarWire("pickTagInput","pickTagChips");
+tagbarWire("packTagInput","packTagChips");
+function refreshTagOptions(){
+  const all = new Set();
+  toPick.concat(toPack).forEach(o=>(o.tags||[]).forEach(t=>{ const c=(t||"").trim(); if(c) all.add(c); }));
+  $("tagOptions").innerHTML = [...all].sort((a,b)=>a.localeCompare(b))
+    .map(t=>'<option value="'+esc(t)+'"></option>').join("");
+}
+
 /* ================= PICK TAB ================= */
 ["pickSearch","dateFrom","dateTo"].forEach(id=> $(id).addEventListener("input", renderPick));
 document.querySelectorAll(".fchip").forEach(c=> c.onclick = ()=>{
@@ -783,6 +858,7 @@ function filteredPick(){
     if(from && d<from) return false;
     if(to && d>to) return false;
     if(pickFlags.size){ const f=contentFlags(o); if(![...pickFlags].some(x=>f.has(x))) return false; }
+    if(!tagsPass(o, pickTagFilters)) return false;
     return true;
   });
 }
@@ -895,7 +971,7 @@ $("packSelAll").onchange = ()=>{
 
 function packSorted(){
   const q = $("packSearch").value.trim().toLowerCase();
-  const match = (o)=> !q || hayOf(o).includes(q);
+  const match = (o)=> (!q || hayOf(o).includes(q)) && tagsPass(o, packTagFilters);
   const unv = toPack.filter(o=> sessionsByOrder[o.orderId]?.status!=="verified" && match(o))
     .sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));   // oldest first, pack in order
   const ver = toPack.filter(o=> sessionsByOrder[o.orderId]?.status==="verified" && match(o))
@@ -993,7 +1069,14 @@ async function openOrder(i){
 }
 
 function renderItems(){
-  $("iList").innerHTML = cur.items.map((it,idx)=>{
+  /* wms23: fully-scanned items sink to the bottom so the remaining work stays
+     on screen for big orders. Stable sort — unfinished items keep bin order,
+     finished ones keep their order among themselves. Row ids still reference
+     the original cur.items index, so scans/undo/manual-check are unaffected. */
+  const order = cur.items.map((_,i)=>i)
+    .sort((a,b)=> (cur.items[a].got>=cur.items[a].need?1:0) - (cur.items[b].got>=cur.items[b].need?1:0));
+  $("iList").innerHTML = order.map(idx=>{
+    const it = cur.items[idx];
     const done = it.got>=it.need;
     return '<div class="irow'+(done?" done":"")+'" id="row'+idx+'">'
       + '<div class="iqty">'+it.got+'<small>/'+it.need+'</small></div>'

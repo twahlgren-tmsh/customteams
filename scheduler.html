@@ -555,7 +555,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-09-01-web35";
+const BUILD="2026-09-01-web36";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -604,7 +604,7 @@ const EXC = {}; // one-off shift exceptions keyed by ISO date; cleared 2026-06-1
 const isoOf = d => { const dt=dateOf(d); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); };
 function owner(step,sg){ if(step===8||step===15) return sg==="L"?"Trinna":"Drea"; return {1:"Mauricio",2:"Drea",3:"Karla",4:"Karla",5:"Mauricio",6:"Trinna",7:"Trinna",9:"Caitlynn",10:"Trinna",11:"Lora",12:"Karla",13:"Karla",14:"Drea",16:"Drea",17:"Mauricio",19:"Trinna"}[step]; }
 const BASE_RUNS = [
- {no:20,name:"Summer Bash",hex:"#0E9888",mult:1,thread:"White",qty:{CP:90,LP:176,CTE:93,LTE:92,CO:21,CS:24,LS:24},
+ {no:20,name:"20. Summer Bash",hex:"#0E9888",mult:1,thread:"White",qty:{CP:90,LP:176,CTE:93,LTE:92,CO:21,CS:24,LS:24},
   lines:[
    {p:"Slice of Summer",q:[6,12,9,10,0,0,0],satin:"Coral"},
    {p:"Seahorse Serenade",q:[6,12,8,7,2,2,2],satin:"Turquoise",ribbon:"Tornado Blue"},
@@ -620,7 +620,7 @@ const BASE_RUNS = [
    {p:"Polka Flamingo",q:[6,12,5,4,2,2,2],satin:"Pink",ribbon:"Azalea"},
    {p:"Core Solid: Ceil Blue",q:[6,8,6,4,0,0,0],satin:"White",ribbon:"White"},
    {p:"Magenta Floral",q:[4,8,6,4,1,2,1],satin:"Dusty Rose",ribbon:"Cerise"}]},
- {no:19,name:"Comfort+",hex:"#E2704A",mult:1.25,thread:"White",threadNote:"2 patterns black thread",qty:{CP:172,CTE:168,CO:42,CS:40},
+ {no:19,name:"19. Comfort+",hex:"#E2704A",mult:1.25,thread:"White",threadNote:"2 patterns black thread",qty:{CP:172,CTE:168,CO:42,CS:40},
   lines:[
    {p:"Polka Dot Floral",q:[20,0,20,0,4,4,0]},
    {p:"Flamingo",q:[20,0,20,0,6,4,0]},
@@ -631,7 +631,7 @@ const BASE_RUNS = [
    {p:"Teal & Magenta Floral",q:[20,0,18,0,4,4,0]},
    {p:"Coral Floral",q:[24,0,24,0,4,4,0]},
    {p:"Lemons",q:[20,0,20,0,6,4,0]}]},
- {no:21,name:"Golden Medicine",hex:"#C99118",mult:1,thread:"White",qty:{CP:112,LP:158,CTE:89,LTE:99,CO:23,CS:32,LS:30},
+ {no:21,name:"21. Golden Medicine",hex:"#C99118",mult:1,thread:"White",qty:{CP:112,LP:158,CTE:89,LTE:99,CO:23,CS:32,LS:30},
   lines:[
    {p:"Lemonade Whimsy",q:[8,12,6,7,2,2,2],satin:"Light pink/turquoise",logo:"White/Gold"},
    {p:"Golden Ice",q:[8,12,8,6,1,2,1],satin:"Light yellow"},
@@ -666,13 +666,13 @@ const BASE_RUNS = [
    {p:"Peach Planters",q:[0,0,2,0,0,0,0]},
    {p:"Blush Rush",q:[0,0,3,0,0,0,0]},
    {p:"Shark Week",q:[0,0,1,0,0,0,0]}]},
- {no:18, name:"Coffee & Maps", done:true, goLive:"2026-06-05", mult:1, lines:[
+ {no:18, name:"18. Coffee & Maps", done:true, goLive:"2026-06-05", mult:1, lines:[
   {p:"Core Solid: Hunter Green",q:[6,12,6,6,3,6,3]},{p:"Core Solid: Black",q:[4,16,4,4,2,4,2]},{p:"Vintage Map",q:[6,12,4,4,2,4,2]},{p:"Latte Love",q:[6,12,6,7,2,2,3]},{p:"Cupids Confetti",q:[6,12,6,6,2,2,3]},{p:"Blood Mist",q:[6,12,6,6,2,2,3]},{p:"Mint Chocolate Swirls",q:[8,12,7,6,2,2,3]},{p:"Camo",q:[8,12,4,10,3,4,4]}]},
- {no:17, name:"Jewels", done:true, goLive:"2026-05-29", mult:1, lines:[
+ {no:17, name:"17. Jewels", done:true, goLive:"2026-05-29", mult:1, lines:[
   {p:"Core Solid: Navy",q:[6,12,6,6,2,4,4]},{p:"Ophelia's Garden",q:[8,16,8,8,2,2,3]},{p:"Neon Whimsy",q:[7,12,6,7,1,2,3]},{p:"Blueberry Riptide",q:[8,12,7,8,2,2,3]},{p:"Indigo Petals",q:[8,16,7,8,2,2,3]},{p:"Royal Swirls",q:[8,12,8,7,2,2,3]},{p:"Sapphire Mist",q:[8,12,9,6,2,2,3]},{p:"Jewel Swirls",q:[8,12,6,7,2,2,3]},{p:"Glow In The Deep",q:[8,16,8,8,4,2,4]},{p:"Boho Calico",q:[8,16,8,8,4,2,4]},{p:"Enchanted Flutter",q:[8,16,8,8,2,2,4]},{p:"Starry Night",q:[8,16,8,8,3,4,4]},{p:"Sunflower Meadow",q:[8,16,8,8,3,4,4]},{p:"Electric Palms",q:[6,12,6,8,2,2,3]}]},
- {no:16, name:"Lilac Love", done:true, goLive:"2026-05-20", mult:1, lines:[
+ {no:16, name:"16. Lilac Love", done:true, goLive:"2026-05-20", mult:1, lines:[
   {p:"Ultraviolet Storm",q:[8,12,7,6,2,2,1]},{p:"Solar Flare",q:[8,12,7,6,2,2,1]},{p:"Lavender Meadow",q:[8,12,7,6,2,2,1]},{p:"Amethyst Meadow",q:[8,12,7,6,2,2,1]},{p:"Fuchsia Flow",q:[8,12,7,6,2,2,1]},{p:"Lavender Petals",q:[8,16,8,8,2,0,0]},{p:"Caribbean Petals",q:[10,16,9,7,2,0,1]},{p:"Core Solid: Flamingo",q:[6,12,6,6,2,4,2]},{p:"Core Solid: Dusty Pink",q:[6,12,6,6,2,4,2]},{p:"Core Solid: Red",q:[6,12,6,6,2,4,2]},{p:"Core Solid: Royal Blue",q:[6,12,6,6,2,4,2]}]},
- {no:15, name:"Midnight Glow", done:true, mult:1, lines:[
+ {no:15, name:"15. Midnight Glow", done:true, mult:1, lines:[
   {p:"Midnight Mirage",q:[8,12,6,6,2,2,3]},{p:"Magenta Mirage",q:[8,12,7,6,2,2,3]},{p:"Petal Eclipse",q:[8,12,7,6,2,2,3]},{p:"Teal Sketch Floral",q:[8,12,7,6,2,2,3]},{p:"Turquoise Flutterwave",q:[8,12,7,6,2,2,3]},{p:"Glow in the Dark Galaxy",q:[8,16,9,10,2,2,4]},{p:"Core Solid: Black",q:[6,8,6,6,2,4,2]},{p:"Glow in the Dark Anatomy",q:[8,16,9,10,2,2,4]}]}
 ];
 const HIST = [[14,"Boy or Girl Navy",339],[13,"Pastel White",413],[12,"Honey Bee",405],[11,"B&W Combo",383],[10,"Micro Summer",143],[9,"Black Small Restock",191],[8,"Mini Restock",202],[7,"Spring Ice",613],[6,"Navy Butterflies",233],[5,"Wanted Dogs",272],[4,"Pastel Party",280],[3,"Restock",446],[2,"Peacock",394],[1,"New Year",481]];
@@ -699,6 +699,9 @@ function rebuildRuns(){
  ATOMS = allAtoms();
 }
 const QCOLS = ["CP","LP","CTE","LTE","CO","CS","LS"];
+/* web36: every run title reads "NN. Name" — prefix the run number when the typed name
+   doesn't already start with it, and normalise the separator when it does. */
+function runName(no, name){ const n=String(name||"").trim(); return new RegExp("^"+no+"\\s*[.\\-\u2014:]").test(n) ? n.replace(/^(\d+)\s*[.\-\u2014:]\s*/, "$1. ") : (no+". "+n); }
 const PRICE = [22.89,29.87,22.79,29.57,20.51,19.67,26.79]; // Shopify retail per style in QCOLS order (Jun 2026)
 const PKEY = "tmsh-pair-v1";
 let PAIR;
@@ -2547,7 +2550,7 @@ function wireCutAll(){
   OVR.cut.sess.forEach(sp=>{ const a={}; document.querySelectorAll('[data-cutact^="'+sp.id+'|"]').forEach(i=>a[i.dataset.cutact.split("|")[1]]=+i.value||0); const q=[a.CP||0,a.LP||0,a.CTE||0,a.LTE||0,a.CO||0,a.CS||0,a.LS||0]; if(q.some(x=>x>0)){ lines.push({p:sp.fabric,q,thread:sp.thread}); hist.push({fabric:sp.fabric,boltYd:sp.boltYd,counts:a,when:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),run:nextNo}); } });
   if(!lines.length){ alert("Enter the counts you cut on at least one fabric first."); return; }
   const _mkrun=()=>{
-  const run={no:nextNo,name:nm,sched:false,mult:1,thread:thr,lines}; if(gl) run.goLive=gl;
+  const run={no:nextNo,name:runName(nextNo,nm),sched:false,mult:1,thread:thr,lines}; if(gl) run.goLive=gl;
   XRUNS=XRUNS.filter(r=>r.no!==nextNo).concat([run]); saveRuns(); rebuildRuns();
   lines.forEach(l=>{ const o=(OVR.fabric.orders||[]).find(x=>x.fabric===l.p && x.received && !x.cut); if(o) o.cut=true; });
   OVR.cut.history=(OVR.cut.history||[]).concat(hist); OVR.cut.sess=[]; OVR.cut.view="choose"; save();
@@ -2927,7 +2930,7 @@ function renderRuns(items, sched){
    ${extra}
    <div class="rdnote">Tap for ${done?"the inventory sheet":"full schedule & pattern detail"}</div>
   </div>`;
- }).join("") + HIST.map(h=>`<div class="rc" style="opacity:.55"><div class="rh"><span class="donut" style="background:conic-gradient(#9BB59B 100%, #EDEAE2 0)"><i>✓</i></span><div><h2>${h[1]}</h2><div class="rm">Run ${h[0]} · ${h[2]} hats · completed</div></div><span class="duechip" style="background:#E8F4E0;color:#3B6D11;margin-left:auto">COMPLETED</span></div><div class="rdnote">Totals only — per-pattern detail pending a clean re-read of the old sheet</div></div>`).join("");
+ }).join("") + HIST.map(h=>`<div class="rc" style="opacity:.55"><div class="rh"><span class="donut" style="background:conic-gradient(#9BB59B 100%, #EDEAE2 0)"><i>✓</i></span><div><h2>${h[0]}. ${h[1]}</h2><div class="rm">Run ${h[0]} · ${h[2]} hats · completed</div></div><span class="duechip" style="background:#E8F4E0;color:#3B6D11;margin-left:auto">COMPLETED</span></div><div class="rdnote">Totals only — per-pattern detail pending a clean re-read of the old sheet</div></div>`).join("");
  document.querySelectorAll("[data-open]").forEach(c=>c.onclick=()=>openRun(+c.dataset.open));
  document.querySelectorAll("[data-schedrun]").forEach(b=>b.onclick=(e)=>{
   e.stopPropagation();
@@ -3823,7 +3826,7 @@ function openBuilder(){
    if(p && q.some(x=>x>0)) lines.push({p, q});
   });
   if(!lines.length){ alert("Add at least one pattern with quantities."); return; }
-  const run = {no, name, sched:false, mult: document.getElementById("nr-mult").checked?1.25:1, lines};
+  const run = {no, name:runName(no,name), sched:false, mult: document.getElementById("nr-mult").checked?1.25:1, lines};
   const _th=document.getElementById("nr-thread").value; if(_th) run.thread=_th;
   const gl = document.getElementById("nr-golive").value; if(gl) run.goLive = gl;
   if(BASE_RUNS.some(r=>r.no===no)){ alert("Run "+no+" is a built-in run — pick a new number."); return; }
@@ -4151,7 +4154,7 @@ function localInterpret(text){
  if(/\bmove\b/.test(s)){ const st=findStep(s); const rn=findRunFuzzy(s); if(st!==null){ ops.push({op:"move",run:rn,stepName:String(st),person,day:day??0,_stepNum:st}); return {ops}; } }
  return {ops:[],note:text};
 }
-function findRunFuzzy(s){ const r=RUNS.find(r=>!r.done&&s.includes(r.name.toLowerCase())); return r?r.no:null; }
+function findRunFuzzy(s){ /* web36: match on the name with or without its "NN. " prefix */ const bare=n=>String(n||"").toLowerCase().replace(/^\d+\s*[.\-\u2014:]\s*/,""); const r=RUNS.find(r=>!r.done&&(s.includes(r.name.toLowerCase())||s.includes(bare(r.name)))); return r?r.no:null; }
 async function interpret(text){
  const daysL = Array.from({length:14},(_,d)=>d+"="+dateOf(d).toDateString()).join("; ");
  const stepNames = "Satin to cotton (LUXE serging); Serge classic tops; " + Object.entries(GN).map(([k,v])=>v).join("; ");

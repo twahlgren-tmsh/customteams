@@ -1940,7 +1940,13 @@ function renderFabric(){
  // IN PRODUCTION: patterns in runs that are scheduled and not finished
  const prodRunsL=RUNS.filter(r=>!r.done && r.sched!==false).map(r=>{ const ri=Object.values(items).filter(i=>i.run===r.no); const tot=ri.reduce((a,i)=>a+i.total,0), rem=ri.reduce((a,i)=>a+i.rem,0); const fin=schedL.runDone[r.no]; return {r, pct: tot?Math.round(100*(tot-rem)/tot):0, done: fin!==null&&fin!==undefined&&fin<0}; });
  const isTool=r=>XRUNS.some(x=>x.no===r.no); /* built-in history runs were posted long ago — never list them under Launch */
- const inProd=prodRunsL.filter(x=>!x.done), toLaunch=prodRunsL.filter(x=>x.done && isTool(x.r) && !(OVR.posted&&OVR.posted[x.r.no]===true)).concat(RUNS.filter(r=>r.done && isTool(r) && !(OVR.posted&&OVR.posted[r.no]===true)).map(r=>({r,pct:100,done:true})));
+ /* web33: a run drops off Launch once every linked pattern in it has been posted — the old
+    whole-run "posted" flag is migrated away into postedPats, so read that too. */
+ const isPosted=r=>{ if(OVR.posted&&OVR.posted[r.no]===true) return true;
+  const pp=(OVR.postedPats&&OVR.postedPats[r.no])||null; if(!pp) return false;
+  const linked=(r.lines||[]).filter(l=>{ if(!(l.q||[]).some(x=>x>0)) return false; try{ return !!shopTarget(l.p).prod; }catch(e){ return false; } });
+  return linked.length>0 && linked.every(l=>pp[l.p]); };
+ const inProd=prodRunsL.filter(x=>!x.done), toLaunch=prodRunsL.filter(x=>x.done && isTool(x.r) && !isPosted(x.r)).concat(RUNS.filter(r=>r.done && isTool(r) && !isPosted(r)).map(r=>({r,pct:100,done:true})));
  const nLaunch=toLaunch.length, nProd=inProd.length;
  const toOrderN=coreRecs.length+recs.length+bisRecs.length;
 

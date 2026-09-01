@@ -63,6 +63,20 @@ nav button.on { background:var(--ink); color:#fff; }
 .hbadge { position:absolute; top:8px; right:32px; font-size:11.5px; font-weight:700; opacity:.75; }
 .blkmenu { position:absolute; top:3px; right:4px; width:24px; height:24px; border:none; background:rgba(255,255,255,.5); border-radius:8px; font-size:15px; line-height:1; color:#2B2A25; opacity:.6; cursor:pointer; padding:0; font-family:inherit; }
 .blkmenu:hover { opacity:1; background:rgba(255,255,255,.9); }
+/* web39: compact strip for at-home helpers + Taylor */
+.sidelane { grid-column:1/-1; margin-top:4px; border-top:1.5px dashed var(--line); padding-top:10px; }
+.sidehead { font-size:10.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--soft); margin-bottom:7px; }
+.sidegrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:9px; align-items:start; }
+.sidegrid .person { padding:9px 10px; }
+.sidegrid .phead { gap:7px; }
+.sidegrid .phead .av { width:26px; height:26px; font-size:11px; }
+.sidegrid .phead b { font-size:12.5px; }
+.sidegrid .phead span { font-size:10px; }
+.sidegrid .hrs { font-size:11px; }
+.sidegrid .stack { gap:5px; }
+.sidegrid .tblk { padding:7px 9px; }
+.sidegrid .tblk .nm { font-size:12px; }
+.sidegrid .empty { font-size:11px; padding:8px; }
 .bnote { margin-top:5px; font-size:11.5px; line-height:1.35; background:rgba(255,255,255,.62); border-radius:8px; padding:4px 20px 4px 7px; position:relative; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .bnote.open { white-space:normal; overflow:visible; text-overflow:clip; }
 .bnotex { position:absolute; right:6px; top:3px; font-size:10px; opacity:.55; }
@@ -561,7 +575,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-09-01-web38";
+const BUILD="2026-09-01-web39";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -595,8 +609,10 @@ const GN = {2:"Trimming",3:"Top stitching",4:"Casing & logos",5:"Serge scrunchie
 const nameOf = (step,sg) => step===1 ? (sg==="L" ? "Satin to cotton" : "Serge classic tops") : GN[step];
 const TEAM = {
  "Trinna":{days:[1,2,4,5],h:10,st:10,en:20,sub:"M T Th F · 10a–8p"},
- "Caitlynn":{days:[1,4],h:8,st:15,en:23,sub:"Mon & Thu · 3p–11p"},
- "Drea":{days:[5,6],h:8,st:7,en:15,sub:"Fri & Sat · 7a–3p"},
+ "Caitlynn":{days:[0],h:10,st:13,en:23,sub:"Sun · 1p–11p"},
+ /* web39: Drea is full time and her start time differs later in the week — byDay overrides
+    the shift for those weekdays (0=Sun … 6=Sat). */
+ "Drea":{days:[2,3,4,5,6],h:8,st:8,en:16,sub:"Tue–Sat · 8a–4p (Fri/Sat 7:30a)",byDay:{5:{st:7.5,en:15.5},6:{st:7.5,en:15.5}}},
  "Mauricio":{days:[5,6],h:8,st:7,en:15,sub:"Fri & Sat · 7a–3p"},
  "Karla":{days:[5,6],h:8,st:7,en:15,sub:"Fri & Sat · 7a–3p"},
  "Lora":{days:[1,2,3,4,5,6],h:5,st:8,en:20,sub:"works from home",home:true},
@@ -1429,15 +1445,20 @@ function gatesOf(item, items){
  });
  return out;
 }
+/* web39: resolve a person's shift for one weekday (byDay wins over the base shift) */
+function shiftOf(person, dow){
+ const t=TEAM[person]||{}; const b=(t.byDay&&t.byDay[dow])||null;
+ return {st:(b&&b.st!=null)?b.st:t.st, en:(b&&b.en!=null)?b.en:t.en, h:(b&&b.h!=null)?b.h:t.h};
+}
 function availOf(person, d, dow){
- const t = TEAM[person];
+ const t = TEAM[person]; const sh = shiftOf(person, dow); /* web39 */
  const ar = OVR.arrive[person+"|"+d];
- if(ar) return ar.h!==undefined ? ar.h : Math.min(t.h, t.en-(ar.st??t.st));
+ if(ar) return ar.h!==undefined ? ar.h : Math.min(sh.h, sh.en-(ar.st??sh.st));
  const ov = OVR.avail[person+"|"+d];
  if(ov!==undefined) return ov;
  const ex = (EXC[isoOf(d)]||{})[person];
  if(ex && ex.h!==undefined) return ex.h;
- return t.days.includes(dow) ? t.h : 0;
+ return t.days.includes(dow) ? sh.h : 0;
 }
 function assignee(item){ const p = OVR.pins[item.key]; return p ? p.person : owner(item.step,item.seg); }
 const SLABEL = {LP:"LUXE Ponytail",CP:"Ponytail",LTE:"LUXE Euro",CTE:"Euro",LO:"LUXE Original",CO:"Original",LS:"LUXE Skull",CS:"Skull"};
@@ -1516,19 +1537,19 @@ function schedule(items){
   const dow = dateOf(d).getDay();
   const cur = {}, cend = {};
   for(const p in TEAM){
-   const t = TEAM[p];
+   const t = TEAM[p]; const sh = shiftOf(p, dow); /* web39: per-weekday shift */
    const ar0 = OVR.arrive[p+"|"+d];
-   const ov = ar0 ? (ar0.h!==undefined ? ar0.h : Math.min(t.h, t.en-(ar0.st??t.st))) : OVR.avail[p+"|"+d];
+   const ov = ar0 ? (ar0.h!==undefined ? ar0.h : Math.min(sh.h, sh.en-(ar0.st??sh.st))) : OVR.avail[p+"|"+d];
    const ex = (EXC[isoOf(d)]||{})[p];
    const on = ov!==undefined ? ov>0 : (ex ? (ex.h===undefined||ex.h>0) : t.days.includes(dow));
    if(!on) continue;
-   const stH = ar0 && ar0.st!==undefined ? ar0.st : ((ov===undefined && ex && ex.st!==undefined) ? ex.st : t.st);
-   const shiftH = t.en-stH;
-   const capH = Math.min(ov!==undefined ? ov : (ex && ex.h!==undefined ? ex.h : t.h), shiftH);
-   const late = (ov!==undefined && !ar0) ? Math.max(0, Math.min(t.h,t.en-t.st)-capH) : 0;
+   const stH = ar0 && ar0.st!==undefined ? ar0.st : ((ov===undefined && ex && ex.st!==undefined) ? ex.st : sh.st);
+   const shiftH = sh.en-stH;
+   const capH = Math.min(ov!==undefined ? ov : (ex && ex.h!==undefined ? ex.h : sh.h), shiftH);
+   const late = (ov!==undefined && !ar0) ? Math.max(0, Math.min(sh.h,sh.en-sh.st)-capH) : 0;
    const s0 = d*1440 + (stH+late)*60;
    cur[p] = s0;
-   cend[p] = Math.min(d*1440 + t.en*60, s0 + capH*60);
+   cend[p] = Math.min(d*1440 + sh.en*60, s0 + capH*60);
   }
   const _hp = [];
   for(const uk in OVR.pins){ const pin=OVR.pins[uk]; if(pin && pin.hard && pin.startDay===d) _hp.push({uk,pin}); }
@@ -1537,7 +1558,7 @@ function schedule(items){
    const u = units.find(x=>x.key===uk);
    if(!u || u.left<=1) continue;
    const p = pin.person || (u.custom ? u.who : owner(u.step,u.seg));
-   if(!(p in cur)){ const t=TEAM[p]; if(!t) continue; cur[p]=d*1440+(t.st||8)*60; cend[p]=cur[p]; }
+   if(!(p in cur)){ const t=TEAM[p]; if(!t) continue; cur[p]=d*1440+(shiftOf(p,dow).st||8)*60; cend[p]=cur[p]; } /* web39 */
    const start = cur[p], alloc = u.left;
    blocks.push({person:p, day:d, run:u.run, step:u.step, seg:u.seg, hrs:alloc/60, key:u.key, base:u.base, sbase:u.sbase, sub:u.sub, part:u.part, pct:u.pct, custom:u.custom, label:u.label, t0:start, t1:start+alloc}); /* web37: sbase+pct ride along for split parts */
    u.left = 0;
@@ -1621,7 +1642,7 @@ function schedule(items){
    hrs=m/60; if(hrs<=0.01) continue;
    person=pin.person||owner(step,seg2); label=bs[1]?(tokName(bs[1])+" · "+(SLABEL[tokStyle(bs[1])]||"")):nameOf(step,seg2);
   }
-  const t=TEAM[person]; const st=(t&&t.st)||8; const t0=pin.startDay*1440+st*60;
+  const t=TEAM[person]; const st=(shiftOf(person, dateOf(pin.startDay).getDay()).st)||8; const t0=pin.startDay*1440+st*60; /* web39 */
   blocks.push({person, day:pin.startDay, run, step, seg:seg2, hrs, key:uk, base, sbase:(custom?(splitPartOf(uk)||{}).base||uk:null), label, custom, done:true, t0, t1:t0+hrs*60});
  }
  const runDone = {}, sewDone = {};
@@ -2892,11 +2913,11 @@ function homeCol(p,t,sched){
 function renderBoard(items, sched){
  const dt = dateOf(selDay); const dow = dt.getDay();
  const off = [];
- let html = "";
+ let html = "", side = ""; /* web39: at-home helpers and Taylor sit in a compact strip below the studio columns */
  for(const p in TEAM){
   const t = TEAM[p];
   if(t.me){ continue; }
-  if(t.home){ html += homeCol(p,t,sched); continue; }
+  if(t.home){ side += homeCol(p,t,sched); continue; }
   const av = availOf(p, selDay, dow);
   const bl = sched.blocks.filter(b=>b.person===p && b.day===selDay);
   if(av<=0 && !bl.length){ off.push(p + (OVR.avail[p+"|"+selDay]===0 ? " (out)" : "")); continue; }
@@ -2952,11 +2973,14 @@ function renderBoard(items, sched){
   const used = bl.reduce((s,b)=>s+b.hrs,0);
   const open = OVR.meOpen!==false;
   const blocks = bl.map(b=>{ const r=b.custom?{hex:"#6B7280",name:"Custom"}:runBy(b.run); const h=Math.max(34,Math.round(b.hrs*30)); const nm=b.custom?b.label:(b.sub?tokName(b.sub):nameOf(b.step,b.seg)); return `<div class="tblk" data-key="${b.key}"${b.done?' data-done="1"':''} data-base="${b.base}" data-label="${nm}" data-hex="${r.hex}" title="${fmtT(b.t0)}–${fmtT(b.t1)}" style="height:auto;min-height:${h}px;background:${tint(r.hex,"1C")};border-left:5px solid ${r.hex};color:#2B2A25${b.done?";opacity:.5":""}">${menuBtn()}<span class="hbadge">${b.done?"✓ ":""}${b.hrs.toFixed(1)}h</span><div class="nm">${b.done?"✓ ":""}${nm}</div><div class="mt"><span style="color:${r.hex};font-weight:700">${r.name}</span>${b.part?`<span class="spart">part ${b.part}${b.pct?" · "+b.pct+"%":""}</span>`:""}</div>${noteHtml(b.key)}${tmrHtml("Taylor",b)}</div>`; }).join("");
-  html += `<div class="person" data-person="Taylor" style="border-style:dashed;background:#FBFAF6">
+  side += `<div class="person" data-person="Taylor" style="border-style:dashed;background:#FBFAF6">
    <div class="phead" style="cursor:pointer" id="meHead"><div class="av" style="background:#6B7280">ME</div><div><b>Me (Taylor)</b><span>${open?"drop tasks you'll do yourself":"tap to expand"}</span></div><div class="hrs"><b>${used.toFixed(1)}h</b> ${open?"▾":"▸"}</div><button class="ptime" data-taddtime="Taylor" title="Add forgotten time">＋ time</button></div>
    ${open?`<div class="stack">${blocks||`<div class="empty">Nothing yet — drag a task here to take it on.</div>`}</div>`:""}
   </div>`;
  }
+ /* web39: the studio columns stay full size; at-home work and Taylor's own list drop into a
+    smaller strip underneath — still drop targets, just out of the way. */
+ if(side) html += `<div class="sidelane"><div class="sidehead">At home &amp; me — drop work here to hand it off</div><div class="sidegrid">${side}</div></div>`;
  document.getElementById("board").innerHTML = html;
  const _mh=document.getElementById("meHead"); if(_mh) _mh.onclick=()=>{ OVR.meOpen=!(OVR.meOpen!==false); save(); render(); };
  document.getElementById("offline").textContent = off.length ? "Off this day: " + off.join(", ") : "";
@@ -4344,7 +4368,7 @@ async function interpret(text){
  }).join(" | ");
  const prompt = `You translate a scrub-hat studio owner's instruction into JSON scheduling ops.
 Context — today is day 0 (${new Date().toDateString()}). Day numbers: ${daysL}.
-People & shifts: Trinna 10:00-20:00 Mon/Tue/Thu/Fri; Caitlynn 15:00-23:00 Mon/Thu; Drea, Mauricio, Karla 7:00-15:00 Fri/Sat; Lora & Anna Cristina work from home.
+People & shifts: Trinna 10:00-20:00 Mon/Tue/Thu/Fri; Caitlynn 13:00-23:00 Sun; Drea 8:00-16:00 Tue/Wed/Thu and 7:30-15:30 Fri/Sat; Mauricio & Karla 7:00-15:00 Fri/Sat; Lora & Anna Cristina work from home.
 Runs: ${RUNS.map(r=>r.no+"="+r.name).join(", ")}. Step names: ${stepNames}.
 Open work: ${openWork}.
 Custom orders (id=name, sew%, emb%, hats): ${CUSTOM.filter(o=>!shipped(o)).map(o=>o.num+"="+o.name+" (sew "+(o.sewPct||0)+"%, emb "+(o.embPct||0)+"%, "+coTime(o).hats+" hats)").join("; ")}.

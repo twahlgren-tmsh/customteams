@@ -555,7 +555,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-08-30-web32";
+const BUILD="2026-09-01-web33";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -1452,6 +1452,10 @@ function schedule(items){
   const pin = OVR.pins[uk];
   if(!pin || !pin.hard || _emitted.has(uk)) continue;
   if(uk.indexOf("fold|")===0) continue; // folding blocks are generated below, not from the done-emit loop
+  /* web33: finished work only shows on the Board where it was actually scheduled. A step
+     ticked off after the fact (no day of its own) is history — it stays ✓ in the Tracker
+     and out of the day's schedule instead of piling onto today. */
+  if(pin.done && typeof pin.startDay!=="number") continue;
   if(OVR.splits && OVR.splits[uk]>1) continue; // this task was split into parts — show the parts, not the whole parent
   let person, run, step, seg2, label, hrs=0, custom=0, base=uk;
   if(uk.indexOf("co|")===0){
@@ -1462,6 +1466,8 @@ function schedule(items){
    person=pin.person||((kind==="emb"||kind==="pl")?"Caitlynn":"Trinna"); custom=1; label=(KLBL[kind]||"Sewing — ")+o.name;
   } else {
    const bs=uk.split("::"); base=bs[0].split("@")[0]; const pr=base.split("|"); run=+pr[0]; step=+pr[1]; seg2=pr[2];
+   /* web33: a planned (not yet scheduled) or completed run never puts blocks on the Board */
+   { const _r=runBy(run); if(_r && (_r.done || _r.sched===false)) continue; }
    let m=0; ATOMS.forEach(a=>{ if(a.run===run && a.step===step && segKey(a.step,a.style)===seg2){ if(bs[1]){ if(a.name+"@@"+a.style===bs[1]) m+=a.min*a.qty*a.mult; } else m+=a.min*a.qty*a.mult; } });
    if(!bs[1] && uk.indexOf("@")>=0 && uk.indexOf("@@")<0){ const n=OVR.splits[base]||1; if(n>1) m=m/n; }
    hrs=m/60; if(hrs<=0.01) continue;
@@ -2056,7 +2062,7 @@ function renderFabric(){
  document.querySelectorAll("[data-fyd]").forEach(b=>b.onclick=()=>{ const [kind,key]=b.dataset.fyd.split("|");
   if(kind==="core"){ const cur=OVR.fabric.yards[key]||0; const v=prompt("Core Solid: "+key+" — yards on hand:",Math.round(cur)); if(v!==null){ OVR.fabric.yards[key]=Math.max(0,+v||0); save(); render(); } }
   else { const o=OVR.fabric.orders.find(x=>x.id===key); if(!o) return; const cur=o.yards||((o.bolts||1)*(o.boltYd||15)); const v=prompt(o.fabric+" — yards on hand:",Math.round(cur)); if(v!==null){ o.yards=Math.max(0,+v||0); save(); render(); } } });
- document.querySelectorAll("[data-corecut]").forEach(b=>b.onclick=()=>{ const c=b.dataset.corecut; const th=(OVR.fabric.threadOv||{})[c]||CORE_THREAD[c]||"white"; if(typeof cutAdd==="function") cutAdd("Core Solid: "+c,"MDG",th,Math.round(OVR.fabric.yards[c]||0)); if(typeof boardToast==="function") boardToast("Added Core Solid: "+c+" to cut ✓"); });
+ document.querySelectorAll("[data-corecut]").forEach(b=>b.onclick=()=>{ const c=b.dataset.corecut; const th=(OVR.fabric.threadOv||{})[c]||CORE_THREAD[c]||"white"; if(typeof cutInit==="function") cutInit(); const _al=(OVR.cut.sess||[]).some(x=>x.fabric==="Core Solid: "+c); if(!_al && typeof cutAdd==="function") cutAdd("Core Solid: "+c,"MDG",th,Math.round(OVR.fabric.yards[c]||0)); OVR.cut.view="current"; save(); gotoView("cut"); render(); if(typeof boardToast==="function") boardToast(_al?("Core Solid: "+c+" is already in this cut"):("Added Core Solid: "+c+" to the cut ✓ — confirm what you cut, then create the run")); }); /* web33: lands on the Cut screen, same as printed fabric */
  document.querySelectorAll("[data-forder]").forEach(b=>b.onclick=()=>{ const [c,n]=b.dataset.forder.split("|"); const cth=(OVR.fabric.threadOv||{})[c]||CORE_THREAD[c]||"white"; OVR.fabric.orders.push({id:"o"+Date.now()+c,fabric:"Core Solid: "+c,bolts:+n,boltYd:CB,vendor:"MDG",thread:cth,core:true,placed:0,arrive:4,received:false}); save(); render(); });
  document.querySelectorAll("[data-catorder]").forEach(b=>b.onclick=()=>{ const nm=b.dataset.catorder; const c=CATALOG.find(x=>x.p===nm); orderCatalog(nm, c?c.ven:""); });
  document.querySelectorAll("[data-freceive]").forEach(b=>b.onclick=()=>{ const o=OVR.fabric.orders.find(x=>x.id===b.dataset.freceive); if(!o) return; const exp=(o.bolts||1)*(o.boltYd||15); const v=prompt("Actual yards received for "+o.fabric+"? (delivered amounts vary)",exp); if(v===null) return; o.yards=Math.max(0,+v||exp); o.received=true; if(o.core){ const m=(o.fabric||"").replace("Core Solid: ",""); if(CORE_VEL[m]!==undefined) OVR.fabric.yards[m]=(OVR.fabric.yards[m]||0)+o.yards; } save(); render(); });
@@ -2124,21 +2130,28 @@ function openFabricPicker(onPick){
  m.onclick=e=>{ if(e.target===m) closeFabricPicker(); };
  m.querySelector("#fpcustom").onclick=()=>{ const nm=(q.value||"").trim()||prompt("Fabric / pattern name:"); if(!nm) return; const ven=prompt("Vendor for "+nm+":","MDG")||""; closeFabricPicker(); pick(nm, ven); };
 }
+/* web33: "Add to cut" on a ready fabric now hands it to the Cut screen instead of
+   inventing a run. It used to prompt for a run number and stamp a guessed 15yd mix
+   (8/16/8/8/2/2/2) straight onto a run — no per-style confirmation anywhere. Now the
+   fabric lands in the current cut session, you confirm the real counts in the audit
+   grid, and the run is created from those numbers. */
 function cutIntoRun(orderId){
- const o=OVR.fabric.orders.find(x=>x.id===orderId); if(!o) return;
- const planned=XRUNS.filter(r=>r.sched===false).map(r=>r.no);
- const all=RUNS.filter(r=>!r.done).map(r=>r.no).sort((a,b)=>a-b);
- const def=planned.length?planned[planned.length-1]:(all.length?all[all.length-1]:22);
- const rn=+prompt("Cut "+o.fabric+" into which run number?\nPlanned runs: "+(planned.join(", ")||"none — type a new number to create"),def);
- if(!rn) return;
- let x=XRUNS.find(r=>r.no===rn);
- const q=[8,16,8,8,2,2,2]; // 15yd default mix in QCOLS order CP,LP,CTE,LTE,CO,CS,LS
- if(!x){ if(BASE_RUNS.some(r=>r.no===rn)){ alert("Run "+rn+" is a built-in run — cut into a planned run (Plan a new run) instead."); return; } x={no:rn,name:"Run "+rn,sched:false,mult:1,lines:[]}; XRUNS.push(x); }
- const ln=x.lines.find(l=>l.p===o.fabric);
- if(ln){ for(let i=0;i<7;i++) ln.q[i]+= (q[i]*(o.bolts||1)); } else { x.lines.push({p:o.fabric, q:q.map(v=>v*(o.bolts||1)), thread:o.thread}); }
- o.cut=true;
- saveRuns(); rebuildRuns(); save(); render();
- OVR.log && OVR.log.push(`Cut ${o.fabric} into run ${rn}`);
+ const o=(OVR.fabric&&OVR.fabric.orders||[]).find(x=>x.id===orderId); if(!o) return;
+ if(typeof cutInit==="function") cutInit();
+ const already=(OVR.cut.sess||[]).some(x=>x.fabric===o.fabric);
+ const yd=Math.round(o.yards!=null?+o.yards:((o.bolts||1)*(o.boltYd||15)))||15;
+ if(!already && typeof cutAdd==="function") cutAdd(o.fabric, o.vendor||"", o.thread||"white", yd);
+ OVR.cut.view="current"; save();
+ gotoView("cut");
+ render();
+ if(typeof boardToast==="function") boardToast(already?(o.fabric+" is already in this cut — confirm the counts below"):("Added "+o.fabric+" to the cut ✓ — confirm what you cut, then create the run"));
+}
+/* web33: shared tab switch (nav highlight + section) */
+function gotoView(v){
+ document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on", x.dataset.v===v));
+ document.querySelectorAll("section").forEach(s=>s.classList.remove("on"));
+ const el=document.getElementById("view-"+v); if(el) el.classList.add("on");
+ window.scrollTo(0,0);
 }
 
 // ===================== CUT PLANNER =====================
@@ -2502,7 +2515,14 @@ function wireCutAll(){
  document.querySelectorAll("[data-clend]").forEach(s=>s.onchange=()=>{ const p=s.dataset.clend.split("|"), sp=find(p[0]); if(!sp)return; const L=sp.layers[+p[1]], v=s.value, half=/h$/.test(v), en=Math.max(L.st,parseInt(v)); L.en=en; L.half=half&&CUT_HALF_OK.includes(en); save(); render(); });
  document.querySelectorAll("[data-cldel]").forEach(b=>b.onclick=()=>{ const p=b.dataset.cldel.split("|"), sp=find(p[0]); if(sp){ sp.layers.splice(+p[1],1); save(); render(); } });
  document.querySelectorAll("[data-cutaddl]").forEach(b=>b.onclick=()=>{ const sp=find(b.dataset.cutaddl); if(sp){ sp.layers.push({st:0,en:6,half:false}); save(); render(); } });
- const acc=document.getElementById("cutaccept"); if(acc) acc.onclick=()=>{ OVR.cut.sess.forEach(s=>s.accepted=true); save(); render(); };
+ /* web33: product setup moved forward — the Shopify drafts are offered the moment the cut
+    is confirmed, not at run creation. Anything still unlinked is caught again at Create run. */
+ const acc=document.getElementById("cutaccept"); if(acc) acc.onclick=()=>{
+  OVR.cut.sess.forEach(s=>s.accepted=true); save(); render();
+  const _venBy={}; (OVR.cut.sess||[]).forEach(sp=>{ _venBy[sp.fabric]=sp.ven||""; });
+  const _newPats=(OVR.cut.sess||[]).map(s=>s.fabric).filter(p=>!/^core solid/i.test(p) && !resolveShop(p));
+  if(_newPats.length) cpOfferDrafts(_newPats,_venBy,()=>{ save(); render(); },"Done \u2014 back to the cut");
+ };
  const mk=document.getElementById("cutmakerun"); if(mk) mk.onclick=()=>{
   const nextNo=Math.max(...RUNS.map(r=>r.no))+1, thr=[...new Set(OVR.cut.sess.map(s=>s.thread))][0]||"white";
   const nm=((document.getElementById("cutrunname")||{}).value||"").trim() || (thr.charAt(0).toUpperCase()+thr.slice(1)+" cut "+new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}));
@@ -2592,6 +2612,24 @@ function fabImgSheet(name, onClose){
  ov.querySelector("#fisdone").onclick=fin;
  ov.onclick=e=>{ if(e.target===ov) fin(); };
 }
+
+/* web33: mark a run finished (or reopen it) from the run detail. A completed run keeps its
+   history but stops producing Board blocks, folding tasks and open steps; its finished hats
+   still show under Launch until they've been posted to Shopify. */
+function toggleRunDone(no){
+ if(typeof isLead!=="undefined" && !isLead) return;
+ const x=XRUNS.find(r=>r.no===no); if(!x){ alert("Run "+no+" is a built-in run — its status is fixed."); return; }
+ if(!x.done){
+  if(!confirm("Mark "+(x.name||("Run "+no))+" complete?\n\nIt comes off the Board and today's schedule. You can reopen it here any time.")) return;
+  x.done=true; if(x.sched===false) x.sched=true;
+  if(!x.goLive && OVR.goLive && OVR.goLive[no]) x.goLive=OVR.goLive[no];
+ } else x.done=false;
+ saveRuns(); rebuildRuns();
+ try{ OVR.log.push((x.done?"Marked run ":"Reopened run ")+no+(x.done?" complete":"")); }catch(e){}
+ save(); renderRD(); render();
+ if(typeof boardToast==="function") boardToast(x.done?("✓ "+(x.name||("Run "+no))+" marked complete"):("↩ Run "+no+" reopened"));
+}
+
 function cancelRun(no){
  if(typeof isLead!=="undefined" && !isLead) return;
  const x=XRUNS.find(z=>z.no===no);
@@ -2624,11 +2662,11 @@ async function cpCreateOne(pat, ven, prof, btn){
   return true;
  }catch(e){ btn.disabled=false; btn.textContent=o; return false; }
 }
-function cpOfferDrafts(pats, venBy, after){
+function cpOfferDrafts(pats, venBy, after, doneLabel){ /* web33: doneLabel — the closing button says what happens next (create the run, or back to the cut) */
  if(typeof isLead!=="undefined" && !isLead){ after(); return; }
  const ov=document.createElement("div");
  ov.style.cssText="position:fixed;inset:0;background:rgba(4,40,44,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px";
- ov.innerHTML='<div class="card" style="max-width:540px;width:100%;max-height:82vh;overflow:auto;margin:0"><b style="font-size:15px">\ud83c\udd95 '+pats.length+' new pattern'+(pats.length>1?"s":"")+' \u2014 create Shopify drafts?</b><div class="fmeta" style="margin:4px 0 10px">These patterns aren\u2019t linked to any Shopify product yet. Create each one as a <b>DRAFT</b> (variants, SKUs, prices, copy &amp; SEO) and link it here so finished hats can post straight to inventory. Tap 📷 to add up to 5 images (4 styles + the swatch) — they attach in order, style images link to their variants, and the AI writes the listing from the swatch. You review and publish in Shopify.</div>'+pats.map(function(p,i){ return '<div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap"><span data-cpthumb="'+i+'" style="width:34px;height:34px;border-radius:8px;background:#EDEAE2;overflow:hidden;flex:none">'+(function(){var _v=fabImgs(p),_u=_v.sw||_v.p||_v.te||_v.o||_v.s;return _u?'<img src="'+_u+'" style="width:100%;height:100%;object-fit:cover">':'';})()+'</span><b style="flex:1;min-width:100px">'+p+'</b><button class="btn" data-cpimg="'+i+'" title="Add swatch photo" style="font-size:12px">'+(fabImgCount(p)?('📷 '+fabImgCount(p)+'/5'):'📷')+'</button><select data-cpprof="'+i+'" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 7px;font-size:12.5px;font-family:inherit"><option value="standard">Standard \u2014 8 variants</option><option value="comfortplus">Comfort+ \u2014 4 variants</option></select><button class="btn go" data-cpgo="'+i+'" style="font-size:12.5px">Create draft</button></div>'; }).join("")+'<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="cpskip">Skip \u2014 pair later</button><button class="btn go" id="cpdone">Done \u2014 create the run</button></div></div>';
+ ov.innerHTML='<div class="card" style="max-width:540px;width:100%;max-height:82vh;overflow:auto;margin:0"><b style="font-size:15px">\ud83c\udd95 '+pats.length+' new pattern'+(pats.length>1?"s":"")+' \u2014 create Shopify drafts?</b><div class="fmeta" style="margin:4px 0 10px">These patterns aren\u2019t linked to any Shopify product yet. Create each one as a <b>DRAFT</b> (variants, SKUs, prices, copy &amp; SEO) and link it here so finished hats can post straight to inventory. Tap 📷 to add up to 5 images (4 styles + the swatch) — they attach in order, style images link to their variants, and the AI writes the listing from the swatch. You review and publish in Shopify.</div>'+pats.map(function(p,i){ return '<div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap"><span data-cpthumb="'+i+'" style="width:34px;height:34px;border-radius:8px;background:#EDEAE2;overflow:hidden;flex:none">'+(function(){var _v=fabImgs(p),_u=_v.sw||_v.p||_v.te||_v.o||_v.s;return _u?'<img src="'+_u+'" style="width:100%;height:100%;object-fit:cover">':'';})()+'</span><b style="flex:1;min-width:100px">'+p+'</b><button class="btn" data-cpimg="'+i+'" title="Add swatch photo" style="font-size:12px">'+(fabImgCount(p)?('📷 '+fabImgCount(p)+'/5'):'📷')+'</button><select data-cpprof="'+i+'" style="border:1.5px solid var(--line);border-radius:8px;padding:6px 7px;font-size:12.5px;font-family:inherit"><option value="standard">Standard \u2014 8 variants</option><option value="comfortplus">Comfort+ \u2014 4 variants</option></select><button class="btn go" data-cpgo="'+i+'" style="font-size:12.5px">Create draft</button></div>'; }).join("")+'<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="cpskip">Skip \u2014 pair later</button><button class="btn go" id="cpdone">'+(doneLabel||"Done \u2014 create the run")+'</button></div></div>';
  document.body.appendChild(ov);
  ov.querySelectorAll("[data-cpgo]").forEach(function(b){ b.onclick=function(){ const i=+b.dataset.cpgo; const sel=ov.querySelector('[data-cpprof="'+i+'"]'); cpCreateOne(pats[i], venBy[pats[i]]||"", sel?sel.value:"standard", b); }; });
  ov.querySelectorAll("[data-cpimg]").forEach(function(b){ b.onclick=function(){ const i=+b.dataset.cpimg; fabImgSheet(pats[i], function(){ var _v=fabImgs(pats[i]),_u=_v.sw||_v.p||_v.te||_v.o||_v.s; const t=ov.querySelector('[data-cpthumb="'+i+'"]'); if(t&&_u) t.innerHTML='<img src="'+_u+'" style="width:100%;height:100%;object-fit:cover">'; b.textContent=fabImgCount(pats[i])?('📷 '+fabImgCount(pats[i])+'/5'):'📷'; }); }; });
@@ -3670,7 +3708,7 @@ function renderRD(){
    <button class="rdclose" id="rdprev" title="Previous run">‹</button><button class="rdclose" id="rdnext" title="Next run">›</button><button class="rdclose" id="rdx">✕</button>
   </div>
   <div class="rdtabs"><button class="${rdTab==="sched"?"on":""}" data-rdt="sched">Schedule</button><button class="${rdTab==="pat"?"on":""}" data-rdt="pat">Patterns &amp; pairings</button><button class="${rdTab==="post"?"on":""}" data-rdt="post">Finish &amp; post${_unlinkedN?" ⚠":""}</button></div>
-  <div style="display:flex;align-items:center;gap:8px;margin:9px 0 2px;font-size:12.5px;color:var(--soft)">Go-live date <input type="date" id="rdgolive" value="${goLiveOf(r)||''}" style="border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12.5px;font-family:inherit"${isLead?'':' disabled'}>${(OVR.goLive&&OVR.goLive[r.no])?' <span style="color:#0F8A6D;font-weight:700">· adjusted</span>':''}${(isLead&&!r.done&&(typeof XRUNS!=="undefined")&&XRUNS.some(x=>x.no===r.no))?'<button class="btn" id="rdcancel" style="margin-left:auto;color:#B4372F;border-color:#E0B3AE;font-size:12px;min-height:30px;padding:4px 10px">✕ Cancel run</button>':''}</div>
+  <div style="display:flex;align-items:center;gap:8px;margin:9px 0 2px;font-size:12.5px;color:var(--soft)">Go-live date <input type="date" id="rdgolive" value="${goLiveOf(r)||''}" style="border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12.5px;font-family:inherit"${isLead?'':' disabled'}>${(OVR.goLive&&OVR.goLive[r.no])?' <span style="color:#0F8A6D;font-weight:700">· adjusted</span>':''}${(isLead&&(typeof XRUNS!=="undefined")&&XRUNS.some(x=>x.no===r.no))?(r.done?'<button class="btn" id="rddone" style="margin-left:auto;font-size:12px;min-height:30px;padding:4px 10px">↩ Reopen run</button>':'<button class="btn" id="rddone" style="margin-left:auto;color:#0F8A6D;border-color:#9FE1CB;font-size:12px;min-height:30px;padding:4px 10px">✓ Mark run complete</button>'):''}${(isLead&&!r.done&&(typeof XRUNS!=="undefined")&&XRUNS.some(x=>x.no===r.no))?'<button class="btn" id="rdcancel" style="margin-left:8px;color:#B4372F;border-color:#E0B3AE;font-size:12px;min-height:30px;padding:4px 10px">✕ Cancel run</button>':''}</div>
   ${body}`;
  wireThreadEdits(); /* web8: editable run thread in run detail */
  document.getElementById("rdx").onclick = closeRun;
@@ -3679,6 +3717,7 @@ function renderRD(){
  document.querySelectorAll("[data-rdt]").forEach(b=>b.onclick=()=>{ rdTab=b.dataset.rdt; renderRD(); });
  const _gl=document.getElementById("rdgolive"); if(_gl) _gl.onchange=()=>{ if(!OVR.goLive) OVR.goLive={}; if(_gl.value) OVR.goLive[r.no]=_gl.value; else delete OVR.goLive[r.no]; if(typeof XRUNS!=="undefined"){ const x=XRUNS.find(z=>z.no===r.no); if(x){ x.goLive=_gl.value||undefined; saveRuns(); } } save(); render(); };
  const _rc=document.getElementById("rdcancel"); if(_rc) _rc.onclick=()=>cancelRun(r.no);
+ const _rdn=document.getElementById("rddone"); if(_rdn) _rdn.onclick=()=>toggleRunDone(r.no);
  document.querySelectorAll(".pcell").forEach(inp=>{ if(!isLead){ inp.disabled = true; return; } inp.onchange=()=>{
   const k = inp.dataset.run+"|"+inp.dataset.pat;
   PAIR[k] = PAIR[k]||{};
@@ -3817,7 +3856,10 @@ function renderTracker(items){
  el.querySelectorAll("[data-markrun]").forEach(b=>b.onclick=()=>{
   const run=+b.dataset.markrun, step=+b.dataset.markstep, sg=b.dataset.markseg, to=b.dataset.to==="1";
   const pk = run+"|"+step+"|"+sg;
-  if(to){ const ex=OVR.pins[pk]||{}; let d0=ex.startDay, pr=ex.person; if((d0===undefined||!pr) && LAST && LAST.sched){ const bl=LAST.sched.blocks.filter(x=>x.key===pk); if(bl.length){ if(d0===undefined) d0=Math.min(...bl.map(x=>x.day)); if(!pr) pr=bl[0].person; } } OVR.pins[pk]=Object.assign(ex,{startDay:(d0===undefined?0:d0), person:pr||ex.person, hard:true, done:true}); } else if(OVR.pins[pk]){ delete OVR.pins[pk].done; }
+  /* web33: ticking a step off that was never on the Board no longer parks it on today.
+     If the step has no scheduled day we record it done with no day at all, and buildSched
+     leaves it off the Board (it's history, not work for today). */
+  if(to){ const ex=OVR.pins[pk]||{}; let d0=ex.startDay, pr=ex.person; if((d0===undefined||!pr) && LAST && LAST.sched){ const bl=LAST.sched.blocks.filter(x=>x.key===pk); if(bl.length){ if(d0===undefined) d0=Math.min(...bl.map(x=>x.day)); if(!pr) pr=bl[0].person; } } const _pin=Object.assign(ex,{person:pr||ex.person, hard:true, done:true}); if(d0===undefined) delete _pin.startDay; else _pin.startDay=d0; OVR.pins[pk]=_pin; } else if(OVR.pins[pk]){ delete OVR.pins[pk].done; }
   if(OVR.prog) delete OVR.prog[pk];   // a discrete Done/Undo clears any manual % override
   ATOMS.forEach(a=>{ if(a.run===run&&a.step===step&&segKey(a.step,a.style)===sg){ if(to) DONE[atomKey(a.run,a.style,a.i)]=true; else delete DONE[atomKey(a.run,a.style,a.i)]; }});
   save(); render();

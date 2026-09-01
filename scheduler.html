@@ -555,7 +555,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-09-01-web33";
+const BUILD="2026-09-01-web34";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -693,6 +693,8 @@ function rebuildRuns(){
  const merge = r => { const e=ex[r.no]; return (e&&e.length) ? Object.assign({}, r, {lines:(r.lines||[]).concat(e)}) : r; };
  RUNS = BASE_RUNS.map(merge).concat(XRUNS.map(x=>{ const base=Object.assign({hex:RPAL[x.no%RPAL.length], mult:x.mult||1}, x); const e=ex[x.no]; if(e&&e.length) base.lines=(x.lines||[]).concat(e); return base; }));
  try{ const tOv=(OVR&&OVR.runThread)||{}; RUNS.forEach(r=>{ if(tOv[r.no]) r.thread=tOv[r.no]; }); }catch(e){} /* web8: run-thread overrides */
+ /* web34: completed-run overrides — lets a built-in run be marked finished too (BASE_RUNS lives in code, so its flag can't be edited from the app) */
+ try{ const dOv=(OVR&&OVR.runDone)||{}; RUNS.forEach(r=>{ if(Object.prototype.hasOwnProperty.call(dOv, r.no)) r.done = dOv[r.no]===true; }); }catch(e){}
  RUNS.forEach(prepRun);
  ATOMS = allAtoms();
 }
@@ -935,6 +937,7 @@ if(!OVR.arrive) OVR.arrive = {};
 if(!OVR.gates) OVR.gates = [];
 if(!OVR.extraLines) OVR.extraLines = {};
 if(!OVR.goLive) OVR.goLive = {};
+if(!OVR.runDone) OVR.runDone = {}; /* web34: per-run completed flag, works for built-in runs too */
 rebuildRuns();
 Object.keys(OVR.detach).forEach(k=>{ OVR.detach[k]=(OVR.detach[k]||[]).filter(n=>n.includes("@@")); if(!OVR.detach[k].length) delete OVR.detach[k]; });
 function save(){ try{ localStorage.setItem(LSKEY, JSON.stringify(DONE)); localStorage.setItem(OVRKEY, JSON.stringify(OVR)); }catch(e){} cloudSave(LSKEY, DONE); cloudSave(OVRKEY, OVR); }
@@ -958,7 +961,7 @@ function applyRemote(key,val,skipRender){
  if(key===LSKEY) DONE=val||{};
  else if(key===OVRKEY){ const inc=Object.keys((val&&val.pins)||{}).length, loc=Object.keys((OVR&&OVR.pins)||{}).length;
   if(inc===0 && loc>0 && USER_TOUCHED){ try{cloudSave(OVRKEY,OVR);}catch(e){} return; }
-  OVR=val||{avail:{},pins:{},log:[]}; if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; if(!OVR.extraLines)OVR.extraLines={}; if(!OVR.goLive)OVR.goLive={}; if(!OVR.shop)OVR.shop={}; if(!OVR.flags)OVR.flags={}; try{ if(typeof rebuildRuns==="function") rebuildRuns(); }catch(e){} }
+  OVR=val||{avail:{},pins:{},log:[]}; if(!OVR.trips)OVR.trips={}; if(!OVR.detach)OVR.detach={}; if(!OVR.splits)OVR.splits={}; if(!OVR.arrive)OVR.arrive={}; if(!OVR.gates)OVR.gates=[]; if(!OVR.extraLines)OVR.extraLines={}; if(!OVR.goLive)OVR.goLive={}; if(!OVR.shop)OVR.shop={}; if(!OVR.flags)OVR.flags={}; if(!OVR.runDone)OVR.runDone={}; try{ if(typeof rebuildRuns==="function") rebuildRuns(); }catch(e){} }
  else if(key==="tmsh-fablive"){ window.FAB_LIVE=val; try{ applyFabLive(); }catch(e){} } /* web8: morning fabric sync */
  else if(key==="tmsh-bis"){ window.BIS_DIG=val; try{ renderBIS(); }catch(e){} } /* web15: back-in-stock demand digest */
  else if(key==="tmsh-rates"){ RATES=Object.assign({sew:16,emb:17,zeroFor:["Taylor"]}, val||{}); } /* web9: tracker pay rates */
@@ -2624,16 +2627,16 @@ function fabImgSheet(name, onClose){
    still show under Launch until they've been posted to Shopify. */
 function toggleRunDone(no){
  if(typeof isLead!=="undefined" && !isLead) return;
- const x=XRUNS.find(r=>r.no===no); if(!x){ alert("Run "+no+" is a built-in run — its status is fixed."); return; }
- if(!x.done){
-  if(!confirm("Mark "+(x.name||("Run "+no))+" complete?\n\nIt comes off the Board and today's schedule. You can reopen it here any time.")) return;
-  x.done=true; if(x.sched===false) x.sched=true;
-  if(!x.goLive && OVR.goLive && OVR.goLive[no]) x.goLive=OVR.goLive[no];
- } else x.done=false;
- saveRuns(); rebuildRuns();
- try{ OVR.log.push((x.done?"Marked run ":"Reopened run ")+no+(x.done?" complete":"")); }catch(e){}
+ const r=RUNS.find(z=>z.no===no); if(!r) return;
+ const x=XRUNS.find(z=>z.no===no); /* built-in runs live in code — they use the override only */
+ const to=!r.done;
+ if(to && !confirm("Mark "+(r.name||("Run "+no))+" complete?\n\nIt comes off the Board and today's schedule. You can reopen it here any time.")) return;
+ if(x){ x.done=to; if(to && x.sched===false) x.sched=true; if(to && !x.goLive && OVR.goLive && OVR.goLive[no]) x.goLive=OVR.goLive[no]; saveRuns(); }
+ if(!OVR.runDone) OVR.runDone={}; OVR.runDone[no]=to;
+ rebuildRuns();
+ try{ OVR.log.push((to?"Marked run ":"Reopened run ")+no+(to?" complete":"")); }catch(e){}
  save(); renderRD(); render();
- if(typeof boardToast==="function") boardToast(x.done?("✓ "+(x.name||("Run "+no))+" marked complete"):("↩ Run "+no+" reopened"));
+ if(typeof boardToast==="function") boardToast(to?("✓ "+(r.name||("Run "+no))+" marked complete"):("↩ Run "+no+" reopened"));
 }
 
 function cancelRun(no){
@@ -3714,7 +3717,7 @@ function renderRD(){
    <button class="rdclose" id="rdprev" title="Previous run">‹</button><button class="rdclose" id="rdnext" title="Next run">›</button><button class="rdclose" id="rdx">✕</button>
   </div>
   <div class="rdtabs"><button class="${rdTab==="sched"?"on":""}" data-rdt="sched">Schedule</button><button class="${rdTab==="pat"?"on":""}" data-rdt="pat">Patterns &amp; pairings</button><button class="${rdTab==="post"?"on":""}" data-rdt="post">Finish &amp; post${_unlinkedN?" ⚠":""}</button></div>
-  <div style="display:flex;align-items:center;gap:8px;margin:9px 0 2px;font-size:12.5px;color:var(--soft)">Go-live date <input type="date" id="rdgolive" value="${goLiveOf(r)||''}" style="border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12.5px;font-family:inherit"${isLead?'':' disabled'}>${(OVR.goLive&&OVR.goLive[r.no])?' <span style="color:#0F8A6D;font-weight:700">· adjusted</span>':''}${(isLead&&(typeof XRUNS!=="undefined")&&XRUNS.some(x=>x.no===r.no))?(r.done?'<button class="btn" id="rddone" style="margin-left:auto;font-size:12px;min-height:30px;padding:4px 10px">↩ Reopen run</button>':'<button class="btn" id="rddone" style="margin-left:auto;color:#0F8A6D;border-color:#9FE1CB;font-size:12px;min-height:30px;padding:4px 10px">✓ Mark run complete</button>'):''}${(isLead&&!r.done&&(typeof XRUNS!=="undefined")&&XRUNS.some(x=>x.no===r.no))?'<button class="btn" id="rdcancel" style="margin-left:8px;color:#B4372F;border-color:#E0B3AE;font-size:12px;min-height:30px;padding:4px 10px">✕ Cancel run</button>':''}</div>
+  <div style="display:flex;align-items:center;gap:8px;margin:9px 0 2px;font-size:12.5px;color:var(--soft)">Go-live date <input type="date" id="rdgolive" value="${goLiveOf(r)||''}" style="border:1.5px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12.5px;font-family:inherit"${isLead?'':' disabled'}>${(OVR.goLive&&OVR.goLive[r.no])?' <span style="color:#0F8A6D;font-weight:700">· adjusted</span>':''}${isLead?(r.done?'<button class="btn" id="rddone" style="margin-left:auto;font-size:12px;min-height:30px;padding:4px 10px">↩ Reopen run</button>':'<button class="btn" id="rddone" style="margin-left:auto;color:#0F8A6D;border-color:#9FE1CB;font-size:12px;min-height:30px;padding:4px 10px">✓ Mark run complete</button>'):''}${(isLead&&!r.done&&(typeof XRUNS!=="undefined")&&XRUNS.some(x=>x.no===r.no))?'<button class="btn" id="rdcancel" style="margin-left:8px;color:#B4372F;border-color:#E0B3AE;font-size:12px;min-height:30px;padding:4px 10px">✕ Cancel run</button>':''}</div>
   ${body}`;
  wireThreadEdits(); /* web8: editable run thread in run detail */
  document.getElementById("rdx").onclick = closeRun;

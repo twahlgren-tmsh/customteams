@@ -555,7 +555,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-09-01-web34";
+const BUILD="2026-09-01-web35";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -900,7 +900,14 @@ const CORE_IMG = {
 };
 function tileColor(name){ if(SOLIDHEX[name]) return SOLIDHEX[name]; let h=0; for(const c of name) h=(h*31+c.charCodeAt(0))%360; return `hsl(${h},45%,78%)`; }
 function inits(name){ return name.replace("Core Solid: ","").replace(/\(Comfort\+\)/i,"").split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase(); }
-function swImg(name, big){ if(/^core solid/i.test(name)){ const c=name.replace(/^core solid:\s*/i,"").trim(); const f2=(typeof CORE_IMG!=="undefined")&&CORE_IMG[c]; if(f2) return `<img src="${f2}" loading="lazy" onerror="this.remove()">`; } if(typeof OVR!=="undefined"&&OVR.fabimg&&OVR.fabimg[name]){ const _fv=OVR.fabimg[name]; const _fu=(typeof _fv==="string")?_fv:(_fv.p||_fv.te||_fv.o||_fv.s||_fv.sw); /* web29: ponytail is the main image; swatch is the fallback */ if(_fu) return `<img src="${_fu}" loading="lazy" onerror="this.remove()">`; } let f=null; if(typeof OVR!=="undefined" && OVR.shop && OVR.shop[name]!==undefined){ const v=OVR.shop[name]; let lk=null; if(v && typeof v==="object"){ if(!v.none) lk=v.prod; } else if(typeof v==="string" && v) lk=v; if(lk){ const b=lk.replace(/ Scrub Hat$/,""); f=SWATCH[lk]||SWATCH[b]; } } if(!f) f=SWATCH[name]; if(!f && typeof shopTarget==="function"){ try{ const pr=shopTarget(name).prod; if(pr) f=SWATCH[pr]||SWATCH[pr.replace(/ Scrub Hat$/,"")]; }catch(e){} } if(!f) return ""; const src = /^https?:/.test(f) ? f : CDN + (big ? f.replace(/_96x96(?=\.webp)/,"_400x400") : f); return `<img src="${src}" loading="lazy" onerror="this.remove()">`; }
+function swImg(name, big){ if(/^core solid/i.test(name)){ const c=name.replace(/^core solid:\s*/i,"").trim(); const f2=(typeof CORE_IMG!=="undefined")&&CORE_IMG[c]; if(f2) return `<img src="${f2}" loading="lazy" onerror="this.remove()">`; } /* web35: an uploaded HAT photo wins (ponytail first). A swatch-only upload no longer
+   beats the product's Shopify ponytail photo — a flat square of fabric next to nine hat
+   photos is what made some runs look inconsistent — so the swatch drops to last resort. */
+ let _swOnly=null;
+ if(typeof OVR!=="undefined"&&OVR.fabimg&&OVR.fabimg[name]){ const _fv=OVR.fabimg[name];
+  if(typeof _fv==="string") _swOnly=_fv;
+  else { const _fu=_fv.p||_fv.te||_fv.o||_fv.s; if(_fu) return `<img src="${_fu}" loading="lazy" onerror="this.remove()">`; _swOnly=_fv.sw||null; }
+ } let f=null; if(typeof OVR!=="undefined" && OVR.shop && OVR.shop[name]!==undefined){ const v=OVR.shop[name]; let lk=null; if(v && typeof v==="object"){ if(!v.none) lk=v.prod; } else if(typeof v==="string" && v) lk=v; if(lk){ const b=lk.replace(/ Scrub Hat$/,""); f=SWATCH[lk]||SWATCH[b]; } } if(!f) f=SWATCH[name]; if(!f && typeof shopTarget==="function"){ try{ const pr=shopTarget(name).prod; if(pr) f=SWATCH[pr]||SWATCH[pr.replace(/ Scrub Hat$/,"")]; }catch(e){} } if(!f) return _swOnly?`<img src="${_swOnly}" loading="lazy" onerror="this.remove()">`:""; const src = /^https?:/.test(f) ? f : CDN + (big ? f.replace(/_96x96(?=\.webp)/,"_400x400") : f); return `<img src="${src}" loading="lazy" onerror="this.remove()">`; }
 /* web8: once linked, show the Shopify product's name instead of the typed pattern name (colorway products keep the typed name) */
 function dispName(p){ try{ if(typeof shopTarget==="function"){ const t=shopTarget(p); if(t&&t.prod&&!t.color){ const n=String(t.prod).replace(/ Scrub Hat$/i,"").trim(); if(n) return n; } } }catch(e){} return p; }
 function swatchHtml(name, big){

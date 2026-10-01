@@ -271,6 +271,33 @@ details.cocard[open] .chev { transform:rotate(90deg); }
 .duechip { font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:99px; }
 /* web21: Orders tab rolodex — snapshot cards, tap for the full order in a drawer */
 .cogrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; margin-top:8px; }
+/* web40: customer groups */
+.grpbox { margin-top:10px; border:1px solid #CFE3E1; background:#F4FAF9; border-radius:12px; padding:10px 12px; }
+.grphd { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.grphd b { font-size:14.5px; color:var(--dark); }
+.grphd .conameedit { border:none; background:none; cursor:pointer; color:#6f8c8f; font-size:12px; padding:0 2px; }
+.grptag { font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; background:#045863; color:#fff; border-radius:99px; padding:2px 8px; }
+.grptag.new { background:#E7E4DA; color:#55534C; }
+.grpmeta { font-size:11.5px; color:var(--soft); }
+.grpsug { font-size:12.5px; background:#FFF6E3; border:1px solid #EAD7A6; border-radius:9px; padding:7px 9px; margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.grpsugbtns { display:flex; gap:5px; flex-wrap:wrap; margin-left:auto; }
+.grpsugbtns .btn, .grpbox .btn { padding:3px 10px; min-height:0; font-size:11.5px; }
+.grpgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.grpprefs { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:4px; }
+@media (max-width:640px){ .grpgrid { grid-template-columns:1fr; } .grpprefs { grid-template-columns:1fr 1fr; } }
+.grpsaved { font-size:11px; color:#3B6D11; opacity:0; transition:opacity .3s; }
+.grphist { margin-top:10px; border-top:1px dashed #CFE3E1; padding-top:8px; display:flex; flex-direction:column; gap:6px; }
+.grprow { display:flex; gap:10px; align-items:flex-start; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:7px; cursor:pointer; }
+.grprow:hover { border-color:#9CC7C3; }
+.grprow img, .grpnoimg { width:54px; height:54px; border-radius:7px; object-fit:cover; object-position:top; flex:none; }
+.grpnoimg { background:#F0EEE6; color:var(--faint); font-size:9.5px; display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.1; }
+.grprow b { font-size:13px; }
+.grprow small { color:var(--soft); font-size:11px; }
+.grpchips { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+.grpchip { font-size:11.5px; background:#EEF4F3; border-radius:6px; padding:1px 6px; }
+.grpchip i { font-style:normal; color:var(--soft); font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
+.grpnote { font-size:11.5px; color:var(--soft); margin-top:3px; white-space:pre-line; }
+.grprep { font-size:10.5px; font-weight:700; color:#045863; background:#E3F1EF; border-radius:99px; padding:1px 6px; white-space:nowrap; vertical-align:1px; }
 .cotile { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; cursor:pointer; display:flex; flex-direction:column; transition:transform .12s, box-shadow .12s; position:relative; }
 .cotile:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,.09); }
 .cotile.shipped { opacity:.55; }
@@ -568,14 +595,14 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Right-click a block (or tap its ⋯) to split it, describe it, or move it. Turn on Edit schedule to drag a block onto a teammate or a day, or above/below another task to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-08-30 · web29 (Ponytail photo is the card image; Daisies on Teal / Blue / Pink are separate products; To order has a Show-more button instead of Up next; New designs only lists prints you add by hand.)</span></div>
+<div class="foot">Right-click a block (or tap its ⋯) to split it, describe it, or move it. Turn on Edit schedule to drag a block onto a teammate or a day, or above/below another task to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-10-01 · web40 (Customer groups: repeat customers are linked, with a lead-only box for priorities, feedback and preferred combos, plus link / merge / split.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-09-01-web39";
+const BUILD="2026-10-01-web40";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -1109,6 +1136,7 @@ async function loadOrders(){ if(typeof sb==="undefined") return; try{
   try{ const {data:mt}=await sb.from("materials_tracking").select("*"); if(Array.isArray(mt)){ MATBY={}; mt.forEach(t=>{ const k=String(t.order_number||""); (MATBY[k]=MATBY[k]||[]).push(t); }); } }catch(e){}
   if(isLead){
    try{ const {data:cs}=await sb.from("customers").select("*"); if(Array.isArray(cs)){ CUSTBY={}; cs.forEach(c=>CUSTBY[c.id]=c); } }catch(e){}
+   await loadGroups(); /* web40 */
    try{ const {data:fs}=await sb.from("order_financials").select("*"); if(Array.isArray(fs)){ FINBY={}; fs.forEach(f=>FINBY[f.order_id]=f); } }catch(e){}
   }
   render();
@@ -3220,6 +3248,143 @@ function openLightbox(src){ var lb=document.getElementById("lightbox"), im=docum
 document.addEventListener("click", function(e){ var z=e.target.closest&&e.target.closest("[data-zoom]"); if(z){ openLightbox(z.getAttribute("data-zoom")); return; } if(e.target.id==="lightbox"||e.target.id==="lightboximg"){ var lb=document.getElementById("lightbox"); if(lb) lb.style.display="none"; } });
 /* ---------- web7: unified Orders tab (lead extras, search, all-orders, analytics) ---------- */
 function coMoney(v){ const n=parseFloat(v); return (v==null||isNaN(n))?"—":"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+/* web40: Customer groups — repeat-customer memory (lead only). One group = one account (practice, department, program).
+   Orders join their customer's group automatically (same email); leads can link/unlink/merge by hand. */
+let GRPBY={}, _grpSelf=0;
+const GRP_PREF=[["pref_scrub_color","Scrub / base color","scrub"],["pref_logo","Logo colors","logo"],["pref_ribbon","Ribbon / ties","ribbon"],["pref_sewing_thread","Sewing thread","sthread"],["pref_embroidery_thread","Embroidery thread","ethread"],["pref_placement","Placement","place"]];
+function grpEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+function grpLive(id){ let g=GRPBY[id], n=0; while(g&&g.merged_into&&n++<5) g=GRPBY[g.merged_into]; return g||null; }
+function grpOrders(gid){ return (ALLORD||[]).filter(r=>r.group_id===gid).sort((a,b)=>String(b.order_date||"").localeCompare(String(a.order_date||""))); }
+function grpHats(r){ if(r.total_hats) return r.total_hats; let n=0; String(r.styles||"").replace(/(\d+)\s*[A-Z]{2,3}/g,(m,d)=>{ n+=+d; return m; }); return n; }
+function grpOf(o){ const r=(o&&o._row)||{}; return r.group_id?grpLive(r.group_id):null; }
+function grpCount(o){ const g=grpOf(o); return g?grpOrders(g.id).length:0; }
+async function loadGroups(){ if(typeof sb==="undefined"||!isLead) return; try{ const {data}=await sb.from("customer_groups").select("*"); if(Array.isArray(data)){ GRPBY={}; data.forEach(g=>GRPBY[g.id]=g); } }catch(e){} }
+function grpSuggest(o){
+ const r=o._row||{}; const g=grpOf(o); if(!g) return [];
+ const dis=new Set(r.group_suggest_dismissed||[]);
+ const doms=new Set(g.domains||[]); const nm=(g.name||"").trim().toLowerCase();
+ return Object.values(GRPBY).filter(x=>!x.merged_into&&x.id!==g.id&&!dis.has(x.id)&&grpOrders(x.id).length&&(
+   (x.domains||[]).some(d=>doms.has(d)) || (nm.length>2&&(x.name||"").trim().toLowerCase()===nm)
+ )).map(x=>({g:x, why:(x.domains||[]).find(d=>doms.has(d))?("same email domain @"+(x.domains||[]).find(d=>doms.has(d))):"same name"}));
+}
+function grpOrderLine(r){
+ const bits=[["Scrub",r.scrub_color],["Logo",r.logo],["Ribbon",r.ribbon],["Thread",r.sewing_thread],["Emb",r.embroidery_thread],["Placement",r.placement],["Font",r.font_option]].filter(b=>b[1]&&String(b[1]).trim());
+ return bits.map(b=>`<span class="grpchip"><i>${b[0]}</i> ${grpEsc(String(b[1]).trim())}</span>`).join("");
+}
+function coGroupPanel(o){
+ const r=o._row||{}; const g=grpOf(o);
+ const lst='display:flex;flex-direction:column;font-size:10.5px;color:#6f8c8f;font-weight:600;gap:2px';
+ const ist='border:1px solid var(--line);border-radius:7px;padding:6px;font:inherit;font-size:13px;font-weight:400;color:var(--ink);width:100%;box-sizing:border-box';
+ if(!g) return `<div class="grpbox"><div class="grphd"><b>👥 Customer group</b></div><div style="font-size:12.5px;color:var(--soft);margin-bottom:6px">This order isn't in a group yet.</div><button class="btn" data-grplink="${o.id}">Link to a group…</button> <button class="btn" data-grpnew="${o.id}">Start a new group</button></div>`;
+ const ords=grpOrders(g.id); const others=ords.filter(x=>x.id!==r.id);
+ const hats=ords.reduce((s,x)=>s+grpHats(x),0);
+ const first=ords.length?ords[ords.length-1].order_date:null;
+ const fmt=d=>d?new Date(String(d).slice(0,10)+"T12:00:00").toLocaleDateString("en-US",{month:"short",year:"numeric"}):"";
+ const contacts=[...new Set(Object.values(CUSTBY).filter(c=>c.group_id===g.id).map(c=>(c.contact||c.name||"").split(" · ")[0]).filter(Boolean))];
+ const sug=grpSuggest(o);
+ const rank=ords.findIndex(x=>x.id===r.id);
+ const nth=ords.length>1&&rank>=0?ords.length-rank:0;
+ const ord=n=>{ const v=n%100; if(v>=11&&v<=13) return n+"th"; return n+({1:"st",2:"nd",3:"rd"}[n%10]||"th"); };
+ const ta=(col,label,ph)=>`<label style="${lst}">${label}<textarea class="grpf" data-grpf="${g.id}|${col}" rows="2" placeholder="${ph}" oninput="this.style.height='auto';this.style.height=Math.max(this.scrollHeight,52)+'px'" style="${ist};line-height:1.45;resize:vertical;min-height:52px">${grpEsc(g[col]||"")}</textarea></label>`;
+ return `<div class="grpbox">
+  <div class="grphd"><b>👥 ${grpEsc(g.name)}</b><button class="conameedit" data-grpren="${g.id}" title="Rename group">✎</button>
+   ${nth?`<span class="grptag">${ord(nth)} order</span>`:`<span class="grptag new">first order</span>`}
+   <span class="grpmeta">${ords.length} order${ords.length===1?"":"s"} · ${hats} hats${first?` · since ${fmt(first)}`:""}${contacts.length?` · ${grpEsc(contacts.join(", "))}`:""}</span></div>
+  ${sug.map(s=>`<div class="grpsug">Possible match: <b>${grpEsc(s.g.name)}</b> (${grpOrders(s.g.id).length} order${grpOrders(s.g.id).length===1?"":"s"} · ${s.why})
+    <span class="grpsugbtns"><button class="btn" data-grpjoin="${o.id}|${s.g.id}">Move this order there</button><button class="btn" data-grpmerge="${g.id}|${s.g.id}">Merge the two groups</button><button class="btn" data-grpdismiss="${o.id}|${s.g.id}">Not a match</button></span></div>`).join("")}
+  <div class="grpgrid">
+   ${ta("priorities","Priorities & focus","What they care about most — e.g. embroidery kept super small, exact color match, fit…")}
+   ${ta("feedback","Feedback & issues","What they said after delivery, remakes, complaints, compliments…")}
+  </div>
+  <div style="${lst};margin-top:8px">Preferred combos <span style="font-weight:400;color:var(--faint)">— start a reorder from these</span></div>
+  <div class="grpprefs">
+   ${GRP_PREF.map(([col,label])=>`<label style="${lst}">${label}<input class="grpf" data-grpf="${g.id}|${col}" value="${grpEsc(g[col]||"")}" style="${ist}"></label>`).join("")}
+  </div>
+  <label style="${lst};margin-top:6px">Combo notes<input class="grpf" data-grpf="${g.id}|pref_notes" value="${grpEsc(g.pref_notes||"")}" placeholder="e.g. fellows on light grey, everyone else navy" style="${ist}"></label>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">
+   <button class="btn" data-grpfill="${o.id}" title="Copy this order's colors, thread and placement into Preferred combos">⤵ Use this order as their combo</button>
+   <button class="btn" data-grplink="${o.id}">Link to another group…</button>
+   ${ords.length>1?`<button class="btn" data-grpnew="${o.id}">Split this order into its own group</button>`:""}
+   <span class="grpsaved" data-grpsaved="${g.id}">Saved ✓</span>
+  </div>
+  ${others.length?`<div class="grphist"><div style="${lst};margin-bottom:4px">Their other orders</div>${others.map(x=>`<div class="grprow" data-grpopen="${grpEsc(x.order_number||"")}">
+     ${x.mockup_url?`<img src="${grpEsc(x.mockup_url)}" alt="" loading="lazy" onerror="this.style.display='none'">`:`<span class="grpnoimg">no<br>mockup</span>`}
+     <div><b>${grpEsc(x.internal_name||("Order "+(x.order_number||"")))}</b> <small>#${grpEsc(x.order_number||"")} · ${fmt(x.order_date)} · ${grpHats(x)} hats${x.styles?` · ${grpEsc(x.styles)}`:""}${(x.order_type||[]).length?` · ${grpEsc((x.order_type||[]).join(", "))}`:""}</small>
+     <div class="grpchips">${grpOrderLine(x)||`<span style="color:var(--faint);font-size:11.5px">no production details saved</span>`}</div>
+     ${x.notes?`<div class="grpnote">${grpEsc(String(x.notes).slice(0,280))}${String(x.notes).length>280?"…":""}</div>`:""}</div></div>`).join("")}</div>`:""}
+ </div>`;
+}
+async function grpSave(gid,col,val){
+ const g=GRPBY[gid]; if(!g) return; g[col]=val; _grpSelf=Date.now();
+ try{ const {error}=await sb.from("customer_groups").update({[col]:val}).eq("id",gid); if(error) throw error;
+  const s=document.querySelector(`[data-grpsaved="${gid}"]`); if(s){ s.style.opacity=1; setTimeout(()=>s.style.opacity=0,1400); } }catch(e){ alert("Couldn't save — check your connection and try again."); }
+}
+async function grpMoveOrder(orderRow, gid, how){
+ _selfWrite=Date.now(); orderRow.group_id=gid; orderRow.group_link=how||"manual";
+ try{ await sb.from("orders").update({group_id:gid, group_link:how||"manual"}).eq("id",orderRow.id); }catch(e){}
+}
+async function grpNewFor(o){
+ const r=o._row; if(!r) return; const nm=prompt("Name for the new group (practice, department or program):", (grpOf(o)||{}).name||o.name||""); if(!nm) return;
+ _grpSelf=Date.now(); const {data,error}=await sb.from("customer_groups").insert({name:nm.trim()}).select("*").single(); if(error||!data){ alert("Couldn't create the group."); return; }
+ GRPBY[data.id]=data; await grpMoveOrder(r,data.id,"manual"); renderCustom();
+}
+async function grpMerge(fromId,toId){
+ const a=GRPBY[fromId], b=GRPBY[toId]; if(!a||!b) return;
+ if(!confirm(`Merge “${a.name}” into “${b.name}”? All of its orders and contacts move over, and any notes are combined.`)) return;
+ const patch={}; ["priorities","feedback","pref_notes",...GRP_PREF.map(p=>p[0])].forEach(k=>{ const av=(a[k]||"").trim(), bv=(b[k]||"").trim(); if(av&&!bv) patch[k]=av; else if(av&&bv&&av!==bv&&!/^pref_(?!notes)/.test(k)) patch[k]=bv+"\n"+av; });
+ patch.domains=[...new Set([...(b.domains||[]),...(a.domains||[])])];
+ _grpSelf=Date.now(); _selfWrite=Date.now();
+ try{
+  await sb.from("customer_groups").update(patch).eq("id",toId); Object.assign(b,patch);
+  await sb.from("orders").update({group_id:toId, group_link:"manual"}).eq("group_id",fromId);
+  await sb.from("customers").update({group_id:toId}).eq("group_id",fromId);
+  await sb.from("customer_groups").update({merged_into:toId}).eq("id",fromId); a.merged_into=toId;
+  (ALLORD||[]).forEach(x=>{ if(x.group_id===fromId){ x.group_id=toId; x.group_link="manual"; } });
+  Object.values(CUSTBY).forEach(c=>{ if(c.group_id===fromId) c.group_id=toId; });
+ }catch(e){ alert("Merge didn't finish — refresh and check."); }
+ renderCustom();
+}
+function grpPicker(o){
+ const r=o._row; if(!r) return; const cur=grpOf(o);
+ const old=document.getElementById("grppick"); if(old) old.remove();
+ const m=document.createElement("div"); m.id="grppick"; m.className="fpickwrap";
+ m.innerHTML=`<div class="fpick"><div class="fpickhead"><b>Link “${grpEsc(o.name)}” to a group</b><button class="rdclose" id="grpx">✕</button></div>
+  <input id="grpq" placeholder="Search groups, contacts, emails or order names…" autocomplete="off" style="border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;font-size:14.5px;font-family:inherit">
+  <label style="font-size:12px;color:var(--soft);margin:8px 2px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="grpall"> Move every order in “${grpEsc(cur?cur.name:"")}” (merge the groups)</label>
+  <div id="grplist" class="fplist"></div></div>`;
+ document.body.appendChild(m);
+ const close=()=>m.remove(); m.querySelector("#grpx").onclick=close; m.addEventListener("click",e=>{ if(e.target===m) close(); });
+ const q=m.querySelector("#grpq"), list=m.querySelector("#grplist");
+ const idx=Object.values(GRPBY).filter(g=>!g.merged_into&&(!cur||g.id!==cur.id)).map(g=>{
+  const os=grpOrders(g.id); const cs=Object.values(CUSTBY).filter(c=>c.group_id===g.id);
+  return {g, os, hay:(g.name+" "+cs.map(c=>(c.name||"")+" "+(c.contact||"")+" "+(c.email||"")).join(" ")+" "+os.map(x=>(x.internal_name||"")+" "+x.order_number).join(" ")+" "+(g.domains||[]).join(" ")).toLowerCase()};
+ }).filter(x=>x.os.length).sort((a,b)=>String((b.os[0]||{}).order_date||"").localeCompare(String((a.os[0]||{}).order_date||"")));
+ const draw=()=>{ const s=q.value.trim().toLowerCase();
+  const hit=idx.filter(x=>!s||s.split(/\s+/).every(w=>x.hay.includes(w))).slice(0,60);
+  list.innerHTML=hit.map(x=>`<button class="fprow" data-gpick="${x.g.id}"><span class="fpn"><b>${grpEsc(x.g.name)}</b><span>${x.os.length} order${x.os.length===1?"":"s"} · ${grpEsc(x.os.slice(0,3).map(o=>o.internal_name||("#"+o.order_number)).join(", "))}${(x.g.domains||[]).length?` · @${grpEsc(x.g.domains[0])}`:""}</span></span></button>`).join("")||`<div class="fmeta" style="padding:8px">No group matches.</div>`;
+  list.querySelectorAll("[data-gpick]").forEach(b=>b.onclick=async()=>{ const to=b.dataset.gpick; const all=m.querySelector("#grpall").checked; close();
+   if(all&&cur) await grpMerge(cur.id,to); else { await grpMoveOrder(r,to,"manual"); renderCustom(); } });
+ };
+ q.oninput=draw; draw(); setTimeout(()=>q.focus(),30);
+}
+function coGroupWire(){
+ const find=id=>(COSRC||CUSTOM).find(x=>x.id===id)||(CUSTOM.concat(PREVCO||[])).find(x=>x.id===id);
+ document.querySelectorAll(".grpf").forEach(i=>i.onchange=()=>{ const [gid,col]=i.dataset.grpf.split("|"); grpSave(gid,col,i.value.trim()||null); });
+ document.querySelectorAll("[data-grpren]").forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); const g=GRPBY[b.dataset.grpren]; if(!g) return; const nm=prompt("Group name:",g.name); if(!nm||nm.trim()===g.name) return; grpSave(g.id,"name",nm.trim()).then(renderCustom); });
+ document.querySelectorAll("[data-grplink]").forEach(b=>b.onclick=()=>{ const o=find(b.dataset.grplink); if(o) grpPicker(o); });
+ document.querySelectorAll("[data-grpnew]").forEach(b=>b.onclick=()=>{ const o=find(b.dataset.grpnew); if(o) grpNewFor(o); });
+ document.querySelectorAll("[data-grpjoin]").forEach(b=>b.onclick=async()=>{ const [oid,gid]=b.dataset.grpjoin.split("|"); const o=find(oid); if(!o||!o._row) return; await grpMoveOrder(o._row,gid,"manual"); renderCustom(); });
+ document.querySelectorAll("[data-grpmerge]").forEach(b=>b.onclick=()=>{ const [a,c]=b.dataset.grpmerge.split("|"); const na=grpOrders(a).length, nc=grpOrders(c).length; nc>=na?grpMerge(a,c):grpMerge(c,a); });
+ document.querySelectorAll("[data-grpdismiss]").forEach(b=>b.onclick=async()=>{ const [oid,gid]=b.dataset.grpdismiss.split("|"); const o=find(oid); if(!o||!o._row) return; const d=[...new Set([...(o._row.group_suggest_dismissed||[]),gid])]; o._row.group_suggest_dismissed=d; _selfWrite=Date.now(); try{ await sb.from("orders").update({group_suggest_dismissed:d}).eq("id",o._row.id); }catch(e){} renderCustom(); });
+ document.querySelectorAll("[data-grpfill]").forEach(b=>b.onclick=async()=>{ const o=find(b.dataset.grpfill); const g=grpOf(o); if(!o||!g) return;
+  const patch={}; GRP_PREF.forEach(([col,,k])=>{ const v=(o[k]||"").trim(); if(v) patch[col]=v; });
+  if(!Object.keys(patch).length){ alert("This order has no colors/thread/placement filled in yet."); return; }
+  const over=GRP_PREF.some(([col])=>patch[col]&&g[col]&&g[col]!==patch[col]);
+  if(over&&!confirm("Replace the saved combo with this order's colors, thread and placement?")) return;
+  _grpSelf=Date.now(); Object.assign(g,patch); try{ await sb.from("customer_groups").update(patch).eq("id",g.id); }catch(e){} renderCustom(); });
+ document.querySelectorAll("[data-grpopen]").forEach(el=>el.onclick=()=>{ const n=el.dataset.grpopen; const t=CUSTOM.concat(PREVCO||[]).find(x=>String(x.num)===String(n).replace(/^#/,"")); if(t){ CO_OPEN=t.id; renderCustom(); const cw=document.getElementById("cowrap"); if(cw) cw.scrollTop=0; } });
+}
+
 function coLeadExtras(o){
  const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; const f=FINBY[r.id]||{};
  const num=v=>{ const n=parseFloat(v); return isNaN(n)?null:n; };
@@ -3486,7 +3651,7 @@ function coTile(o,t,chip){
  return `<div class="cotile${shipped(o)?" shipped":""}" data-coopen="${o.id}">
   <div class="coimg">${o.mockup?`<img src="${o.mockup}" alt="" loading="lazy" onerror="this.parentNode.textContent='no mockup'">`:"no mockup yet"}</div>
   <div class="cobody2">
-   <div class="cotitle"><span>${(o.name||"").replace(/</g,"&lt;")}</span><small>#${o.num||""}</small></div>
+   <div class="cotitle"><span>${(o.name||"").replace(/</g,"&lt;")}${(isLead&&grpCount(o)>1)?` <span class="grprep" title="Repeat customer: ${grpCount(o)} orders in this group">👥 ${grpCount(o)}</span>`:""}</span><small>#${o.num||""}</small></div>
    <div class="cometa"><span><b>${hats}</b> hats</span>${o.styles?`<span>${o.styles}</span>`:""}${dueTxt?`<span>due ${dueTxt}</span>`:""}</div>
    <div class="cometa">${coIcons(o)}${chip}</div>
    <div class="cobar" title="${pct}% of production time complete"><i style="width:${pct}%"></i></div>
@@ -3507,7 +3672,7 @@ function renderCustom(){
  const q=(CO_Q||"").trim().toLowerCase();
  /* web22: one continuous list — open orders by deadline, then previous (shipped/delivered) orders newest first, paged as you scroll */
  const odate=o=>((o._row||{}).order_date||"");
- const matchQ=o=>{ if(!q) return true; const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; return ((o.name||"")+" "+(o.num||"")+" "+(o.styles||"")+" "+(c.name||"")+" "+(c.email||"")+" "+(c.contact||"")).toLowerCase().includes(q); };
+ const matchQ=o=>{ if(!q) return true; const r=o._row||{}; const c=CUSTBY[r.customer_id]||{}; const gg=(isLead&&r.group_id)?(grpLive(r.group_id)||{}):{}; return ((o.name||"")+" "+(o.num||"")+" "+(o.styles||"")+" "+(c.name||"")+" "+(c.email||"")+" "+(c.contact||"")+" "+(gg.name||"")).toLowerCase().includes(q); }; /* web40: + group name */
  const matchT=o=>{ if(!CO_TYPEF.size) return true; const ts=coTypesOf(o); return [...CO_TYPEF].some(k=>ts.indexOf(k)>=0); };
  const openL=CUSTOM.filter(o=>!shipped(o)&&matchQ(o)&&matchT(o)).sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"));
  const prevAll=CUSTOM.filter(o=>shipped(o)).concat(PREVCO).filter(o=>matchQ(o)&&matchT(o)).sort((a,b)=>odate(b).localeCompare(odate(a)));
@@ -3553,6 +3718,7 @@ function renderCustom(){
     </div>
     <div class="cotl">${tl}</div>
     ${tlEditPanel(o)}
+    ${isLead?coGroupPanel(o):""}
     <div class="coprod" style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">
      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div class="comockbox" style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
@@ -3711,6 +3877,7 @@ function renderCustom(){
  const _cad=document.getElementById("coadd2"); if(_cad) _cad.onclick=coAddOrder;
  const _csy=document.getElementById("cosync2"); if(_csy) _csy.onclick=()=>coSyncShopify(_csy);
  document.querySelectorAll("[data-coecust]").forEach(b=>b.onclick=()=>coEditCust(b.dataset.coecust));
+ if(isLead) coGroupWire(); /* web40 */
  document.querySelectorAll(".codate").forEach(i=>i.onchange=async()=>{ const [id,col]=i.dataset.codate.split("|"); const o=(COSRC||CUSTOM).find(x=>x.id===id); if(!o||!o._row) return; o._row[col]=i.value||null; _selfWrite=Date.now(); try{ await sb.from("orders").update({[col]:i.value||null, updated_at:new Date().toISOString()}).eq("id",o._row.id); }catch(e){} });
  document.querySelectorAll("[data-cofinance]").forEach(b=>b.onclick=()=>{ /* web30: finances live in the Finance tab */
   FIN_Q=b.dataset.cofinance||""; FIN_RANGE="all"; CO_OPEN=null; const cw=document.getElementById("cowrap"); if(cw) cw.classList.remove("open");
@@ -4776,6 +4943,7 @@ function startApp(){ if(APP_STARTED) return; APP_STARTED=true;
    if(role===null){ try{ const {data:prof}=await withTO(sb.from("profiles").select("role").eq("id",uid).maybeSingle(),8000); role=prof&&prof.role; }catch(e){} }
    isLead = role===null ? true : role==="lead"; }catch(e){ isLead=true; }
   await bootCloud(); await loadOrders(); await loadTimeEntries(); await loadBIS(); /* web9 tracker · web15 back-in-stock */
+  try{ if(isLead) sb.channel("groups-live").on("postgres_changes",{event:"*",schema:"public",table:"customer_groups"},()=>{ if(Date.now()-_grpSelf<2500) return; loadGroups().then(()=>{ try{ if(!document.activeElement||!document.activeElement.classList.contains("grpf")) renderCustom(); }catch(e){} }); }).subscribe(); }catch(e){} /* web40 */
   try{ sb.channel("orders-live").on("postgres_changes",{event:"*",schema:"public",table:"orders"},()=>{ if(Date.now()-_selfWrite<2500) return; loadOrders(); }).subscribe(); }catch(e){}
   try{ sb.channel("te-live").on("postgres_changes",{event:"*",schema:"public",table:"time_entries"},()=>{ if(Date.now()-_teSelf<2000) return; loadTimeEntries().then(render); }).subscribe(); }catch(e){} /* web9: everyone sees running timers live */
   try{ if(isLead) sb.channel("bis-live").on("postgres_changes",{event:"*",schema:"public",table:"bis_signups"},()=>{ if(Date.now()-_bisSelf<2000) return; loadBIS().then(()=>{ try{ renderBIS(); }catch(e){} }); }).subscribe(); }catch(e){} /* web15 */

@@ -237,7 +237,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms24</span>
+    <span class="build">wms25</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -1566,7 +1566,8 @@ async function loadPrintQueue(){
   const rowHtml = (r)=> '<div class="prow">'
     + '<input class="qtyIn" type="number" min="1" value="'+r.qty+'" onchange="pqUpdateQty('+r.id+',this.value)" title="Edit label quantity">'
     + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant_title||"")+'</span>'
-    + (r.source!=="manual"&&!orderGroups.size?' <span class="vt">('+esc(r.source)+')</span>':"")+'</span>'
+    + (r.source!=="manual"&&!orderGroups.size?' <span class="vt">('+esc(r.source)+')</span>':"")
+    + (goodBarcode(r.barcode)?"":' <span class="shortChip">no barcode</span>')+'</span>'
     + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="pqRemove('+r.id+')">✕</button></div>';
   let html = "";
   for(const [label, rows] of orderGroups){
@@ -1585,7 +1586,8 @@ async function loadPrintQueue(){
       html += rows.map(r=>'<div class="prow">'
         + '<input class="qtyIn" type="number" min="1" value="'+r.qty+'" onchange="pqUpdateQty('+r.id+',this.value)" title="Edit label quantity">'
         + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant_title||"")+'</span>'
-        + (r.source!=="manual"?' <span class="vt">('+esc(r.source)+')</span>':"")+'</span>'
+        + (r.source!=="manual"?' <span class="vt">('+esc(r.source)+')</span>':"")
+        + (goodBarcode(r.barcode)?"":' <span class="shortChip">no barcode</span>')+'</span>'
         + '<button class="ghostBtn" style="padding:5px 10px;font-size:11.5px" onclick="pqRemove('+r.id+')">✕</button></div>').join("");
     }
   }
@@ -1603,14 +1605,36 @@ $("markPrintedBtn").onclick = async ()=>{
   await sb.from("print_queue").update({status:"printed"}).in("id", pqRows.map(r=>r.id));
   loadPrintQueue();
 };
-$("printPendingBtn").onclick = ()=>{
+$("printPendingBtn").onclick = async ()=>{
   if(!pqRows.length){ alert("Print queue is empty."); return; }
+  /* wms25: pull each variant's CURRENT barcode right before printing. Labels queued
+     before a product had a barcode used to print the word "null" and never scan. */
+  const vids=[...new Set(pqRows.map(r=>r.variant_id).filter(Boolean).map(String))];
+  if(vids.length){
+    const fresh=new Map();
+    for(let i=0;i<vids.length;i+=200){
+      const {data} = await sb.from("catalog_variants").select("variant_id,barcode").in("variant_id", vids.slice(i,i+200));
+      (data||[]).forEach(v=> fresh.set(String(v.variant_id), v.barcode));
+    }
+    const fixes=[];
+    pqRows.forEach(r=>{
+      const b=fresh.get(String(r.variant_id));
+      if(goodBarcode(b) && b!==r.barcode){ r.barcode=b; fixes.push(sb.from("print_queue").update({barcode:b}).eq("id",r.id)); }
+    });
+    if(fixes.length) await Promise.all(fixes);
+  }
+  const noCode = pqRows.filter(r=> !goodBarcode(r.barcode));
+  if(noCode.length && !confirm(noCode.length+" queued line(s) have NO barcode yet and will be skipped:\n\n"
+      + noCode.slice(0,8).map(r=>"• "+r.title+" — "+(r.variant_title||"")).join("\n")
+      + (noCode.length>8?"\n…":"")
+      + "\n\nAssign them in the barcode audit (Print tab), then print those. Print the rest now?")) return;
   // Same grouping as the on-screen list: each order's labels print together,
   // in queued (packing) sequence, before any bin-sorted manual/production labels.
   const { orderGroups, otherRows } = printQueueGroups();
   const labels=[];
-  for(const rows of orderGroups.values()) rows.forEach(r=>{ for(let i=0;i<r.qty;i++) labels.push(r); });
-  otherRows.forEach(r=>{ for(let i=0;i<r.qty;i++) labels.push(r); });
+  for(const rows of orderGroups.values()) rows.forEach(r=>{ if(goodBarcode(r.barcode)) for(let i=0;i<r.qty;i++) labels.push(r); });
+  otherRows.forEach(r=>{ if(goodBarcode(r.barcode)) for(let i=0;i<r.qty;i++) labels.push(r); });
+  if(!labels.length){ alert("Nothing printable — every queued line is missing a barcode."); return; }
   printLabels(labels);
 };
 
@@ -1638,37 +1662,56 @@ function labelSizeClass(titleRaw, variantRaw){
   const n = labelLines(titleRaw, variantRaw).length;
   return n<=2 ? "szL" : (n===3 ? "szM" : "szS");
 }
+/* wms25: BIG-BARCODE label layout (2in x 1in). The barcode now fills the bottom
+   ~60% of the label at a full 1.66in wide (3 printer dots per bar on the 203dpi Rollo)
+   with clear white margins on both sides so scanners lock on fast. Pattern name sits
+   on line 1, style + lining (+ color) on ONE line under it, small logo top-right.
+   A tiny fit script shrinks the text only when a long name would overflow its band. */
+function labelTextHtml2(titleRaw, variantRaw){
+  const lines = labelLines(titleRaw, variantRaw);
+  const rest = lines.slice(1);
+  return '<div class="t">'+esc(lines[0]||"")+'</div>'
+    + (rest.length ? '<div class="v">'+rest.map(esc).join(" &middot; ")+'</div>' : "");
+}
 const LABEL_SIZE_CSS =
-    ".t{font-weight:bold;line-height:1.12;overflow-wrap:break-word}"
-  + ".v{line-height:1.12;overflow-wrap:break-word}"
-  + ".szL .t{font-size:12px}.szL .v{font-size:10px}"
-  + ".szM .t{font-size:10.5px}.szM .v{font-size:9px}"
-  + ".szS .t{font-size:9px}.szS .v{font-size:8px}";
+    ".t{font-weight:bold;line-height:1.08;font-size:12px;overflow-wrap:break-word}"
+  + ".v{line-height:1.08;font-size:10px;overflow-wrap:break-word}";
+const LABEL_LAYOUT_CSS =
+    "@page{size:2in 1in;margin:0} body{margin:0;font-family:Arial,sans-serif}"
+  + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:0.04in 0.07in 0.05in;display:flex;flex-direction:column;box-sizing:border-box}"
+  + ".top{display:flex;width:100%;align-items:flex-start;gap:4px;height:0.29in;flex:none}"
+  + ".tt{flex:1;min-width:0;height:0.29in;overflow:hidden}"
+  + LABEL_SIZE_CSS
+  + ".lg{height:0.27in;max-width:0.5in;object-fit:contain;object-position:right top;flex-shrink:0}"
+  + ".bc{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding-top:0.03in}"
+  + ".bc svg{width:1.66in;height:0.57in;display:block}";
+/* runs inside the print window: step text down until each label's text fits its band */
+const LABEL_FIT_SCRIPT = "<script>function fitLabels(){document.querySelectorAll('.tt').forEach(function(b){"
+  + "var t=b.querySelector('.t'),v=b.querySelector('.v'),ts=parseFloat(t&&t.style.fontSize)||12,vs=parseFloat(v&&v.style.fontSize)||10;"
+  + "while(b.scrollHeight>b.clientHeight+1&&ts>7){ts-=0.5;vs=Math.max(6.5,vs-0.5);"
+  + "if(t)t.style.fontSize=ts+'px';if(v)v.style.fontSize=vs+'px';}});}"
+  + "fitLabels();window.addEventListener('load',fitLabels);setTimeout(fitLabels,300);<\/script>";
+function labelSvg(sid, code){
+  const work=$("svgWork");
+  work.insertAdjacentHTML("beforeend",'<svg id="'+sid+'"></svg>');
+  try{ JsBarcode("#"+sid, code, {format:"CODE128", displayValue:false, height:60, width:3, margin:0}); }catch(_e){}
+  const el=$(sid);
+  return el ? el.outerHTML.replace('id="'+sid+'"','preserveAspectRatio="none"') : "";
+}
+function labelHtml(sid, title, variant, code){
+  return '<div class="label">'
+    + '<div class="top"><div class="tt">'+labelTextHtml2(title, variant)+'</div>'
+    + '<img class="lg" src="'+LOGO+'"></div>'
+    + '<div class="bc">'+labelSvg(sid, code)+'</div></div>';
+}
+/* a barcode is printable only if it's a real value — never blank or the text "null" */
+const goodBarcode = (b)=>{ const s=String(b??"").trim(); return !!s && s.toLowerCase()!=="null" && s.toLowerCase()!=="undefined"; };
 
 function printLabels(labels){
-  const work=$("svgWork");
   let html="";
-  labels.forEach((r,i)=>{
-    const sid="bc"+i;
-    work.insertAdjacentHTML("beforeend",'<svg id="'+sid+'"></svg>');
-    try{ JsBarcode("#"+sid, r.barcode, {format:"CODE128", displayValue:false, height:40, width:1.2, margin:0}); }catch(_e){}
-    const el=$(sid);
-    const svg=el?el.outerHTML.replace('id="'+sid+'"',""):"";
-    html += '<div class="label '+labelSizeClass(r.title, r.variant_title)+'">'
-      + '<div class="top"><div class="tt">'+labelTextHtml(r.title, r.variant_title)+'</div>'
-      + '<img class="lg" src="'+LOGO+'"></div>'
-      + '<div class="bc">'+svg+'</div></div>';
-  });
-  work.innerHTML="";
-  printDoc(html,
-    "@page{size:2in 1in;margin:0} body{margin:0;font-family:Arial,sans-serif}"
-    + ".label{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:2px 5px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box}"
-    + ".top{display:flex;width:100%;align-items:center;gap:5px}"
-    + ".tt{flex:1;min-width:0}"
-    + LABEL_SIZE_CSS
-    + ".lg{height:0.55in;max-width:1.05in;object-fit:contain;object-position:right center;flex-shrink:0}"
-    + ".szS .lg{height:0.44in;max-width:0.9in}"
-    + ".bc{flex:1;display:flex;align-items:center;justify-content:center;min-height:0} .bc svg{max-width:1.75in;height:0.34in}", 900);
+  labels.forEach((r,i)=>{ html += labelHtml("bc"+i, r.title, r.variant_title, r.barcode); });
+  $("svgWork").innerHTML="";
+  printDoc(html+LABEL_FIT_SCRIPT, LABEL_LAYOUT_CSS, 900);
 }
 
 function printDoc(bodyHtml, css, delay){
@@ -1903,9 +1946,11 @@ $("ppQueueBtn").onclick = async ()=>{
   const {error} = await sb.from("print_queue").insert(rows);
   if(error){ $("ppMsg").textContent=error.message; $("ppMsg").style.color="var(--coral)"; return; }
   const hats=rows.reduce((a,b)=>a+b.qty,0);
+  const noBc = rows.filter(r=> !goodBarcode(r.barcode)).length;
   $("ppMsg").textContent = "✓ Queued "+hats+" labels across "+rows.length+" patterns/styles"
+    + (noBc? " · ⚠ "+noBc+" have no barcode yet — assign them in the barcode audit before printing" : "")
     + (unmatched.size? " · couldn't match: "+[...unmatched].slice(0,6).join(", ")+(unmatched.size>6?"…":"") : "");
-  $("ppMsg").style.color = unmatched.size ? "var(--warn)" : "var(--ok)";
+  $("ppMsg").style.color = (unmatched.size||noBc) ? "var(--warn)" : "var(--ok)";
   loadPrintQueue();
 };
 $("ppCloseBtn").onclick = ()=> $("ppOverlay").classList.add("hidden");
@@ -2160,31 +2205,10 @@ $("clPrintBtn").onclick = ()=>{
   printCustomLabels(labels);
 };
 function printCustomLabels(labels){
-  const work=$("svgWork");
   let html="";
-  labels.forEach((r,i)=>{
-    const sid="ccb"+i;
-    work.insertAdjacentHTML("beforeend",'<svg id="'+sid+'"></svg>');
-    try{ JsBarcode("#"+sid, r.barcode, {format:"CODE128", displayValue:false, height:70, width:1.7, margin:0}); }catch(_e){}
-    const el=$(sid);
-    const svg=el?el.outerHTML.replace('id="'+sid+'"',""):"";
-    html += '<div class="clabel '+labelSizeClass(r.title, r.variant)+'">'
-      + '<div class="ctop"><div class="ctt">'+labelTextHtml(r.title, r.variant)+'</div>'
-      + '<img class="clg" src="'+LOGO+'"></div>'
-      + '<div class="cbc">'+svg+'</div></div>';
-  });
-  work.innerHTML="";
-  printDoc(html,
-    "@page{size:2in 1in;margin:0} body{margin:0;font-family:Arial,sans-serif}"
-    + ".clabel{width:2in;height:1in;overflow:hidden;page-break-after:always;padding:3px 6px;box-sizing:border-box;display:flex;flex-direction:column}"
-    + ".ctop{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}"
-    + ".ctt{flex:1;min-width:0}"
-    + LABEL_SIZE_CSS
-    + ".ctt .v{color:#333}"
-    + ".clg{height:0.52in;max-width:1in;object-fit:contain;object-position:right top;flex-shrink:0}"
-    + ".szS .clg{height:0.42in;max-width:0.85in}"
-    + ".cbc{flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0;margin-top:1px}"
-    + ".cbc svg{max-width:1.7in;height:0.36in}", 900);
+  labels.forEach((r,i)=>{ html += labelHtml("ccb"+i, r.title, r.variant, r.barcode); });
+  $("svgWork").innerHTML="";
+  printDoc(html+LABEL_FIT_SCRIPT, LABEL_LAYOUT_CSS, 900);
 }
 
 /* ================= STATS TAB ================= */

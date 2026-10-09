@@ -162,7 +162,7 @@
   .cDiff.pos{color:var(--ok);} .cDiff.neg{color:var(--coral);} .cDiff.zero{color:var(--dim); font-weight:400;}
   .secHead{display:flex; align-items:center; gap:10px; margin:18px 0 10px; flex-wrap:wrap;}
   .secHead h3{font-size:15px; color:var(--teal-dark);}
-  .secHead .sp{flex:1;}
+  .secHead .sp, .sp{flex:1;}
 
   /* stats */
   .statGrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:16px;}
@@ -192,7 +192,8 @@
   .chip.gift.winback{background:var(--coral-soft); color:var(--coral); border-color:var(--coral); cursor:pointer;}
 
   /* Gifts tab program switch + gift profile overlay */
-  .progSwitch{display:flex; gap:8px; margin-bottom:14px;}
+  .progSwitch{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  @media(max-width:720px){ .donGrid{grid-template-columns:1fr !important;} }
   .progBtn{padding:9px 16px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--dim); font-size:13.5px; font-weight:700;}
   .progBtn.on{background:var(--teal); border-color:var(--teal); color:#fff;}
   .giftReason{font-size:12.5px; color:var(--teal-dark); font-style:italic; margin:2px 0 8px;}
@@ -237,7 +238,7 @@
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms25</span>
+    <span class="build">wms26</span>
   </header>
 
   <!-- ============ PICK ============ -->
@@ -394,6 +395,7 @@
       <button class="progBtn" data-prog="winback">&#128075; Win-back</button>
       <button class="progBtn" data-prog="stats">&#128202; Stats</button>
       <button class="progBtn" data-prog="log">&#128220; Gift log</button>
+      <button class="progBtn" data-prog="donation">&#128151; Donations</button>
     </div>
     <div id="giftsCandidatesView">
       <div class="secHead"><h3 id="giftsHeading">VIP thank-you candidates</h3><span class="sp"></span>
@@ -425,6 +427,55 @@
       </div>
       <div class="sub" style="color:var(--dim);font-size:12px;margin:-6px 0 10px;">Every gift ever logged, newest first. Set an outcome when you hear back, or fix a qty/note. Edits and deletes only change the log — Shopify inventory is never adjusted retroactively.</div>
       <div id="giftsLogBody"><div class="empty">Loading&hellip;</div></div>
+    </div>
+    <div id="giftsDonationView" class="hidden">
+      <div class="secHead"><h3>Donation box intake</h3><span class="sp"></span>
+        <button class="ghostBtn" id="donPrintCardsBtn" style="padding:8px 14px;font-size:12.5px;" title="Print the 8 scannable style cards to laminate">&#128424; Print style cards</button>
+      </div>
+      <div class="sub" style="color:var(--dim);font-size:12px;margin:-6px 0 12px;">Scan every hat going into the box. A real product barcode is deducted from Shopify when you log (or just logged, if you switch that off). Scan a laminated <b>style card</b> for hats that aren't stocked products &mdash; those are logged by style only and never touch inventory. Custom-listing barcodes (CSH / CESH / CPSH) are treated the same way.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;" class="donGrid">
+        <div style="border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card);">
+          <div style="font-size:12.5px;font-weight:700;color:var(--teal-dark);margin-bottom:8px;">Who it's going to</div>
+          <input type="text" id="donRecipient" placeholder="Recipient / organization (e.g. Tampa General NICU drive)" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:8px;">
+          <input type="text" id="donNote" placeholder="Note (optional) &mdash; event, contact, why" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:8px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" id="donDeduct" checked> Deduct real products from Shopify as I log</label>
+          <div class="sub" style="color:var(--dim);font-size:11.5px;margin:4px 0 0 24px;">Off = log only; lines are flagged &ldquo;Shopify not deducted&rdquo; in the gift log so you can have Claude adjust them later.</div>
+        </div>
+        <div style="border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card);">
+          <div style="font-size:12.5px;font-weight:700;color:var(--teal-dark);margin-bottom:8px;">Attach a Shopify order (optional)</div>
+          <div style="display:flex;gap:8px;">
+            <input type="search" id="donOrderQ" placeholder="Order # or customer name" style="flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box;">
+            <button class="ghostBtn" id="donOrderBtn" style="padding:8px 14px;font-size:12.5px;">Look up</button>
+          </div>
+          <div id="donOrderResults" style="margin-top:8px;"></div>
+          <div id="donOrderChosen" style="margin-top:8px;font-size:12.5px;"></div>
+        </div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card);margin-bottom:12px;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="donScan" placeholder="Scan a hat barcode or a style card&hellip;" autocomplete="off" style="flex:1;min-width:240px;padding:12px 14px;border:2px solid var(--teal);border-radius:10px;font-size:15px;box-sizing:border-box;">
+          <span id="donTotals" style="font-size:12.5px;color:var(--dim);"></span>
+        </div>
+        <div id="donMsg" class="scanMsg" style="margin-top:8px;"></div>
+        <div id="donList" style="margin-top:10px;"></div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+          <button class="primaryBtn" id="donLogBtn">Log donation</button>
+          <button class="ghostBtn" id="donClearBtn" style="padding:8px 14px;font-size:12.5px;">Clear box</button>
+          <span id="donLogMsg" style="font-size:12.5px;"></span>
+        </div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card);margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:12.5px;font-weight:700;color:var(--teal-dark);">Note for the box</div>
+          <span class="sp"></span>
+          <button class="ghostBtn" id="donWriteBtn" style="padding:8px 14px;font-size:12.5px;">&#9997; Write a note</button>
+          <button class="ghostBtn" id="donPrintNoteBtn" style="padding:8px 14px;font-size:12.5px;" disabled>&#128424; Print note</button>
+        </div>
+        <div class="sub" style="color:var(--dim);font-size:12px;margin:4px 0 8px;">Drafts two options from what's in the box, who it's going to, and the Shopify order note if one is attached. Pick one, tweak the wording if you like, then print it on plain paper.</div>
+        <div id="donNoteOptions"></div>
+        <textarea id="donNoteText" placeholder="Your chosen note shows up here &mdash; edit freely before printing." style="width:100%;min-height:120px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13.5px;line-height:1.45;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea>
+        <div id="donNoteMsg" style="font-size:12px;color:var(--dim);margin-top:4px;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2340,12 +2391,14 @@ const GIFT_BLURB = {
 document.querySelectorAll(".progBtn[data-prog]").forEach(b=> b.onclick = ()=>{
   activeGiftProgram = b.dataset.prog;
   document.querySelectorAll(".progBtn[data-prog]").forEach(x=>x.classList.toggle("on", x===b));
-  const isStats = activeGiftProgram==="stats", isLog = activeGiftProgram==="log";
-  $("giftsCandidatesView").classList.toggle("hidden", isStats||isLog);
+  const isStats = activeGiftProgram==="stats", isLog = activeGiftProgram==="log", isDon = activeGiftProgram==="donation";
+  $("giftsCandidatesView").classList.toggle("hidden", isStats||isLog||isDon);
   $("giftsStatsView").classList.toggle("hidden", !isStats);
   $("giftsLogView").classList.toggle("hidden", !isLog);
+  $("giftsDonationView").classList.toggle("hidden", !isDon);
   if(isStats){ loadGiftStats(); return; }
   if(isLog){ loadGiftLog(); return; }
+  if(isDon){ renderDon(); setTimeout(()=>$("donScan").focus(),50); return; }
   $("giftsHeading").textContent = activeGiftProgram==="loyalty" ? "VIP thank-you candidates" : "Win-back candidates";
   $("giftsBlurb").textContent = GIFT_BLURB[activeGiftProgram];
   $("giftsMeta").textContent = "";
@@ -2520,6 +2573,194 @@ async function giftSearchAll(){
   }catch(e){ box.innerHTML='<div class="empty" style="padding:10px;">Search failed: '+esc(e.message||e)+'</div>'; }
 }
 
+/* ================= DONATIONS (wms26) =================
+   Scan hats into a donation box. Real product barcodes → inventory line (Shopify
+   deducted via apply-gift unless "Deduct" is off → logged with inventory_pending).
+   Style cards (TMSH-DON-<CODE>) and custom-listing barcodes → style-only "special"
+   line: logged for cost/count, never touches inventory. */
+const DON_PREFIX = "TMSH-DON-";
+let donItems = [];      // [{key, giftType, variantId?, sku?, styleCode?, title, qty, unitCost?, onHand?}]
+let donOrder = null;    // {orderId, number, customer, customerId, email}
+let donBatch = null;
+function styleCodeFromVariant(v){   // custom-listing variant → style code (L/C + P/T/S/O)
+  const t = ((v.variant_title||"")+" "+(v.sku||"")).toLowerCase();
+  const lux = /luxe|satin/.test(t) ? "L" : "C";
+  const sh = /ponytail/.test(t) ? "P" : /euro/.test(t) ? "T" : /skull/.test(t) ? "S" : "O";
+  return lux+sh;
+}
+async function donResolve(raw){
+  const code = raw.trim(), up = code.toUpperCase();
+  if(up.startsWith(DON_PREFIX)){
+    const sc = up.slice(DON_PREFIX.length);
+    const row = (await loadStyleGiftCosts()).find(r=>r.style_code===sc);
+    if(!row) return null;
+    return { key:"style:"+sc, giftType:"special", styleCode:sc, title:row.style_name+" — style card (not a stocked product)", unitCost:Number(row.unit_cost)||0 };
+  }
+  if(!catalog) await loadCatalog();
+  let v = catalog.find(x=> x.barcode===code);
+  if(!v){ const n=skuNorm(code); v = catalog.find(x=> x.sku && skuNorm(x.sku)===n); }
+  if(!v) return null;
+  if(GENERIC_LABEL_TITLES.has(v.product_title||"")){   // CSH/CESH/CPSH share style-level barcodes → style only
+    const sc = styleCodeFromVariant(v);
+    const row = (await loadStyleGiftCosts()).find(r=>r.style_code===sc);
+    return { key:"style:"+sc, giftType:"special", styleCode:sc, title:(row?row.style_name:sc)+" — custom hat (not stocked)", unitCost:row?(Number(row.unit_cost)||0):0 };
+  }
+  return { key:"var:"+v.variant_id, giftType:"inventory", variantId:v.variant_id, sku:v.sku,
+    title:v.product_title+" — "+(v.variant_title||""), onHand:(v.inventory_on_hand ?? v.inventory_quantity)||0 };
+}
+function renderDon(){
+  const el = $("donList"); if(!el) return;
+  const hats = donItems.reduce((a,x)=>a+x.qty,0);
+  const inv = donItems.filter(x=>x.giftType==="inventory").reduce((a,x)=>a+x.qty,0);
+  $("donTotals").textContent = donItems.length ? hats+" hat"+(hats===1?"":"s")+" in the box · "+inv+" from stock · "+(hats-inv)+" style-only" : "";
+  if(!donItems.length){ el.innerHTML='<div class="empty">Nothing scanned yet — scan the first hat.</div>'; return; }
+  el.innerHTML = donItems.map((it,i)=>'<div class="prow" id="don'+i+'"><span class="q">'+it.qty+'×</span>'
+    + '<span class="ti">'+esc(it.title)
+    + (it.giftType==="inventory" ? ' <span class="chip" style="background:var(--ok-soft);color:var(--ok);border-color:var(--ok);">stock · '+it.onHand+' on hand</span>'
+                                 : ' <span class="chip">style only</span>')+'</span>'
+    + '<button class="ghostBtn" style="padding:5px 9px;font-size:11.5px" onclick="donAdj('+i+',-1)">−</button>'
+    + '<button class="ghostBtn" style="padding:5px 9px;font-size:11.5px" onclick="donAdj('+i+',1)">+</button>'
+    + '<button class="ghostBtn" style="padding:5px 9px;font-size:11.5px;color:var(--coral)" onclick="donAdj('+i+',-999)">✕</button></div>').join("");
+}
+function donAdj(i,d){ const it=donItems[i]; if(!it) return; it.qty+=d; if(it.qty<=0) donItems.splice(i,1); renderDon(); $("donScan").focus(); }
+if($("donScan")) $("donScan").addEventListener("keydown", async e=>{
+  if(e.key!=="Enter") return;
+  const raw=e.target.value.trim(); e.target.value="";
+  if(!raw) return;
+  let it=null;
+  try{ it = await donResolve(raw); }catch(_e){}
+  if(!it){ sndBad(); setMsg("donMsg","✖ Not recognized: "+raw,"bad"); return; }
+  const ex = donItems.find(x=>x.key===it.key);
+  if(ex) ex.qty++; else donItems.push(Object.assign({qty:1}, it));
+  sndOk(); setMsg("donMsg","✓ "+it.title+(ex?"  ×"+ex.qty:""),"ok");
+  renderDon();
+  const row=$("don"+donItems.findIndex(x=>x.key===it.key)); if(row){ row.classList.add("flash"); setTimeout(()=>row.classList.remove("flash"),450); }
+});
+if($("donClearBtn")) $("donClearBtn").onclick = ()=>{ if(donItems.length && !confirm("Clear everything scanned into this box?")) return; donItems=[]; donBatch=null; renderDon(); setMsg("donMsg","",""); donNoteReset(); $("donScan").focus(); };
+/* order lookup — reuses the order-search edge fn (digits → order #, else customer name) */
+async function donOrderLookup(){
+  const q = ($("donOrderQ").value||"").trim(); const box=$("donOrderResults");
+  if(!q) return;
+  box.innerHTML='<div class="empty" style="padding:8px;">Searching Shopify…</div>';
+  try{
+    const {data,error} = await sb.functions.invoke("order-search",{body:{q}});
+    if(error) throw error; if(data?.error) throw new Error(data.error);
+    const rows = data.orders||[];
+    if(!rows.length){ box.innerHTML='<div class="empty" style="padding:8px;">No Shopify orders match “'+esc(q)+'”.</div>'; return; }
+    box.innerHTML = rows.slice(0,8).map((o,i)=>{
+      window._donHits = rows;
+      return '<div style="display:flex;align-items:center;gap:8px;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px;">'
+        + '<div><div style="font-weight:700;font-size:13px;">'+esc(o.customer||"Customer")+'</div><div style="font-size:11.5px;color:var(--dim);">'+esc(o.number||"")+' · '+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+'</div></div>'
+        + '<button class="ghostBtn" style="padding:6px 12px;font-size:12px;" onclick="donPickOrder('+i+')">Attach</button></div>';
+    }).join("");
+  }catch(e){ box.innerHTML='<div class="empty" style="padding:8px;">Search failed: '+esc(e.message||e)+'</div>'; }
+}
+function donPickOrder(i){
+  const o = (window._donHits||[])[i]; if(!o) return;
+  donOrder = { orderId:o.orderId, number:o.number, customer:o.customer, customerId:o.customerId||null, email:o.email||null,
+    note:o.note||null, customerNote:o.customerNote||null, tags:o.tags||[], lineItems:o.lineItems||[] };
+  $("donOrderResults").innerHTML=""; $("donOrderQ").value="";
+  if(!$("donRecipient").value.trim() && o.customer) $("donRecipient").value = o.customer;
+  renderDonOrder(); $("donScan").focus();
+}
+function renderDonOrder(){
+  const el=$("donOrderChosen"); if(!el) return;
+  el.innerHTML = donOrder ? '<span class="chip" style="background:var(--ok-soft);color:var(--ok);border-color:var(--ok);">Attached: '+esc(donOrder.number||"")+' · '+esc(donOrder.customer||"")+'</span> <button class="ghostBtn" style="padding:3px 8px;font-size:11px" onclick="donOrder=null;renderDonOrder()">✕</button>'
+    + (donOrder.note ? '<div style="font-size:12px;color:var(--dim);margin-top:6px;"><b>Order note:</b> '+esc(donOrder.note)+'</div>' : '<div style="font-size:11.5px;color:var(--dim);margin-top:6px;">No order note on this order.</div>') : "";
+}
+if($("donOrderBtn")) $("donOrderBtn").onclick = donOrderLookup;
+if($("donOrderQ")) $("donOrderQ").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); donOrderLookup(); } });
+/* commit — one apply-gift call per line, all sharing a batch id */
+if($("donLogBtn")) $("donLogBtn").onclick = async ()=>{
+  if(!donItems.length){ setMsg("donMsg","Scan something first.","bad"); return; }
+  const recipient = $("donRecipient").value.trim();
+  if(!recipient){ setMsg("donMsg","Who is this going to? Fill in the recipient first.","bad"); $("donRecipient").focus(); return; }
+  const deduct = $("donDeduct").checked;
+  const cardNote = ($("donNoteText").value||"").trim();
+  const note = [$("donNote").value.trim(), cardNote ? "Card note: "+cardNote.replace(/\s+/g," ").slice(0,400) : ""].filter(Boolean).join(" | ");
+  const batch = donBatch || (donBatch = "don-"+Date.now().toString(36));
+  const items=[...donItems]; let ok=0, pending=0, err=null;
+  $("donLogBtn").disabled=true; $("donLogMsg").textContent="Logging "+items.length+" line"+(items.length===1?"":"s")+"…"; $("donLogMsg").style.color="var(--dim)";
+  for(const it of items){
+    const body = { program:"donation", customerId:donOrder?.customerId||null, customerName:recipient, customerEmail:donOrder?.email||null,
+      orderId:donOrder?.orderId||null, orderNumber:donOrder?.number||null, qty:it.qty, note: ok===0?note:null,
+      giftType:it.giftType, variantId:it.variantId||null, sku:it.sku||null, styleCode:it.styleCode||null, title:it.title,
+      skipShopify: !deduct, batchId:batch };
+    try{
+      const {data,error} = await sb.functions.invoke("apply-gift",{body});
+      if(error) throw error; if(data?.error) throw new Error(data.error);
+      ok++; if(data.inventoryPending) pending++;
+      donItems = donItems.filter(x=>x.key!==it.key); renderDon();
+    }catch(e){ err=e; break; }
+  }
+  const hats = items.slice(0,ok).reduce((a,x)=>a+x.qty,0);
+  if(err){
+    $("donLogMsg").textContent="✖ Logged "+ok+" of "+items.length+" lines — "+(err.message||err)+". The rest are still in the box; fix and log again.";
+    $("donLogMsg").style.color="var(--coral)";
+  } else {
+    sndCountHit();
+    $("donLogMsg").textContent="✓ Logged "+hats+" hat"+(hats===1?"":"s")+" to "+recipient
+      + (pending ? " · "+pending+" line"+(pending===1?"":"s")+" flagged “Shopify not deducted”" : (deduct ? " · stock lines deducted in Shopify" : ""));
+    $("donLogMsg").style.color = pending ? "var(--warn)" : "var(--ok)";
+    donBatch=null; donOrder=null; renderDonOrder(); $("donRecipient").value=""; $("donNote").value=""; setMsg("donMsg","","");
+    donNoteReset();
+  }
+  $("donLogBtn").disabled=false; $("donScan").focus();
+};
+/* note for the box — two AI-drafted options (donation-note edge fn), editable, printable */
+let donNoteOpts = [];
+function donNoteReset(){ donNoteOpts=[]; if($("donNoteOptions")) $("donNoteOptions").innerHTML=""; if($("donNoteText")) $("donNoteText").value=""; if($("donNoteMsg")) $("donNoteMsg").textContent=""; donNoteSync(); }
+function donNoteSync(){ const b=$("donPrintNoteBtn"); if(b) b.disabled = !($("donNoteText").value||"").trim(); }
+if($("donNoteText")) $("donNoteText").addEventListener("input", donNoteSync);
+function donUseNote(i){ const o=donNoteOpts[i]; if(!o) return; $("donNoteText").value=o.text; donNoteSync();
+  document.querySelectorAll(".donOpt").forEach((el,j)=> el.style.borderColor = j===i ? "var(--teal)" : "var(--line)"); $("donNoteText").focus(); }
+if($("donWriteBtn")) $("donWriteBtn").onclick = async ()=>{
+  const btn=$("donWriteBtn"); btn.disabled=true; btn.textContent="Writing…"; $("donNoteMsg").textContent="";
+  try{
+    const body = { recipient:$("donRecipient").value.trim(), note:$("donNote").value.trim(),
+      items: donItems.map(it=>({title:it.title, qty:it.qty, giftType:it.giftType})),
+      order: donOrder ? { number:donOrder.number, customer:donOrder.customer, note:donOrder.note, customerNote:donOrder.customerNote, tags:donOrder.tags, lineItems:donOrder.lineItems } : null };
+    const {data,error} = await sb.functions.invoke("donation-note",{body});
+    if(error) throw error; if(data?.error) throw new Error(data.error);
+    donNoteOpts = data.options||[];
+    $("donNoteOptions").innerHTML = donNoteOpts.map((o,i)=>'<div class="donOpt" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;" onclick="donUseNote('+i+')">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><b style="font-size:12.5px;color:var(--teal-dark);">'+esc(o.label)+'</b><span class="sp"></span><button class="ghostBtn" style="padding:4px 10px;font-size:11.5px" onclick="event.stopPropagation();donUseNote('+i+')">Use this</button></div>'
+      + '<div style="font-size:13px;white-space:pre-wrap;line-height:1.45;">'+esc(o.text)+'</div></div>').join("");
+    $("donNoteMsg").textContent = data.source==="ai" ? "Drafted from the box contents"+(donOrder?" and the attached order":"")+". Pick one and edit as needed." : "AI wasn't available, so these are template notes — edit as needed.";
+  }catch(e){ $("donNoteMsg").textContent="Couldn't draft a note: "+(e.message||e); $("donNoteMsg").style.color="var(--coral)"; }
+  btn.disabled=false; btn.textContent="✍ Write a note";
+};
+const DON_NOTE_CSS =
+    "@page{size:letter;margin:1in} body{margin:0;font-family:Georgia,'Times New Roman',serif;color:#222}"
+  + ".note{max-width:5.5in;margin:0 auto;text-align:center}"
+  + ".lg{height:0.7in;margin:0.4in auto 0.5in;display:block}"
+  + ".tx{font-size:15.5px;line-height:1.7;white-space:pre-wrap;text-align:left}"
+  + ".ft{margin-top:0.6in;font-family:Arial,sans-serif;font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase}";
+if($("donPrintNoteBtn")) $("donPrintNoteBtn").onclick = ()=>{
+  const t = ($("donNoteText").value||"").trim(); if(!t) return;
+  printDoc('<div class="note"><img class="lg" src="'+LOGO+'"><div class="tx">'+esc(t)+'</div><div class="ft">taylormadescrubhats.com</div></div>', DON_NOTE_CSS, 700);
+};
+
+/* printable style cards: 8 per letter sheet, 3.5in × 2in, cut + laminate */
+const DON_CARD_CSS =
+    "@page{size:letter;margin:0.5in} body{margin:0;font-family:Arial,sans-serif;color:#111}"
+  + ".sheet{display:grid;grid-template-columns:3.5in 3.5in;gap:0.25in;justify-content:center}"
+  + ".card{width:3.5in;height:2in;box-sizing:border-box;border:1px dashed #999;border-radius:10px;padding:0.12in 0.18in;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;break-inside:avoid}"
+  + ".hd{display:flex;align-items:center;gap:8px;width:100%;justify-content:space-between}"
+  + ".lg{height:0.3in;max-width:0.9in;object-fit:contain}"
+  + ".nm{font-weight:bold;font-size:15px}.sub{font-size:8.5px;color:#555;margin-top:2px}"
+  + ".bc svg{width:2.7in;height:0.62in;display:block}.code{font-family:monospace;font-size:9px;letter-spacing:1px;color:#333}";
+if($("donPrintCardsBtn")) $("donPrintCardsBtn").onclick = async ()=>{
+  const rows = (await loadStyleGiftCosts()).slice().sort((a,b)=>binRank(a.style_code)-binRank(b.style_code));
+  if(!rows.length){ alert("No styles found in style_gift_costs."); return; }
+  const html = '<div class="sheet">' + rows.map((r,i)=>'<div class="card">'
+    + '<div class="hd"><img class="lg" src="'+LOGO+'"><div style="text-align:right"><div class="nm">'+esc(r.style_name)+'</div><div class="sub">Donation / giveaway card · not a stocked product</div></div></div>'
+    + '<div class="bc">'+labelSvg("don"+i, DON_PREFIX+r.style_code)+'</div>'
+    + '<div class="code">'+DON_PREFIX+r.style_code+'</div></div>').join("") + '</div>';
+  $("svgWork").innerHTML="";
+  printDoc(html, DON_CARD_CSS, 900);
+};
+
 /* ---------- Gifts tab: full gift log — browse, edit, follow-up outcomes (wms22) ---------- */
 const GIFT_OUTCOMES = [
   ["", "— outcome —"],
@@ -2560,13 +2801,15 @@ function renderGiftLog(){
   let html = '<div class="sub" style="color:var(--dim);font-size:12.5px;margin-bottom:8px;">'
     + rows.length+' gift'+(rows.length===1?"":"s")+' · $'+totalCost.toFixed(2)+' total cost · '+withOutcome+' with a follow-up outcome</div>';
   html += rows.map(r=>{
-    const custClick = r.customer_id ? ' style="cursor:pointer;color:var(--teal-dark)" onclick="openGiftProfile(\''+esc(r.customer_id)+'\',\''+(r.program==="winback"?"winback":"loyalty")+'\','+(r.order_id?'\''+esc(r.order_id)+'\'':'null')+')" title="Open gift profile"' : '';
+    const custClick = (r.customer_id && r.customer_id!=="donation") ? ' style="cursor:pointer;color:var(--teal-dark)" onclick="openGiftProfile(\''+esc(r.customer_id)+'\',\''+(r.program==="winback"?"winback":"loyalty")+'\','+(r.order_id?'\''+esc(r.order_id)+'\'':'null')+')" title="Open gift profile"' : '';
+    const pendingChip = r.inventory_pending ? ' <span class="chip" style="background:#fff4d6;color:#8a5a00;border-color:#e8c977;" title="Logged without a Shopify deduction">&#9203; Shopify not deducted</span>'
+      + '<button class="ghostBtn" style="padding:3px 8px;font-size:11px;margin-left:4px" title="Mark this line as deducted in Shopify (after you or Claude adjusted it)" onclick="glMarkDeducted('+r.id+')">&#10003; deducted</button>' : '';
     return '<div class="prow" style="flex-wrap:wrap;row-gap:4px;">'
       + '<span style="min-width:76px;color:var(--dim);font-size:12px">'+fmtDate(r.created_at)+'</span>'
       + '<span class="ti"><b'+custClick+'>'+esc(r.customer_name||"Customer")+'</b> — '+esc(r.title||r.style_code||"—")+' ×'+r.qty
-      + ' <span class="vt">('+(r.program==="winback"?"win-back":"loyalty")+(r.order_number?' · order '+esc(r.order_number):'')+' · $'+Number(r.total_cost||0).toFixed(2)+' cost)</span>'
+      + ' <span class="vt">('+GIFT_PROGRAM_LABEL(r.program)+(r.order_number?' · order '+esc(r.order_number):'')+' · $'+Number(r.total_cost||0).toFixed(2)+' cost)</span>'
       + (r.note?' <span title="'+esc(r.note)+'" style="cursor:help">&#128221;</span>':'')
-      + outcomeChipHtml(r)+'</span>'
+      + outcomeChipHtml(r)+pendingChip+'</span>'
       + '<select onchange="glSetOutcome('+r.id+',this.value)" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;">'
       + GIFT_OUTCOMES.map(([v,l])=>'<option value="'+v+'"'+(v===(r.outcome||"")?" selected":"")+'>'+esc(l)+'</option>').join("")
       + '</select>'
@@ -2576,6 +2819,14 @@ function renderGiftLog(){
       + '</div>';
   }).join("");
   $("giftsLogBody").innerHTML = html;
+}
+const GIFT_PROGRAM_LABEL = (p)=> p==="winback" ? "win-back" : p==="donation" ? "donation" : "loyalty";
+async function glMarkDeducted(id){
+  const r = glRows.find(x=>x.id===id); if(!r) return;
+  if(!confirm("Mark \""+(r.title||r.sku||"this line")+"\" ×"+r.qty+" as already deducted in Shopify? (This only clears the flag — it does not change inventory.)")) return;
+  const {error} = await sb.from("gift_actions").update({inventory_pending:false}).eq("id",id);
+  if(error){ alert("Could not update: "+error.message); return; }
+  r.inventory_pending=false; renderGiftLog();
 }
 async function glSetOutcome(id, val){
   const r = glRows.find(x=>x.id===id); if(!r) return;
@@ -2671,6 +2922,7 @@ function renderGiftStats(){
     + card("$"+totalValue.toFixed(2), "total retail value gifted")
     + card(byProg.loyalty.n, "loyalty thank-you gifts ($"+byProg.loyalty.cost.toFixed(2)+" cost)")
     + card(byProg.winback.n, "win-back gifts ($"+byProg.winback.cost.toFixed(2)+" cost)")
+    + card((byProg.donation||{n:0}).n, "donation lines ($"+((byProg.donation||{cost:0}).cost).toFixed(2)+" cost)")
     + '</div>'
     + '<div class="secHead"><h3>Gifts logged — last 6 months</h3></div>'
     + '<div class="bars">'+bars+'</div>';

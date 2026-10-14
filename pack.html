@@ -207,6 +207,44 @@
   .gtypeBtn.on{background:var(--teal-soft); border-color:var(--teal); color:var(--teal-dark);}
   .costPreview{font-size:12.5px; color:var(--dim); margin:6px 0;}
   .giftGap{font-size:11px; color:var(--dim); margin-left:2px;}
+  .histBatch{border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px; background:var(--card);}
+  .hbHead{font-size:13.5px; margin-bottom:6px;}
+  .hbRow{display:flex; gap:10px; align-items:center; padding:6px 2px; border-top:1px dashed var(--line); font-size:13px;}
+  .hbRow .vt, .histBatch .vt{color:var(--dim); font-size:12px;}
+  #histFilters select, #histFilters input, .teamGrid input, .teamGrid select{padding:8px 10px; border:1px solid var(--line); border-radius:9px; font-size:13px; font-family:inherit; background:var(--card); min-width:0;}
+  .teamGrid{display:grid; grid-template-columns:1.3fr 1fr .8fr 1.1fr .8fr 1.5fr; gap:8px; align-items:center; padding:6px 0; border-bottom:1px dashed var(--line); font-size:13px;}
+  .teamGrid.teamHead{font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--dim);}
+  .teamGrid.off{opacity:.5;}
+  .teamGrid.teamAdd{grid-template-columns:1.3fr 1fr .8fr 1.1fr .8fr auto; border:none;}
+  .ghostBtn.sm, .primaryBtn.sm{padding:7px 11px; font-size:12px;}
+  @media (max-width:720px){ .teamGrid{grid-template-columns:1fr 1fr;} .teamGrid.teamHead{display:none;} }
+  /* wms27: add-ons on the right hat, embroidery spec card, 4+ flag, custom orders */
+  .aoChip{display:inline-block; font-size:11px; font-weight:800; padding:2px 8px; border-radius:99px; margin-left:6px; white-space:nowrap; vertical-align:middle;}
+  .aoChip.btn{background:#eef0ff; color:#3b46a8; border:1px solid #8e97e6;}
+  .aoChip.emb{background:#fff0f7; color:#a3236a; border:1px solid #e88bbd;}
+  .embCard{margin:6px 0 4px; padding:10px 12px; border:1.5px dashed #e88bbd; background:#fffafd; border-radius:12px; font-size:13px; width:100%;}
+  .embHat{display:flex; gap:12px; align-items:center; margin-bottom:8px;}
+  .embBig{width:42px; height:42px; border-radius:10px; border:1px solid rgba(0,0,0,.3); flex:none; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--dim);}
+  .embBig.none{background:repeating-linear-gradient(45deg,#eee,#eee 5px,#fff 5px,#fff 10px);}
+  .embText{font-size:16px; font-weight:800; color:var(--text);}
+  .embN{font-size:11px; font-weight:700; color:var(--dim); margin-left:6px;}
+  .embColor{font-size:12.5px; color:var(--dim);}
+  .embColor code{font-size:12px; background:var(--bg); padding:1px 5px; border-radius:5px;}
+  .embGrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:4px 14px; font-size:12.5px;}
+  .embGrid b{display:block; font-size:10.5px; letter-spacing:.5px; text-transform:uppercase; color:#a3236a;}
+  .svcBox{background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:8px 12px; margin:6px 0 10px; font-size:12.5px; color:var(--dim);}
+  .svcBox.warn{background:var(--warn-soft); border-color:var(--warn); color:var(--warn); font-weight:700;}
+  .hiChip{font-size:11px; font-weight:800; color:#fff; background:var(--teal-dark); border-radius:99px; padding:2px 8px; margin-left:8px; white-space:nowrap;}
+  .prow.hi{background:var(--teal-soft);}
+  .prow input[type=checkbox]{width:18px; height:18px; accent-color:var(--teal);}
+  .prowSub{padding:0 4px 8px 54px; border-bottom:1px dashed var(--line);}
+  .modeBar{display:flex; gap:4px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:4px; margin-bottom:12px; width:max-content; max-width:100%;}
+  .modeBar button{padding:8px 16px; border-radius:9px; background:transparent; color:var(--dim); font-size:13.5px; font-weight:700;}
+  .modeBar button.on{background:var(--teal); color:#fff;}
+  .modeBar .n{font-size:11px; opacity:.85; margin-left:4px;}
+  .custBtn{padding:8px 12px; border-radius:10px; background:var(--ok-soft); color:var(--ok); border:1.5px solid var(--ok); font-size:12.5px; font-weight:800; white-space:nowrap;}
+  .irow .ititle .embCard{margin-top:8px;}
+
 </style>
 </head>
 <body>
@@ -215,9 +253,9 @@
   <div class="loginBox">
     <img id="loginLogo" alt="Taylor Made Scrub Hats">
     <h1>ShipShape</h1>
-    <p>Pick &middot; Pack &middot; Print &middot; Count &mdash; sign in with your Taylor Made account.</p>
-    <input id="email" type="email" placeholder="Email" autocomplete="username">
-    <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+    <p>Pick &middot; Pack &middot; Print &middot; Count &mdash; sign in with your username and PIN.</p>
+    <input id="email" type="text" placeholder="Username" autocomplete="username" autocapitalize="off" spellcheck="false">
+    <input id="password" type="password" placeholder="4-digit PIN" autocomplete="current-password" inputmode="numeric">
     <button id="loginBtn">Sign in</button>
     <div id="loginErr"></div>
   </div>
@@ -237,12 +275,18 @@
     </nav>
     <button class="hbtn" id="refreshBtn">&#8635;</button>
     <button class="hbtn" id="syncBtn" title="Re-pull products + inventory from Shopify">Sync</button>
+    <span id="meName" style="font-size:12.5px;font-weight:700;color:var(--teal-dark);white-space:nowrap"></span>
+    <button class="hbtn hidden" id="teamBtn" onclick="openTeam()" title="Logins and PINs">Team</button>
     <button class="hbtn" id="logoutBtn">Sign out</button>
-    <span class="build">wms26</span>
+    <span class="build">wms27</span>
   </header>
 
   <!-- ============ PICK ============ -->
   <div id="tab-pick" class="wrap">
+    <div class="modeBar" id="pickModeBar">
+      <button class="on" data-mode="retail" onclick="setPickMode('retail')">Orders<span class="n" id="pickModeN"></span></button>
+      <button data-mode="custom" onclick="setPickMode('custom')">Custom orders<span class="n" id="pickModeNC"></span></button>
+    </div>
     <div class="toolbar">
       <input type="search" id="pickSearch" placeholder="Search orders — name, #, SKU, item, city…">
       <input type="date" id="dateFrom" title="From date">
@@ -270,6 +314,10 @@
   <!-- ============ PACK ============ -->
   <div id="tab-pack" class="wrap hidden">
     <div id="packQueue">
+      <div class="modeBar" id="packModeBar">
+        <button class="on" data-mode="retail" onclick="setPackMode('retail')">Orders<span class="n" id="packModeN"></span></button>
+        <button data-mode="custom" onclick="setPackMode('custom')">Custom orders<span class="n" id="packModeNC"></span></button>
+      </div>
       <div class="toolbar">
         <input type="search" id="packSearch" placeholder="Search fulfilled orders…">
       </div>
@@ -282,6 +330,7 @@
         <label><input type="checkbox" id="packSelAll"> Select all to pack</label>
         <span id="cycleCount" style="font-size:13px;color:var(--dim)"></span>
         <span style="flex:1"></span>
+        <button class="ghostBtn" onclick="openHistory()" title="Who packed which orders, and everything logged">&#128339; History</button>
         <button class="ghostBtn" id="packPrintBtn" disabled>&#128424; Send to print</button>
         <button class="primaryBtn" id="cycleBtn" disabled>Start pack cycle</button>
       </div>
@@ -289,6 +338,7 @@
     </div>
     <div id="packSession" class="hidden">
       <div id="pNote" class="pnote hidden"></div>
+      <div id="pSvc"></div>
       <div id="scanBox">
         <label id="scanTitle">SCAN ITEM — scanner or type SKU + Enter</label>
         <input id="scanInput" autocomplete="off" spellcheck="false">
@@ -481,6 +531,26 @@
 </div>
 
 <!-- pick detail overlay -->
+<!-- wms27: pack history + activity log -->
+<div id="histOverlay" class="overlay hidden">
+  <div class="sheet" style="width:min(900px,96vw)">
+    <h2>History</h2>
+    <div class="sub">Who packed which orders (grouped by pack cycle), and everything each login did.</div>
+    <div class="modeBar" id="histTabs"><button data-t="packed" onclick="histTabSet('packed')">Packed orders</button><button data-t="log" onclick="histTabSet('log')">Activity log</button></div>
+    <div class="toolbar" id="histFilters"></div>
+    <div id="histBody"></div>
+    <div class="sheetBar"><button class="ghostBtn" id="histCloseBtn">Close</button></div>
+  </div>
+</div>
+<!-- wms27: logins (lead only) -->
+<div id="teamOverlay" class="overlay hidden">
+  <div class="sheet" style="width:min(980px,96vw)">
+    <h2>Team logins</h2>
+    <div class="sub">Each person signs in to ShipShape and StitchLab with their own username and 4-digit PIN. "Times as" links the login to their name on the StitchLab board so their timers and history line up.</div>
+    <div id="teamBody"></div>
+    <div class="sheetBar"><button class="ghostBtn" id="teamCloseBtn">Close</button></div>
+  </div>
+</div>
 <div id="pdOverlay" class="overlay hidden">
   <div class="sheet">
     <h2 id="pdTitle">Order</h2>
@@ -599,6 +669,10 @@ const $ = (id) => document.getElementById(id);
 $("hdrLogo").src = LOGO; $("loginLogo").src = LOGO;
 
 let toPick = [], toPack = [], sessionsByOrder = {}, catalog = null;
+let toPickCustom = [], toPackCustom = [];   // wms27: orders tagged "Custom"
+let pickMode = "retail", packMode = "retail";
+const findOrder = (id)=> toPick.find(x=>x.orderId===id) || toPack.find(x=>x.orderId===id)
+  || toPickCustom.find(x=>x.orderId===id) || toPackCustom.find(x=>x.orderId===id);
 let cur = null;                  // active pack session
 let selected = new Set();        // pick multi-select
 let cycleSel = new Set();        // pack cycle selection
@@ -651,10 +725,11 @@ function contentFlags(o){
   const f = new Set();
   for(const it of o.items){
     const t = (it.title||"").toLowerCase();
-    if(t.includes("button")) f.add("buttons");
-    if(t.includes("embroider")) f.add("embroidery");
+    if(t.includes("button") || hasBtn(it)) f.add("buttons");
+    if(t.includes("embroider") || hasEmb(it)) f.add("embroidery");
     if(t.includes("magnet")) f.add("magnets");
   }
+  if(o.looseButtonSets) f.add("buttons");
   return f;
 }
 const FLAG_LABELS = {buttons:"Buttons", embroidery:"Embroidery", magnets:"Mask Magnets"};
@@ -722,26 +797,294 @@ function starsHtml(o){
     + "★".repeat(s) + '<span class="off">'+"★".repeat(5-s)+'</span></span>';
 }
 
-/* ---------- auth ---------- */
+/* ================= wms27: add-ons on the right hat + embroidery specs =================
+   pack-orders v12 tags each line: isAddon (a priced Button Set / Embroidery Add-on line
+   folded under its hat), isService (custom-order logo/digitizing/fee lines — never picked
+   or scanned), and addons {buttons, embroidery{hats[{n,text,color}], font, location,
+   placement, ribbon}} parsed from the add-on builder's fields on the hat line itself. */
+const FONT_NAMES = {};   // Font Style number → name, e.g. {"1":"Block"} — fill in once Taylor confirms
+const isHat = (it)=> !it.isAddon && !it.isService;
+const hasEmb = (it)=> !!(it.addons && it.addons.embroidery);
+const hasBtn = (it)=> !!(it.addons && it.addons.buttons);
+function fontLabel(f){ if(!f) return "—"; const n=String(f).trim(); return FONT_NAMES[n] ? FONT_NAMES[n]+" (Font "+n+")" : "Font "+n; }
+function heightLabel(p){
+  if(!p) return "—";
+  if(/along\s*bottom/i.test(p)) return "Bottom edge — bottom of the text ½\" up from the fold";
+  const m = p.match(/(\d+(?:\.\d+)?)\s*(?:"|”|in)/); if(m) return m[1]+"\" up from the bottom edge (space for folding)";
+  return p;
+}
+/* Nearest everyday color name for a hex, by distance in Lab space (how eyes see color). */
+const COLOR_NAMES = [["Black","#000000"],["Charcoal","#36454F"],["Dark Gray","#555555"],["Gray","#808080"],["Silver","#C0C0C0"],
+ ["Light Gray","#D3D3D3"],["White","#FFFFFF"],["Ivory","#FFFFF0"],["Cream","#F3E5AB"],["Beige","#D8C3A5"],["Tan","#D2B48C"],
+ ["Khaki","#C3B091"],["Brown","#7B4A2A"],["Chocolate","#4E2A1E"],["Rust","#B7410E"],["Copper","#B87333"],["Maroon","#800000"],
+ ["Burgundy","#800020"],["Wine","#722F37"],["Dark Red","#8B0000"],["Red","#E10600"],["Cherry","#C21E2F"],["Crimson","#DC143C"],
+ ["Coral","#FF7F50"],["Salmon","#FA8072"],["Peach","#FFCBA4"],["Orange","#FF7A00"],["Burnt Orange","#CC5500"],["Gold","#D4A017"],
+ ["Mustard","#E1AD01"],["Yellow","#FFE600"],["Lemon","#FFF44F"],["Lime","#9ACD32"],["Bright Green","#00C000"],["Kelly Green","#4CBB17"],
+ ["Green","#228B22"],["Forest Green","#14532D"],["Hunter Green","#355E3B"],["Olive","#708238"],["Sage","#9CAF88"],["Mint","#98E2C6"],
+ ["Seafoam","#71EEB8"],["Teal","#008080"],["Dark Teal","#014D4E"],["Turquoise","#30D5C8"],["Aqua","#00CED1"],["Sky Blue","#87CEEB"],
+ ["Baby Blue","#A7C7E7"],["Ceil Blue","#92A1CF"],["Light Blue","#ADD8E6"],["Cornflower","#6495ED"],["Blue","#1F5FD1"],["Royal Blue","#2346B5"],
+ ["Cobalt","#0047AB"],["Navy","#1B2A4A"],["Midnight","#191970"],["Periwinkle","#8C9EFF"],["Lavender","#B57EDC"],["Lilac","#C8A2C8"],
+ ["Purple","#7A219E"],["Violet","#8F00FF"],["Plum","#5E2750"],["Eggplant","#3B1E36"],["Magenta","#D0006F"],["Fuchsia","#E0218A"],
+ ["Hot Pink","#FF3E9A"],["Pink","#F4A6C1"],["Rose","#E63B7A"],["Blush","#F2C4CE"],["Light Pink","#FFD1DC"],["Mauve","#B784A7"],["Dusty Rose","#C48B8B"]];
+function hexRgb(h){ h=String(h||"").replace("#","").trim(); if(h.length===3) h=h.split("").map(c=>c+c).join(""); const n=parseInt(h.slice(0,6),16); return isNaN(n)?null:[n>>16&255,n>>8&255,n&255]; }
+function rgbLab(c){ let [r,g,b]=c.map(v=>{ v/=255; return v>0.04045?Math.pow((v+0.055)/1.055,2.4):v/12.92; });
+  let x=(r*0.4124+g*0.3576+b*0.1805)/0.95047, y=r*0.2126+g*0.7152+b*0.0722, z=(r*0.0193+g*0.1192+b*0.9505)/1.08883;
+  const f=t=> t>0.008856?Math.cbrt(t):(7.787*t+16/116); x=f(x); y=f(y); z=f(z); return [116*y-16, 500*(x-y), 200*(y-z)]; }
+const _labCache = COLOR_NAMES.map(([n,h])=>[n,rgbLab(hexRgb(h))]);
+function colorName(hex){ const c=hexRgb(hex); if(!c) return ""; const L=rgbLab(c); let best=null, bd=1e9;
+  for(const [n,l] of _labCache){ const d=(L[0]-l[0])**2+(L[1]-l[1])**2+(L[2]-l[2])**2; if(d<bd){ bd=d; best=n; } } return best; }
+function addonBadgesHtml(it){
+  let h = "";
+  if(hasBtn(it)) h += '<span class="aoChip btn"'+(it.buttonsInferred?' title="Button set was added to the order on its own — it matches the number of hats, so every hat gets buttons. Glance at the order if unsure."':'')+'>&#128280; Buttons'+(it.buttonsInferred?" ?":"")+'</span>';
+  if(hasEmb(it)) h += '<span class="aoChip emb">&#129525; Embroidery</span>';
+  return h;
+}
+function embSpecHtml(it){
+  const e = it.addons && it.addons.embroidery; if(!e) return "";
+  const hats = (e.hats && e.hats.length) ? e.hats : [{n:1,text:null,color:null}];
+  const rows = hats.map(h=>{
+    const nm = h.color ? colorName(h.color) : "";
+    return '<div class="embHat">'
+      + (h.color ? '<span class="embBig" style="background:'+esc(h.color)+'"></span>' : '<span class="embBig none">?</span>')
+      + '<div><div class="embText">'+(h.text?'&ldquo;'+esc(h.text)+'&rdquo;':'<i>no text given</i>')+(hats.length>1||it.qty>1?' <span class="embN">hat #'+h.n+'</span>':'')+'</div>'
+      + '<div class="embColor">'+(h.color? esc(nm)+' &middot; <code>'+esc(h.color.toUpperCase())+'</code>' : 'no thread color given')+'</div></div></div>';
+  }).join("");
+  const ribbon = e.ribbon && !/^no\b/i.test(e.ribbon) ? '<div><b>Ribbon</b>'+esc(e.ribbon)+'</div>' : "";
+  return '<div class="embCard">'+rows
+    + '<div class="embGrid"><div><b>Font</b>'+esc(fontLabel(e.font))+'</div>'
+    + '<div><b>Location</b>'+esc(e.location||"—")+'</div>'
+    + '<div><b>Height</b>'+esc(heightLabel(e.placement))+'</div>'+ribbon+'</div></div>';
+}
+/* Lines on an order that are NOT picked/scanned (custom logo/digitizing/fee lines, loose add-ons). */
+function serviceLinesHtml(o){
+  const sv = (o.items||[]).filter(it=>it.isService);
+  let h = "";
+  if(sv.length) h += '<div class="svcBox"><b>Also on this order (not picked or scanned):</b> '
+    + sv.map(it=> esc(it.qty+"× "+(it.variantTitle && /^(cesh|csh|cpsh)$/i.test(it.title) ? it.variantTitle : it.title))).join(" · ")+'</div>';
+  if(o.looseButtonSets) h += '<div class="svcBox warn">&#128280; '+o.looseButtonSets+' button set'+(o.looseButtonSets===1?"":"s")+' on this order aren\'t tied to a specific hat — check the order or note for which hats.</div>';
+  return h;
+}
+
+/* ---------- auth ----------
+   wms27: individual logins. Type a username + 4-digit PIN (Taylor sets these in Team),
+   or an email + password as before. A username signs in as <username>@staff.taylormadescrubhats.com
+   with password "tmsh-pin-<PIN>" — team-users (edge fn) creates logins the same way. */
+const STAFF_DOMAIN = "staff.taylormadescrubhats.com";
+let ME = { id:null, role:"team", name:"", person:null };
+let ROSTER = {};                     // user id → display name, for "packed by"
+let cycleBatchId = null;
+const newBatchId = ()=> (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{ const r=Math.random()*16|0; return (c==="x"?r:(r&3|8)).toString(16); }));
+const isLeadMe = ()=> ME.role==="lead";
+const nameOf = (uid)=> uid ? (ROSTER[uid] || "someone") : "—";
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
-  if(session){ showApp(); } else { $("loginView").classList.remove("hidden"); }
+  if(session){ showApp(); } else { $("loginView").classList.remove("hidden"); $("email").focus(); }
 }
 $("loginBtn").onclick = doLogin;
 $("password").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
+$("email").addEventListener("keydown",e=>{ if(e.key==="Enter") $("password").focus(); });
 async function doLogin(){
   $("loginErr").textContent="";
-  const { error } = await sb.auth.signInWithPassword({ email:$("email").value.trim(), password:$("password").value });
-  if(error){ $("loginErr").textContent=error.message; return; }
+  const who = $("email").value.trim(), secret = $("password").value.trim();
+  if(!who || !secret){ $("loginErr").textContent="Enter your username and PIN."; return; }
+  let email = who, password = secret;
+  if(!who.includes("@")){
+    if(!/^\d{4}$/.test(secret)){ $("loginErr").textContent="Your PIN is 4 numbers."; return; }
+    email = who.toLowerCase()+"@"+STAFF_DOMAIN; password = "tmsh-pin-"+secret;
+  }
+  $("loginBtn").disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $("loginBtn").disabled = false;
+  if(error){ $("loginErr").textContent = /invalid/i.test(error.message) ? "That username and PIN don't match." : (/banned/i.test(error.message)?"This login is turned off — ask Taylor.":error.message); return; }
   showApp();
 }
 $("logoutBtn").onclick = async ()=>{ await sb.auth.signOut(); location.reload(); };
 
+async function loadMe(){
+  try{
+    const { data:{ session } } = await sb.auth.getSession();
+    const uid = session?.user?.id || null;
+    ME = { id:uid, role:"team", name:(session?.user?.email||"").split("@")[0], person:null };
+    let { data, error } = await sb.from("profiles").select("id,full_name,display_name,username,role,person,active");
+    if(error){ ({ data } = await sb.from("profiles").select("id,full_name,role")); }   // before the wms27 SQL runs
+    (data||[]).forEach(p=>{ ROSTER[p.id] = p.display_name || p.username || (p.full_name||"").split("@")[0] || "someone"; });
+    const mine = (data||[]).find(p=>p.id===uid);
+    if(mine){ ME.role = mine.role||"team"; ME.name = ROSTER[uid]; ME.person = mine.person||null; }
+  }catch(_e){}
+  $("meName").textContent = ME.name ? "👤 "+ME.name : "";
+  $("teamBtn").classList.toggle("hidden", !isLeadMe());
+}
+/* Who-did-what log (activity_log). Never blocks the work if it can't write. */
+function logActivity(action, details, extra){
+  try{
+    if(!ME.id) return;
+    const row = Object.assign({ user_id:ME.id, app:"shipshape", action, details:details||{} }, extra||{});
+    sb.from("activity_log").insert(row).then(()=>{}, ()=>{});
+  }catch(_e){}
+}
+/* pack_sessions insert that still works before the batch_id column exists */
+async function insertPackSession(row){
+  let r = await sb.from("pack_sessions").insert(row).select().single();
+  if(r.error && /batch_id/i.test(r.error.message||"")){ const { batch_id, ...rest } = row; r = await sb.from("pack_sessions").insert(rest).select().single(); }
+  return r;
+}
+
 function showApp(){
   $("loginView").classList.add("hidden");
   $("appView").classList.remove("hidden");
-  loadQueue();
+  loadMe().then(()=> loadQueue());
   setInterval(()=>{ if(!cur && activeTab!=="count") loadQueue(true); }, 120000);
+}
+
+/* ---------- wms27: custom orders — package & ship without scanning every hat ---------- */
+async function markCustomPacked(orderId){
+  const o = findOrder(orderId); if(!o) return;
+  const hats = hatUnits(o,"qty");
+  if(!confirm("Mark custom order "+o.number+" ("+o.customer+", "+hats+" hats) as packaged and shipped?")) return;
+  const now = new Date().toISOString();
+  const lines = o.items.filter(i=>i.requiresShipping && isHat(i)).map(i=>({ key:i.barcode||("line:"+i.lineId), title:i.title+(i.variantTitle?" — "+i.variantTitle:""), sku:i.sku, need:i.qty, got:i.qty }));
+  const { data:existing } = await sb.from("pack_sessions").select("id").eq("shopify_order_id", o.orderId).eq("status","in_progress").maybeSingle();
+  let error;
+  if(existing){
+    ({ error } = await sb.from("pack_sessions").update({ status:"verified", verified_at:now, user_id:ME.id,
+      items:{ customPacked:true, bulkConfirmed:true, lines } }).eq("id", existing.id));
+  } else {
+    ({ error } = await insertPackSession({ shopify_order_id:o.orderId, order_number:o.number, user_id:ME.id, status:"verified",
+      verified_at:now, batch_id:null, items:{ customPacked:true, bulkConfirmed:true, lines } }));
+  }
+  if(error){ alert("Could not mark it packed: "+error.message); return; }
+  sessionsByOrder[o.orderId] = { shopify_order_id:o.orderId, status:"verified", verified_at:now, user_id:ME.id, by:ME.name };
+  logActivity("custom_packed", { hats, customer:o.customer }, { order_number:o.number });
+  tagVerified(o.orderId);
+  renderPack();
+}
+
+/* ---------- wms27: Pack history — who packed which orders, by batch; activity log ---------- */
+let histTab = "packed", histPerson = "", histDays = 7;
+function openHistory(){ $("histOverlay").classList.remove("hidden"); renderHistory(); }
+$("histCloseBtn").onclick = ()=> $("histOverlay").classList.add("hidden");
+function histTabSet(t){ histTab=t; renderHistory(); }
+async function renderHistory(){
+  document.querySelectorAll("#histTabs button").forEach(b=>b.classList.toggle("on", b.dataset.t===histTab));
+  const since = new Date(Date.now()-histDays*864e5).toISOString();
+  const people = Object.entries(ROSTER).sort((a,b)=>a[1].localeCompare(b[1]));
+  $("histFilters").innerHTML =
+    (isLeadMe() ? '<select onchange="histPerson=this.value;renderHistory()"><option value="">Everyone</option>'
+      + people.map(([id,n])=>'<option value="'+id+'"'+(histPerson===id?" selected":"")+'>'+esc(n)+'</option>').join("")+'</select>' : "")
+    + '<select onchange="histDays=+this.value;renderHistory()">'+[[1,"Today"],[7,"Last 7 days"],[30,"Last 30 days"],[90,"Last 90 days"]]
+      .map(([d,l])=>'<option value="'+d+'"'+(histDays===d?" selected":"")+'>'+l+'</option>').join("")+'</select>'
+    + '<input type="search" id="histSearch" placeholder="Find an order #" oninput="renderHistory()" value="'+esc(($("histSearch")||{}).value||"")+'">';
+  const q = (($("histSearch")||{}).value||"").replace(/[^0-9]/g,"");
+  const body = $("histBody"); body.innerHTML = '<div class="empty">Loading…</div>';
+  if(histTab==="packed"){
+    let qy = sb.from("pack_sessions").select("*").eq("status","verified").order("verified_at",{ascending:false}).limit(1500);
+    if(q) qy = qy.ilike("order_number","%"+q+"%"); else qy = qy.gte("verified_at", since);
+    if(histPerson) qy = qy.eq("user_id", histPerson);
+    const { data, error } = await qy;
+    if(error){ body.innerHTML = '<div class="empty">Could not load: '+esc(error.message)+'</div>'; return; }
+    const rows = (data||[]).filter(s=>!(s.items&&s.items.backfill));
+    if(!rows.length){ body.innerHTML = '<div class="empty">No packed orders in this range.</div>'; return; }
+    // Group: a pack cycle = one batch; orders packed on their own are their own row.
+    const groups = new Map();
+    rows.forEach(s=>{ const k = s.batch_id || ("solo:"+s.id); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(s); });
+    body.innerHTML = [...groups.values()].map(list=>{
+      list.sort((a,b)=> new Date(a.verified_at)-new Date(b.verified_at));
+      const first = list[0], last = list[list.length-1];
+      const who = [...new Set(list.map(s=>nameOf(s.user_id)))].join(", ");
+      const how = (s)=> s.items?.customPacked ? '<span class="chip">packed (custom)</span>' : (s.items?.bulkConfirmed ? '<span class="chip note">checked, no scan</span>' : '<span class="chip flag">scanned</span>');
+      const span = list.length>1 ? fmtTime(first.verified_at)+"–"+fmtTime(last.verified_at) : fmtTime(first.verified_at);
+      return '<div class="histBatch"><div class="hbHead"><b>'+esc(who)+'</b> · '+fmtDate(first.verified_at)+' '+span
+        + ' · '+list.length+' order'+(list.length===1?"":"s")+(first.batch_id?' <span class="vt">pack cycle</span>':"")+'</div>'
+        + list.map(s=>'<div class="hbRow"><span class="onum" style="font-size:14px;min-width:70px">'+esc(s.order_number||"")+'</span>'
+          + '<span class="vt">'+fmtTime(s.verified_at)+'</span> '+how(s)
+          + '<span class="vt" style="margin-left:auto">'+((s.items?.lines||[]).reduce((a,l)=>a+(l.need||0),0)||"")+' items</span></div>').join("")
+        + '</div>';
+    }).join("");
+  } else {
+    let qy = sb.from("activity_log").select("*").order("created_at",{ascending:false}).limit(1000);
+    if(q) qy = qy.ilike("order_number","%"+q+"%"); else qy = qy.gte("created_at", since);
+    if(histPerson) qy = qy.eq("user_id", histPerson);
+    else if(!isLeadMe()) qy = qy.eq("user_id", ME.id);
+    const { data, error } = await qy;
+    if(error){ body.innerHTML = '<div class="empty">'+(/activity_log/.test(error.message)?"The activity log turns on once the wms27 database update is run.":"Could not load: "+esc(error.message))+'</div>'; return; }
+    if(!(data||[]).length){ body.innerHTML = '<div class="empty">Nothing logged in this range.</div>'; return; }
+    body.innerHTML = data.map(r=>'<div class="hbRow"><span class="vt" style="min-width:132px">'+fmtDate(r.created_at)+' '+fmtTime(r.created_at)+'</span>'
+      + '<b style="min-width:90px">'+esc(nameOf(r.user_id))+'</b><span>'+esc(activityText(r))+'</span>'
+      + '<span class="vt" style="margin-left:auto">'+esc(r.app||"")+'</span></div>').join("");
+  }
+}
+function activityText(r){
+  const d = r.details||{}, on = r.order_number ? "#"+r.order_number : "";
+  switch(r.action){
+    case "order_verified": return (d.bulk?"Checked (no scan) ":"Scan-verified ")+on+(d.items?" · "+d.items+" items":"");
+    case "order_unverified": return "Un-verified "+on;
+    case "custom_packed": return "Packed & shipped custom order "+on+(d.hats?" · "+d.hats+" hats":"");
+    case "pack_cycle_start": return "Started a pack cycle · "+(d.orders||[]).length+" orders ("+(d.orders||[]).join(", ")+")";
+    case "pack_cancelled": return "Cancelled pack session "+on;
+    case "pick_list": return "Made a pick list · "+(d.orders||[]).length+" orders, "+(d.items||0)+" items";
+    case "labels_queued": return "Queued "+(d.labels||0)+" barcode labels"+(d.orders?" from "+d.orders.length+" orders":"");
+    case "count_pushed": return "Pushed count corrections to Shopify"+(d.bin?" · "+d.bin:"");
+    default: return r.action.replace(/_/g," ")+(on?" "+on:"");
+  }
+}
+
+/* ---------- wms27: Team — logins (lead only) ---------- */
+const STITCH_PEOPLE = ["Trinna","Caitlynn","Drea","Mauricio","Karla","Lora","Anna Cristina","Taylor","Chris"];
+async function teamCall(body){
+  const { data:{ session } } = await sb.auth.getSession();
+  const r = await fetch(SUPA_URL+"/functions/v1/team-users", { method:"POST",
+    headers:{ "Content-Type":"application/json", apikey:SUPA_KEY, Authorization:"Bearer "+session.access_token }, body:JSON.stringify(body) });
+  const j = await r.json().catch(()=>({error:"Bad response"}));
+  if(!r.ok || j.error) throw new Error(j.error||("HTTP "+r.status));
+  return j;
+}
+async function openTeam(){ $("teamOverlay").classList.remove("hidden"); renderTeam(); }
+$("teamCloseBtn").onclick = ()=> $("teamOverlay").classList.add("hidden");
+async function renderTeam(){
+  const el = $("teamBody"); el.innerHTML = '<div class="empty">Loading…</div>';
+  let people = [];
+  try{ people = (await teamCall({action:"list"})).people||[]; }
+  catch(e){ el.innerHTML = '<div class="empty">Could not load logins: '+esc(e.message)+'</div>'; return; }
+  const personOpts = (cur)=> '<option value="">— none —</option>'+STITCH_PEOPLE.map(n=>'<option'+(cur===n?" selected":"")+'>'+n+'</option>').join("");
+  el.innerHTML = '<div class="teamGrid teamHead"><span>Name</span><span>Username</span><span>Role</span><span>Times as (StitchLab)</span><span>Last sign-in</span><span></span></div>'
+    + people.map(p=>'<div class="teamGrid'+(p.active===false?" off":"")+'">'
+      + '<input value="'+esc(p.display_name||(p.full_name||"").split("@")[0])+'" onchange="teamUpd(\''+p.id+'\',{display_name:this.value})">'
+      + '<span>'+(p.username?esc(p.username):'<i class="vt">email login</i>')+'</span>'
+      + '<select onchange="teamUpd(\''+p.id+'\',{role:this.value})"><option value="team"'+(p.role!=="lead"?" selected":"")+'>Team</option><option value="lead"'+(p.role==="lead"?" selected":"")+'>Lead</option></select>'
+      + '<select onchange="teamUpd(\''+p.id+'\',{person:this.value})">'+personOpts(p.person)+'</select>'
+      + '<span class="vt">'+(p.last_sign_in_at?fmtDate(p.last_sign_in_at):"never")+'</span>'
+      + '<span style="display:flex;gap:6px;justify-content:flex-end"><button class="ghostBtn sm" onclick="teamPin(\''+p.id+'\','+(p.username?"true":"false")+',\''+esc(p.username||"")+'\')">Set PIN</button>'
+      + '<button class="ghostBtn sm" onclick="teamUpd(\''+p.id+'\',{active:'+(p.active===false?"true":"false")+'},true)">'+(p.active===false?"Turn on":"Turn off")+'</button></span></div>').join("")
+    + '<div class="secHead" style="margin-top:18px"><h3 style="font-size:15px">Add a person</h3></div>'
+    + '<div class="teamGrid teamAdd"><input id="tnName" placeholder="Name (e.g. Drea)"><input id="tnUser" placeholder="username" autocapitalize="off">'
+    + '<select id="tnRole"><option value="team">Team</option><option value="lead">Lead</option></select>'
+    + '<select id="tnPerson">'+personOpts("")+'</select>'
+    + '<input id="tnPin" placeholder="4-digit PIN" inputmode="numeric" maxlength="4">'
+    + '<button class="primaryBtn sm" onclick="teamAdd()">Add</button></div>'
+    + '<div id="teamMsg" class="sub" style="margin-top:8px"></div>';
+}
+async function teamUpd(id, patch, rerender){
+  try{ await teamCall(Object.assign({action:"update", user_id:id}, patch)); $("teamMsg").textContent="Saved."; if(rerender) renderTeam(); loadMe(); }
+  catch(e){ alert(e.message); renderTeam(); }
+}
+async function teamPin(id, hasUser, uname){
+  let username = uname;
+  if(!hasUser){
+    username = (prompt("This is an email login. Pick a username for PIN sign-in (their email and old password will stop working):")||"").trim().toLowerCase();
+    if(!username) return;
+  }
+  const pin = (prompt("New 4-digit PIN for "+username+":")||"").trim();
+  if(!/^\d{4}$/.test(pin)){ if(pin) alert("PIN must be exactly 4 numbers."); return; }
+  try{ await teamCall({action:"set_pin", user_id:id, pin, username}); alert("PIN set. "+username+" can sign in with it now."); renderTeam(); }
+  catch(e){ alert(e.message); }
+}
+async function teamAdd(){
+  const body = { action:"create", display_name:$("tnName").value.trim(), username:$("tnUser").value.trim().toLowerCase(),
+    role:$("tnRole").value, person:$("tnPerson").value||null, pin:$("tnPin").value.trim() };
+  if(!body.display_name || !body.username){ $("teamMsg").textContent="Name and username are both needed."; return; }
+  if(!/^\d{4}$/.test(body.pin)){ $("teamMsg").textContent="PIN must be exactly 4 numbers."; return; }
+  try{ await teamCall(body); renderTeam(); loadMe(); }
+  catch(e){ $("teamMsg").textContent = e.message; }
 }
 
 /* ---------- tabs ---------- */
@@ -773,14 +1116,15 @@ async function loadQueue(silent){
   try{
     const [{data,error}, sess, giftIds] = await Promise.all([
       sb.functions.invoke("pack-orders"),
-      sb.from("pack_sessions").select("shopify_order_id,status,verified_at").order("created_at",{ascending:false}),
+      sb.from("pack_sessions").select("shopify_order_id,status,verified_at,user_id").order("created_at",{ascending:false}),
       sb.from("gift_candidates").select("customer_id").eq("program","loyalty"),
     ]);
     if(error) throw error;
     if(data?.error) throw new Error(data.error);
     toPick = data.toPick||[]; toPack = data.toPack||[];
+    toPickCustom = data.toPickCustom||[]; toPackCustom = data.toPackCustom||[];   // wms27
     sessionsByOrder = {};
-    (sess.data||[]).forEach(s=>{ if(!sessionsByOrder[s.shopify_order_id]) sessionsByOrder[s.shopify_order_id]=s; });
+    (sess.data||[]).forEach(s=>{ if(!sessionsByOrder[s.shopify_order_id]){ s.by = s.user_id ? nameOf(s.user_id) : ""; sessionsByOrder[s.shopify_order_id]=s; } });
     giftLoyaltyIds = new Set((giftIds.data||[]).map(r=>String(r.customer_id)));
     refreshTagOptions();
     renderPick(); renderPack();
@@ -898,7 +1242,7 @@ tagbarWire("pickTagInput","pickTagChips");
 tagbarWire("packTagInput","packTagChips");
 function refreshTagOptions(){
   const all = new Set();
-  toPick.concat(toPack).forEach(o=>(o.tags||[]).forEach(t=>{ const c=(t||"").trim(); if(c) all.add(c); }));
+  toPick.concat(toPack, toPickCustom, toPackCustom).forEach(o=>(o.tags||[]).forEach(t=>{ const c=(t||"").trim(); if(c) all.add(c); }));
   $("tagOptions").innerHTML = [...all].sort((a,b)=>a.localeCompare(b))
     .map(t=>'<option value="'+esc(t)+'"></option>').join("");
 }
@@ -919,14 +1263,25 @@ $("selAll").onchange = ()=>{
 
 function hayOf(o){
   return [o.number,o.customer,o.destination,o.note,(o.tags||[]).join(" "),
-    ...o.items.map(i=>[i.sku,i.title,i.variantTitle].join(" "))].join(" ").toLowerCase();
+    ...o.items.map(i=>[i.sku,i.title,i.variantTitle,(hasEmb(i)?(i.addons.embroidery.hats||[]).map(h=>h.text).join(" "):"")].join(" "))].join(" ").toLowerCase();
+}
+/* wms27: Pick shows either regular orders or orders tagged "Custom" */
+const pickSource = ()=> pickMode==="custom" ? toPickCustom : toPick;
+function setPickMode(m){
+  if(m===pickMode) return;
+  pickMode = m; selected = new Set();
+  document.querySelectorAll("#pickModeBar button").forEach(b=>b.classList.toggle("on", b.dataset.mode===m));
+  renderPick();
+}
+function hatUnits(o, useQty){
+  return o.items.filter(i=>i.requiresShipping && isHat(i)).reduce((a,b)=>a+(b[useQty]??b.qty??0),0);
 }
 function filteredPick(){
   const q = $("pickSearch").value.trim().toLowerCase();
   const qn = skuNorm(q).toLowerCase();
   const from = $("dateFrom").value ? new Date($("dateFrom").value+"T00:00:00") : null;
   const to = $("dateTo").value ? new Date($("dateTo").value+"T23:59:59") : null;
-  return toPick.filter(o=>{
+  return pickSource().filter(o=>{
     if(q && !(hayOf(o).includes(q) || hayOf(o).includes(qn))) return false;
     const d = new Date(o.createdAt);
     if(from && d<from) return false;
@@ -939,6 +1294,8 @@ function filteredPick(){
 function renderPick(){
   const shown = filteredPick();
   const el = $("pickList");
+  $("pickModeN").textContent = toPick.length ? "("+toPick.length+")" : "";
+  $("pickModeNC").textContent = toPickCustom.length ? "("+toPickCustom.length+")" : "";
   const selShown = shown.filter(o=>selected.has(o.orderId)).length;
   $("selAll").checked = shown.length>0 && selShown===shown.length;
   $("selCount").textContent = selected.size ? selected.size+" selected" : "";
@@ -946,9 +1303,9 @@ function renderPick(){
   $("pickListBtn").textContent = selected.size ? "Create pick list ("+selected.size+")" : "Create pick list";
   $("pickPrintBtn").disabled = !selected.size;
   $("pickPrintBtn").textContent = selected.size ? "\u{1F5A8} Send to print ("+selected.size+")" : "\u{1F5A8} Send to print";
-  if(!shown.length){ el.innerHTML = '<div class="empty">No unfulfilled orders match. 🎉</div>'; return; }
+  if(!shown.length){ el.innerHTML = '<div class="empty">'+(pickMode==="custom"?"No open custom orders match.":"No unfulfilled orders match. 🎉")+'</div>'; return; }
   el.innerHTML = shown.map(o=>{
-    const units = o.items.filter(i=>i.requiresShipping).reduce((a,b)=>a+b.unfulfilledQty,0);
+    const units = hatUnits(o,"unfulfilledQty");
     const flags = [...contentFlags(o)].map(f=>'<span class="chip flag">'+FLAG_LABELS[f]+'</span>').join("");
     const tags = (o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("");
     const pay = o.financial!=="PAID" ? ' <span class="badge unpaid">'+esc(o.financial)+'</span>' : "";
@@ -958,7 +1315,7 @@ function renderPick(){
       + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+pay+'</div>'
       + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+' · placed '+fmtTime(o.createdAt)+'</div>'
       + '<div class="chips">'+flags+tags+noteChipsHtml(o)+giftChipHtml(o)+'</div></div>'
-      + '<div class="ocount"><b>'+units+'</b>items</div></div>';
+      + '<div class="ocount"><b>'+units+'</b>'+(pickMode==="custom"?"hats":"items")+'</div></div>';
   }).join("");
 }
 function toggleSel(id){ selected.has(id)?selected.delete(id):selected.add(id); renderPick(); }
@@ -970,7 +1327,7 @@ function embSwatchHtml(it){
   return ' <span class="embSwatch" style="background:'+esc(it.embroideryColor)+'" title="'+esc(tip)+'"></span>';
 }
 function openPickDetail(orderId){
-  const o = toPick.find(x=>x.orderId===orderId);
+  const o = findOrder(orderId);
   if(!o) return;
   $("pdTitle").textContent = "Order "+o.number+" · "+o.customer;
   const pay = o.financial!=="PAID" ? ' <span class="badge unpaid">'+esc(o.financial)+'</span>' : "";
@@ -978,30 +1335,40 @@ function openPickDetail(orderId){
   let notesHtml = "";
   if(o.note) notesHtml += '<div class="pnote" style="margin-bottom:8px;">&#128140; <b>Customer note:</b> '+esc(o.note)+'</div>';
   if(o.timelineNotes && o.timelineNotes.length) notesHtml += '<div class="pnote" style="background:var(--teal-soft);border-color:var(--teal);color:var(--teal-dark);margin-bottom:8px;">&#128221; <b>Internal note'+(o.timelineNotes.length>1?"s":"")+':</b> '+o.timelineNotes.map(esc).join(" · ")+'</div>';
-  const items = (o.items||[]).filter(it=>it.requiresShipping!==false);
+  notesHtml += serviceLinesHtml(o);
+  const items = (o.items||[]).filter(it=>it.requiresShipping!==false && isHat(it));
   const rowsHtml = items.length ? items.map(it=>{
     const qty = it.unfulfilledQty ?? it.qty ?? 1;
-    return '<div class="prow"><span class="q">'+qty+'×</span><span class="sk">'+esc(it.sku||"—")+'</span>'
-      + '<span class="ti">'+esc(it.title)+' <span class="vt">'+esc(it.variantTitle||"")+'</span>'+embSwatchHtml(it)+'</span>'
-      + '<span class="bin" style="font-size:11px;padding:3px 8px;">'+esc(binOf(it.sku))+'</span></div>';
+    return '<div class="prow" style="'+(hasEmb(it)?"border-bottom:none":"")+'"><span class="q">'+qty+'×</span><span class="sk">'+esc(it.sku||"—")+'</span>'
+      + '<span class="ti">'+esc(it.title)+' <span class="vt">'+esc(it.variantTitle||"")+'</span>'+addonBadgesHtml(it)+'</span>'
+      + '<span class="bin" style="font-size:11px;padding:3px 8px;">'+esc(binOf(it.sku))+'</span></div>'
+      + (hasEmb(it) ? '<div class="prowSub">'+embSpecHtml(it)+'</div>' : "");
   }).join("") : '<div class="empty">No shippable items.</div>';
   $("pdBody").innerHTML = notesHtml + rowsHtml;
   $("pdOverlay").classList.remove("hidden");
 }
 $("pdCloseBtn").onclick = ()=> $("pdOverlay").classList.add("hidden");
 
-/* pick list build */
+/* pick list build
+   wms27: add-on lines are folded into their hat, never listed as something to pull;
+   anything with 4+ of the exact same SKU in the batch is flagged and listed first so it
+   can be pulled together; hats getting buttons or embroidery are listed with their specs. */
+const HI_QTY = 4;
 $("pickListBtn").onclick = async ()=>{
-  const orders = toPick.filter(o=>selected.has(o.orderId));
+  const orders = pickSource().filter(o=>selected.has(o.orderId));
   if(!orders.length) return;
-  const agg = new Map();
+  const agg = new Map(), addonJobs = [];
   for(const o of orders){
     for(const it of o.items){
-      if(!it.requiresShipping || it.unfulfilledQty<=0) continue;
+      if(!it.requiresShipping || it.unfulfilledQty<=0 || !isHat(it)) continue;
       const key = it.variantId || it.sku || it.title;
       if(!agg.has(key)) agg.set(key,{ variantId:it.variantId||null, sku:it.sku, title:it.title, variant:it.variantTitle,
-        bin:binOf(it.sku), qty:0, orders:new Set() });
+        bin:binOf(it.sku), qty:0, orders:new Set(), btn:0, emb:0, maxInOrder:0 });
       const a = agg.get(key); a.qty += it.unfulfilledQty; a.orders.add(o.number);
+      a.maxInOrder = Math.max(a.maxInOrder, it.unfulfilledQty);
+      if(hasBtn(it)) a.btn += it.unfulfilledQty;
+      if(hasEmb(it)) a.emb += it.unfulfilledQty;
+      if(hasBtn(it) || hasEmb(it)) addonJobs.push({ o, it });
     }
   }
   /* wms24: quiet stock check — flag a line ONLY when the shelf can't cover it */
@@ -1015,22 +1382,41 @@ $("pickListBtn").onclick = async ()=>{
     const oh = onHand.get(String(r.variantId));
     return oh < r.qty ? '<span class="shortChip">&#9888; only '+oh+' on hand</span>' : "";
   };
+  const aoMini = (r)=> (r.btn?'<span class="aoChip btn">&#128280; '+r.btn+'</span>':"")+(r.emb?'<span class="aoChip emb">&#129525; '+r.emb+'</span>':"");
+  const hiChip = (r)=> r.qty>=HI_QTY ? '<span class="hiChip">'+r.qty+' · pull together</span>' : "";
+  const rowHtml = (r, withBox)=> '<div class="prow'+(r.qty>=HI_QTY?" hi":"")+'">'
+      + (withBox?'<input type="checkbox" title="Pulled">':"")
+      + '<span class="q">'+r.qty+'×</span><span class="sk">'+esc(r.sku||"—")+'</span>'
+      + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant||"")+'</span>'+aoMini(r)+shortChip(r)+(withBox?"":hiChip(r))+'</span>'
+      + (r.orders.size>1?'<span class="vt">'+r.orders.size+' orders</span>':"")+'</div>';
+  let html = "";
+  const hi = [...agg.values()].filter(r=>r.qty>=HI_QTY).sort((a,b)=> b.qty-a.qty || binSort(a.bin,b.bin));
+  if(hi.length){
+    html += '<div class="groupHead"><span class="b">Pull these first — '+HI_QTY+' or more of the same</span><span class="n">'+hi.length+' SKU'+(hi.length===1?"":"s")+' · tick as you pull</span></div>';
+    html += hi.map(r=>rowHtml(r,true)).join("");
+  }
+  if(addonJobs.length){
+    html += '<div class="groupHead"><span class="b">Buttons &amp; embroidery to add</span><span class="n">'+addonJobs.length+' line'+(addonJobs.length===1?"":"s")+'</span></div>';
+    html += addonJobs.map(({o,it})=> '<div class="prow" style="'+(hasEmb(it)?"border-bottom:none":"")+'"><span class="q">'+it.unfulfilledQty+'×</span><span class="sk">'+esc(o.number)+'</span>'
+      + '<span class="ti">'+esc(it.title)+' <span class="vt">'+esc(it.variantTitle||"")+'</span>'+addonBadgesHtml(it)+'</span></div>'
+      + (hasEmb(it)?'<div class="prowSub">'+embSpecHtml(it)+'</div>':"")).join("");
+  }
+  const loose = orders.filter(o=>o.looseButtonSets);
+  if(loose.length) html += '<div class="svcBox warn">&#128280; Button sets not tied to a hat on: '+loose.map(o=>esc(o.number)).join(", ")+' — check those orders.</div>';
   const groups = {};
   [...agg.values()].forEach(a=>{ (groups[a.bin]=groups[a.bin]||[]).push(a); });
   const bins = Object.keys(groups).sort(binSort);
-  let html = "";
   for(const b of bins){
     const rows = groups[b].sort((x,y)=> (x.title+(x.variant||"")).localeCompare(y.title+(y.variant||"")));
     const n = rows.reduce((s,r)=>s+r.qty,0);
     html += '<div class="groupHead"><span class="b">'+esc(binLabel(b))+'</span><span class="n">'+n+' items</span></div>';
-    html += rows.map(r=>'<div class="prow"><span class="q">'+r.qty+'×</span><span class="sk">'+esc(r.sku||"—")+'</span>'
-      + '<span class="ti">'+esc(r.title)+' <span class="vt">'+esc(r.variant||"")+'</span>'+shortChip(r)+'</span>'
-      + (r.orders.size>1?'<span class="vt">'+r.orders.size+' orders</span>':"")+'</div>').join("");
+    html += rows.map(r=>rowHtml(r,false)).join("");
   }
   $("plSub").textContent = orders.length+" orders · "+[...agg.values()].reduce((s,a)=>s+a.qty,0)
     +" items · "+orders.map(o=>o.number).join(", ");
   $("plBody").innerHTML = html;
   $("plOverlay").classList.remove("hidden");
+  logActivity("pick_list", { orders: orders.map(o=>o.number), items: [...agg.values()].reduce((s,a)=>s+a.qty,0) });
 };
 $("plCloseBtn").onclick = ()=> $("plOverlay").classList.add("hidden");
 $("plPrintBtn").onclick = ()=>{
@@ -1041,8 +1427,15 @@ $("plPrintBtn").onclick = ()=>{
     + ".groupHead .b{font-size:15px;font-weight:800}.groupHead .n{font-size:11px;color:#666}"
     + ".prow{display:flex;gap:10px;padding:5px 2px;border-bottom:1px dashed #ccc;font-size:12.5px;align-items:center}"
     + ".prow .q{font-weight:800;min-width:38px}.prow .sk{font-family:monospace;min-width:110px;font-size:11px;color:#555}"
-    + ".prow .ti{flex:1}.prow .vt{color:#666;font-size:11px}"
-    + ".shortChip{font-size:10px;font-weight:800;color:#c0392b;border:1px solid #c0392b;border-radius:99px;padding:1px 6px;margin-left:6px;white-space:nowrap}");
+    + ".prow .ti{flex:1}.prow .vt{color:#666;font-size:11px}.prow input{width:14px;height:14px}"
+    + ".shortChip{font-size:10px;font-weight:800;color:#c0392b;border:1px solid #c0392b;border-radius:99px;padding:1px 6px;margin-left:6px;white-space:nowrap}"
+    + ".hiChip{font-size:10px;font-weight:800;border:1.5px solid #111;border-radius:99px;padding:1px 6px;margin-left:6px}"
+    + ".aoChip{font-size:10px;font-weight:800;border:1px solid #555;border-radius:99px;padding:1px 6px;margin-left:6px}"
+    + ".prowSub{padding:0 0 6px 48px;border-bottom:1px dashed #ccc}.embCard{border:1.5px dashed #999;border-radius:8px;padding:6px 8px;font-size:12px}"
+    + ".embHat{display:flex;gap:8px;align-items:center;margin-bottom:4px}.embBig{width:26px;height:26px;border:1px solid #333;border-radius:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}"
+    + ".embText{font-weight:800;font-size:14px}.embColor{font-size:11px;color:#444}.embN{font-size:10px;color:#666}"
+    + ".embGrid{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px}.embGrid b{display:block;font-size:9px;text-transform:uppercase;color:#666}"
+    + ".svcBox{border:1px solid #999;border-radius:6px;padding:5px 8px;margin:6px 0;font-size:11.5px}");
 };
 
 /* ================= PACK TAB ================= */
@@ -1055,21 +1448,31 @@ $("packSelAll").onchange = ()=>{
   renderPack();
 };
 
+/* wms27: Pack shows either regular orders or orders tagged "Custom" */
+const packSource = ()=> packMode==="custom" ? toPackCustom : toPack;
+function setPackMode(m){
+  if(m===packMode) return;
+  packMode = m; cycleSel = new Set();
+  document.querySelectorAll("#packModeBar button").forEach(b=>b.classList.toggle("on", b.dataset.mode===m));
+  renderPack();
+}
 function packSorted(){
   const q = $("packSearch").value.trim().toLowerCase();
   const match = (o)=> (!q || hayOf(o).includes(q)) && tagsPass(o, packTagFilters);
-  const unv = toPack.filter(o=> sessionsByOrder[o.orderId]?.status!=="verified" && match(o))
+  const src = packSource();
+  const unv = src.filter(o=> sessionsByOrder[o.orderId]?.status!=="verified" && match(o))
     .sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt));   // oldest first, pack in order
-  const ver = toPack.filter(o=> sessionsByOrder[o.orderId]?.status==="verified" && match(o))
+  const ver = src.filter(o=> sessionsByOrder[o.orderId]?.status==="verified" && match(o))
     .sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
   return { unv, ver };
 }
 function packCard(o, greyed){
-  const units = o.items.filter(x=>x.requiresShipping).reduce((a,b)=>a+b.qty,0);
+  const units = hatUnits(o,"qty");
   const s = sessionsByOrder[o.orderId];
   let badge = "";
-  if(s?.status==="verified") badge='<span class="badge verified">✓ VERIFIED</span>';
+  if(s?.status==="verified") badge='<span class="badge verified">✓ '+(o.isCustom?"PACKED":"VERIFIED")+'</span>'+(s.by?' <span class="vt" style="font-size:11.5px;color:var(--dim)">by '+esc(s.by)+'</span>':"");
   else if(s?.status==="in_progress") badge='<span class="badge progress">IN PROGRESS</span>';
+  const flags = [...contentFlags(o)].filter(f=>f!=="magnets").map(f=>'<span class="chip flag">'+FLAG_LABELS[f]+'</span>').join("");
   const cb = greyed ? "" :
     '<input type="checkbox" '+(cycleSel.has(o.orderId)?"checked":"")+' onclick="event.stopPropagation()" onchange="toggleCycle(\''+o.orderId+'\')">';
   return '<div class="ocard clickable'+(greyed?" greyed":"")+'" onclick="openOrderById(\''+o.orderId+'\')">'
@@ -1077,52 +1480,62 @@ function packCard(o, greyed){
     + '<div class="onum">'+esc(o.number)+'</div>'
     + '<div class="oinfo"><div class="cust">'+esc(o.customer)+' '+starsHtml(o)+' '+badge+'</div>'
     + '<div class="meta">'+esc(o.destination||"")+' · '+fmtDate(o.createdAt)+' · placed '+fmtTime(o.createdAt)+'</div>'
-    + '<div class="chips">'+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
+    + '<div class="chips">'+flags+(o.tags||[]).map(t=>'<span class="chip">'+esc(t)+'</span>').join("")
     + noteChipsHtml(o)+(greyed?"":giftChipHtml(o))+'</div></div>'
+    + (!greyed && o.isCustom ? '<button class="custBtn" onclick="event.stopPropagation();markCustomPacked(\''+o.orderId+'\')" title="Mark this custom order packaged and shipped without scanning each hat">&#10003; Packed &amp; shipped</button>' : "")
     + (greyed?'<button class="unvBtn" onclick="event.stopPropagation();unverifyOrder(\''+o.orderId+'\')" title="Send back to the pack queue to be re-checked">&#8617; Un-verify</button>':"")
-    + '<div class="ocount"><b>'+units+'</b>items</div></div>';
+    + '<div class="ocount"><b>'+units+'</b>'+(o.isCustom?"hats":"items")+'</div></div>';
 }
 function renderPack(){
   const { unv, ver } = packSorted();
+  const unvOf = (list)=> list.filter(o=> sessionsByOrder[o.orderId]?.status!=="verified").length;
+  $("packModeN").textContent = unvOf(toPack) ? "("+unvOf(toPack)+")" : "";
+  $("packModeNC").textContent = unvOf(toPackCustom) ? "("+unvOf(toPackCustom)+")" : "";
   cycleSel = new Set([...cycleSel].filter(id=> unv.some(o=>o.orderId===id)));
   $("packSelAll").checked = unv.length>0 && unv.every(o=>cycleSel.has(o.orderId));
   $("cycleBtn").disabled = !cycleSel.size;
   $("cycleBtn").textContent = cycleSel.size ? "Start pack cycle ("+cycleSel.size+")" : "Start pack cycle";
   $("packPrintBtn").disabled = !cycleSel.size;
   $("packPrintBtn").textContent = cycleSel.size ? "\u{1F5A8} Send to print ("+cycleSel.size+")" : "\u{1F5A8} Send to print";
-  $("cycleCount").textContent = unv.length+" to pack · "+ver.length+" verified";
+  $("cycleCount").textContent = unv.length+" to pack · "+ver.length+(packMode==="custom"?" packed":" verified");
   let html = "";
-  if(!unv.length) html += '<div class="empty">Nothing waiting to pack — newly fulfilled orders appear here at the top. 🎉</div>';
+  if(!unv.length) html += '<div class="empty">'+(packMode==="custom"
+    ? "No fulfilled custom orders waiting — once a custom order is marked fulfilled in Shopify it shows up here to package and ship."
+    : "Nothing waiting to pack — newly fulfilled orders appear here at the top. 🎉")+'</div>';
   else html += unv.map(o=>packCard(o,false)).join("");
-  if(ver.length) html += '<div class="secLabel">VERIFIED / DONE</div>' + ver.map(o=>packCard(o,true)).join("");
+  if(ver.length) html += '<div class="secLabel">'+(packMode==="custom"?"PACKED &amp; SHIPPED":"VERIFIED / DONE")+'</div>' + ver.map(o=>packCard(o,true)).join("");
   $("packListEl").innerHTML = html;
 }
 function toggleCycle(id){ cycleSel.has(id)?cycleSel.delete(id):cycleSel.add(id); renderPack(); }
 function startCycle(){
   const { unv } = packSorted();
   cycle = unv.filter(o=>cycleSel.has(o.orderId)).map(o=>o.orderId);
+  cycleBatchId = newBatchId();
+  if(cycle.length) logActivity("pack_cycle_start", { batch: cycleBatchId, orders: unv.filter(o=>cycleSel.has(o.orderId)).map(o=>o.number) });
   if(cycle.length) openOrderById(cycle[0]);
 }
 function nextInCycle(){
   const next = cycle.find(id=> sessionsByOrder[id]?.status!=="verified" && (!cur || id!==cur.order.orderId));
   if(next){ openOrderById(next); return true; }
-  cycle = []; cycleSel = new Set();
+  cycle = []; cycleSel = new Set(); cycleBatchId = null;
   return false;
 }
 function openOrderById(id){
-  const i = toPack.findIndex(o=>o.orderId===id);
-  if(i>=0) openOrder(i);
+  const o = toPack.find(x=>x.orderId===id) || toPackCustom.find(x=>x.orderId===id);
+  if(o) openOrder(o);
 }
 
-async function openOrder(i){
-  const o = toPack[i];
+async function openOrder(o){
   const map = new Map();
   for(const it of o.items){
-    if(!it.requiresShipping) continue;
-    const key = it.barcode || ("line:"+it.lineId);
+    if(!it.requiresShipping || !isHat(it)) continue;   // wms27: add-ons ride on their hat; custom service lines aren't scanned
+    /* Same barcode but different add-ons (one hat with buttons, one without) = separate rows.
+       Plain hats keep the bare barcode as their key, so in-progress sessions carry over. */
+    const sig = (hasBtn(it)?"B":"")+(hasEmb(it)?"E:"+JSON.stringify(it.addons.embroidery):"");
+    const key = (it.barcode || ("line:"+it.lineId)) + (sig ? "|"+sig : "");
     if(!map.has(key)) map.set(key,{ key, barcode:it.barcode, title:it.title, variant:it.variantTitle,
       sku:it.sku, bin:binOf(it.sku), need:0, got:0, manual:!it.barcode, archived:it.productStatus==="ARCHIVED",
-      image:it.imageUrl||null,
+      image:it.imageUrl||null, addons:it.addons||null, buttonsInferred:!!it.buttonsInferred,
       embroideryColor:it.embroideryColor||null, embroideryText:it.embroideryText||null });
     map.get(key).need += it.qty;
   }
@@ -1135,12 +1548,12 @@ async function openOrder(i){
     session = existing;
     const prog = existing.items?.progress || {};
     items.forEach(it=>{ it.got = Math.min(prog[it.key]||0, it.need); });
+    if(cycleBatchId && !existing.batch_id) sb.from("pack_sessions").update({ batch_id:cycleBatchId }).eq("id",existing.id).then(()=>{});
   } else {
-    const { data:{ user } } = await sb.auth.getUser();
-    const { data: created, error } = await sb.from("pack_sessions").insert({
-      shopify_order_id:o.orderId, order_number:o.number, user_id:user?.id,
+    const { data: created, error } = await insertPackSession({
+      shopify_order_id:o.orderId, order_number:o.number, user_id:ME.id||null, batch_id:cycleBatchId||null,
       items:{ progress:{}, lines: items.map(({key,title,sku,need})=>({key,title,sku,need})) },
-    }).select().single();
+    });
     if(error){ alert("Could not start session: "+error.message); return; }
     session = created;
   }
@@ -1149,8 +1562,11 @@ async function openOrder(i){
   $("packSession").classList.remove("hidden");
   const pos = cycle.length ? " · cycle "+(cycle.indexOf(o.orderId)+1)+"/"+cycle.length : "";
   $("scanTitle").textContent = "ORDER "+o.number+" · "+o.customer+pos+" — SCAN ITEMS";
-  if(o.note){ $("pNote").textContent="Order note: "+o.note; $("pNote").classList.remove("hidden"); }
+  const noteBits = [];
+  if(o.note) noteBits.push("Order note: "+o.note);
+  if(noteBits.length){ $("pNote").textContent=noteBits.join(" · "); $("pNote").classList.remove("hidden"); }
   else $("pNote").classList.add("hidden");
+  $("pSvc").innerHTML = serviceLinesHtml(o);
   setMsg("scanMsg","","");
   renderItems();
   focusScan();
@@ -1169,8 +1585,9 @@ function renderItems(){
     return '<div class="irow'+(done?" done":"")+'" id="row'+idx+'">'
       + '<div class="iqty">'+it.got+'<small>/'+it.need+'</small></div>'
       + (it.image?'<img class="ithumb" src="'+esc(it.image)+'" alt="" loading="lazy">':"")
-      + '<div class="ititle"><div class="t">'+esc(it.title)+embSwatchHtml(it)+'</div>'
+      + '<div class="ititle"><div class="t">'+esc(it.title)+addonBadgesHtml(it)+'</div>'
       + (it.variant?'<div class="v">'+esc(it.variant)+'</div>':"")
+      + (hasEmb(it) && !done ? embSpecHtml(it) : "")
       + '<div class="s">'+esc(it.sku||"no SKU")+(it.archived?' · <span style="color:var(--warn)">archived</span>':"")+'</div></div>'
       + (it.bin!=="OTHER"?'<div class="bin">'+esc(it.bin)+'</div>':"")
       + (!done?'<button class="manualBtn" title="Mark 1 checked without scanning" onclick="manualConfirm('+idx+')">✓ Check 1</button>':"")
@@ -1276,6 +1693,7 @@ $("cancelBtn").onclick = async ()=>{
   if(!cur) return;
   if(!confirm("Cancel this pack session? Progress will be discarded.")) return;
   await sb.from("pack_sessions").update({status:"cancelled"}).eq("id",cur.session.id);
+  logActivity("pack_cancelled", {}, { order_number:cur.order.number });
   exitPack();
 };
 /* wms20: queue the order you're ACTIVELY packing straight to the print queue —
@@ -1323,18 +1741,18 @@ $("checkAllBtn").onclick = async ()=>{
    you want to re-check). The verified session is cancelled so the order
    returns to the pack queue with fresh progress. */
 async function unverifyOrder(orderId){
-  const o = toPack.find(x=>x.orderId===orderId);
+  const o = findOrder(orderId);
   if(!confirm("Un-verify order "+(o?o.number:orderId)+"? It moves back into the pack queue to be checked again.")) return;
   const { error } = await sb.from("pack_sessions").update({ status:"cancelled" })
     .eq("shopify_order_id", orderId).eq("status","verified");
   if(error){ alert("Could not un-verify: "+error.message); return; }
+  logActivity("order_unverified", {}, { order_number:o?o.number:null });
   loadQueue();
 }
 
 async function logScan(barcode,it,result){
-  const { data:{ user } } = await sb.auth.getUser();
   await sb.from("pack_scans").insert({ session_id:cur.session.id, barcode,
-    matched_variant_id:null, matched_sku:it?.sku||null, result, user_id:user?.id });
+    matched_variant_id:null, matched_sku:it?.sku||null, result, user_id:ME.id||null });
 }
 async function saveProgress(){
   const progress={};
@@ -1345,8 +1763,9 @@ async function saveProgress(){
 }
 async function checkComplete(){
   if(!cur.items.every(it=>it.got>=it.need)) return;
-  await sb.from("pack_sessions").update({status:"verified",verified_at:new Date().toISOString()}).eq("id",cur.session.id);
-  sessionsByOrder[cur.order.orderId] = {shopify_order_id:cur.order.orderId, status:"verified"};
+  await sb.from("pack_sessions").update({status:"verified",verified_at:new Date().toISOString(), user_id:ME.id||cur.session.user_id||null}).eq("id",cur.session.id);
+  sessionsByOrder[cur.order.orderId] = {shopify_order_id:cur.order.orderId, status:"verified", user_id:ME.id, by:ME.name};
+  logActivity("order_verified", { bulk:!!cur.bulk, items:cur.items.reduce((a,b)=>a+b.need,0) }, { order_number:cur.order.number, batch_id:cur.session.batch_id||cycleBatchId||null });
   sndDone();
   $("doneTitle").textContent="Order "+cur.order.number+(cur.bulk?" checked (no scans)":" verified");
   const remaining = cycle.filter(id=> sessionsByOrder[id]?.status!=="verified").length;
@@ -1508,10 +1927,12 @@ function orderPrintItems(o){
   // pack-scan session, correctly uses it.qty for these). toPick orders still
   // use the remaining unfulfilledQty so already-shipped partial lines aren't
   // re-queued.
-  const fulfilledCtx = !toPick.some(x=>x.orderId===o.orderId) && toPack.some(x=>x.orderId===o.orderId);
+  const fulfilledCtx = !toPick.some(x=>x.orderId===o.orderId) && !toPickCustom.some(x=>x.orderId===o.orderId)
+    && (toPack.some(x=>x.orderId===o.orderId) || toPackCustom.some(x=>x.orderId===o.orderId));
   const map = new Map();
   for(const it of (o.items||[])){
     if(it.requiresShipping===false) continue;
+    if(it.isAddon || it.isService) continue;   // wms27: add-ons / custom service lines never get a barcode label
     const qty = fulfilledCtx ? (it.qty ?? 1) : (it.unfulfilledQty ?? it.qty ?? 1);
     if(qty<=0) continue;
     const key = it.variantId || it.barcode || it.sku || it.title;
@@ -1537,7 +1958,7 @@ function renderPrintOrderMatch(o){
   $("printCatalog").innerHTML = html || '<div class="empty">No shippable items on this order.</div>';
 }
 async function pqQueueOrder(orderId){
-  const o = toPick.find(x=>x.orderId===orderId) || toPack.find(x=>x.orderId===orderId);
+  const o = findOrder(orderId);
   if(!o) return;
   const rows = orderPrintItems(o).filter(r=>r.barcode);
   if(!rows.length) return;
@@ -1549,7 +1970,7 @@ async function pqQueueOrder(orderId){
   loadPrintQueue();
 }
 async function pqQueueOrderItem(orderId, idx){
-  const o = toPick.find(x=>x.orderId===orderId) || toPack.find(x=>x.orderId===orderId);
+  const o = findOrder(orderId);
   if(!o) return;
   const r = orderPrintItems(o)[idx];
   if(!r || !r.barcode) return;
@@ -1588,12 +2009,13 @@ async function pqQueueOrdersBulk(orderIds, sourceList){
   await loadPrintQueue();
   switchTab("print");
   const totalLabels = rows.reduce((s,r)=>s+r.qty,0);
+  logActivity("labels_queued", { labels:totalLabels, orders:orders.map(o=>o.number) });
   let msg = "Queued "+totalLabels+" label"+(totalLabels===1?"":"s")+" from "+orders.length+" order"+(orders.length===1?"":"s")+" for print.";
   if(skippedLines) msg += " ("+skippedLines+" line item(s) skipped — no barcode on file"+(skippedOrders?", "+skippedOrders+" order(s) had none printable":"")+".)";
   alert(msg);
 }
-$("pickPrintBtn").onclick = ()=> pqQueueOrdersBulk([...selected], toPick);
-$("packPrintBtn").onclick = ()=> pqQueueOrdersBulk([...cycleSel], toPack);
+$("pickPrintBtn").onclick = ()=> pqQueueOrdersBulk([...selected], pickSource());
+$("packPrintBtn").onclick = ()=> pqQueueOrdersBulk([...cycleSel], packSource());
 
 /* Splits the pending queue into per-order groups (source "order <num>",
    e.g. from Pick/Pack send-to-print) — kept in queued sequence, NOT
@@ -1925,6 +2347,7 @@ $("csPushBtn").onclick = async ()=>{
     $("csPushMsg").textContent = "✓ "+data.set+" quantities updated in Shopify"
       + ((data.failed||[]).length? " · "+data.failed.length+" failed":"");
     $("csPushMsg").style.color = "var(--ok)";
+    logActivity("count_pushed", { bin:countBin||null, set:data.set, failed:(data.failed||[]).length });
     catalog = null;  // refresh cached quantities next time
   }catch(e){
     $("csPushMsg").textContent = "✖ "+(e.message||e);

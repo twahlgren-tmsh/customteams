@@ -453,6 +453,12 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 .ptime{ border:1.5px solid var(--line); background:var(--card); border-radius:99px; font-size:10.5px; font-weight:700; color:var(--soft); padding:4px 9px; cursor:pointer; margin-left:6px; flex:none; font-family:inherit; }
 .ptime:hover{ border-color:var(--dark); color:var(--dark); }
 /* bottom sheet (move-to · add-time) */
+.tvday{ display:flex; justify-content:space-between; margin:12px 0 4px; padding-bottom:3px; border-bottom:2px solid var(--line); font-size:13px; font-weight:700; }
+.tvrow{ display:flex; gap:10px; align-items:center; padding:6px 2px; border-bottom:1px dashed var(--line); font-size:13px; }
+.tvt{ color:var(--soft); font-size:12px; white-space:nowrap; }
+.tvk{ font-size:10.5px; color:var(--soft); border:1px solid var(--line); border-radius:99px; padding:1px 6px; margin-left:4px; }
+.tvchip{ font-size:12px; border:1px solid var(--line); border-radius:99px; padding:3px 10px; background:var(--card); }
+#timewrap select, #timewrap input{ border:1.5px solid var(--line); border-radius:9px; padding:8px 10px; font-size:13px; font-family:inherit; background:var(--card); }
 .sheetwrap{ position:fixed; inset:0; background:rgba(20,40,44,.45); z-index:400; display:flex; align-items:flex-end; justify-content:center; }
 .sheet{ background:var(--card); border-radius:20px 20px 0 0; width:min(560px,100vw); max-height:82vh; overflow:auto; padding:18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow:0 -12px 40px rgba(0,0,0,.25); }
 .sheet h3{ font-size:15px; font-weight:700; margin-bottom:4px; }
@@ -524,9 +530,9 @@ nav a.navlink:hover{ background:var(--tmsoft); }
  <div style="background:#fff;border-radius:20px;padding:30px 26px;max-width:360px;width:100%;text-align:center">
   <div style="background:linear-gradient(135deg,#045863,#00acb2);border-radius:16px;padding:20px 18px;margin:0 0 16px"><img src="/White%20Logo.png" alt="Taylor Made Scrub Hats" style="width:100%;height:auto;display:block"></div>
   <h1 style="font-size:19px;font-weight:700;margin:4px 0 2px;color:#045863">StitchLab</h1>
-  <p style="color:#6f8c8f;font-size:13px;margin-bottom:16px">Sign in with your team account</p>
-  <input id="liEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:8px">
-  <input id="liPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:12px">
+  <p style="color:#6f8c8f;font-size:13px;margin-bottom:16px">Sign in with your username and PIN</p>
+  <input id="liEmail" type="text" placeholder="Username" autocomplete="username" autocapitalize="off" spellcheck="false" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:8px">
+  <input id="liPass" type="password" placeholder="4-digit PIN" inputmode="numeric" autocomplete="current-password" style="width:100%;box-sizing:border-box;border:1.5px solid #E8E5DE;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:12px">
   <button id="liBtn" style="width:100%;background:#045863;color:#fff;border:0;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer">Sign in</button>
   <div id="liErr" style="color:#C2452D;font-size:12px;margin-top:8px;min-height:14px"></div>
  </div>
@@ -558,6 +564,7 @@ nav a.navlink:hover{ background:var(--tmsoft); }
   <button data-v="fabric"><span class="nico">🪡</span>Fabric</button>
   <button data-v="cut"><span class="nico">✂️</span>Cut</button>
   <button data-v="fin"><span class="nico">💲</span>Finance</button>
+  <button data-v="time"><span class="nico">⏱</span>Time</button>
 </nav>
 
 <section id="view-board" class="on">
@@ -588,6 +595,9 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <section id="view-cut">
   <div id="cutwrap"></div>
 </section>
+<section id="view-time">
+  <div id="timewrap"></div>
+</section>
 <section id="view-fin">
   <div class="card" id="finstats"></div>
   <div class="card" id="fintable"></div>
@@ -595,14 +605,14 @@ nav a.navlink:hover{ background:var(--tmsoft); }
 <div id="rdwrap"><div class="rd" id="rd"></div></div>
 <div id="cowrap"><div id="cod"></div></div>
 <div id="nrwrap" style="display:none;position:fixed;inset:0;background:rgba(35,33,28,.45);z-index:210;overflow:auto;padding:3vh 3vw"><div class="rd" id="nr" style="max-width:880px"></div></div>
-<div class="foot">Right-click a block (or tap its ⋯) to split it, describe it, or move it. Turn on Edit schedule to drag a block onto a teammate or a day, or above/below another task to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-10-01 · web40 (Customer groups: repeat customers are linked, with a lead-only box for priorities, feedback and preferred combos, plus link / merge / split.)</span></div>
+<div class="foot">Right-click a block (or tap its ⋯) to split it, describe it, or move it. Turn on Edit schedule to drag a block onto a teammate or a day, or above/below another task to set the order — the schedule re-flows around your change. Use the voice button (or type) for things like "Drea is out Saturday." Blocks are sized by how long each step should take.<br><span style="opacity:.6">Build 2026-10-14 · web41 (Individual logins: username + PIN, own-name timers, Time history.)</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><!-- web21: pinned — the floating @2 tag started shipping a build whose auth.getUser() hangs, which blanked the whole tool -->
 <script>
 const SUPABASE_URL='https://mvspfxwiuipswvjwvlsv.supabase.co';
 const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3BmeHdpdWlwc3d2and2bHN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjQwODUsImV4cCI6MjA5NjIwMDA4NX0.E4EH90lNuWSoARXXQ2jVJF280aaPjyUFrZha7HbPKJc';
 /* web23: no cross-tab Web Lock — a single hung StitchLab tab used to hold `lock:sb-…-auth-token` forever and every other tab booted blank waiting on it */
-const BUILD="2026-10-01-web40";
+const BUILD="2026-10-14-web41";
 function sbStoredSession(){ try{ return JSON.parse(localStorage.getItem("sb-"+SUPABASE_URL.replace(/^https?:\/\//,"").split(".")[0]+"-auth-token")||"null"); }catch(e){ return null; } } /* web24 */
 /* web25: two clients. `sbAuthClient` owns sign-in + background token refresh (persists to localStorage).
    `sb` (data + realtime) reads the stored token directly via `accessToken`, so a data call never waits on the
@@ -1216,19 +1226,23 @@ function blockMeta(b){
  if(b.fold) return {order_num:null, run_no:b.run!=null?b.run:null, step:null, seg:null, task:b.label||"Fold & inspect", kind:"sew"};
  return {order_num:null, run_no:b.run!=null?b.run:null, step:b.step!=null?b.step:null, seg:b.seg||null, task:(b.sub?tokName(b.sub):nameOf(b.step,b.seg))||"", kind:teKindOf(b.step)};
 }
+let TE_HAS_UID=false;   // web41: true once the time_entries.user_id column exists
 async function loadTimeEntries(){ if(typeof sb==="undefined") return; try{
  const {data,error}=await sb.from("time_entries").select("*").order("started_at",{ascending:true});
  if(error||!Array.isArray(data)) return;
+ if(data.length) TE_HAS_UID = Object.prototype.hasOwnProperty.call(data[0],"user_id");
+ else { try{ const r=await sb.from("time_entries").select("user_id").limit(1); TE_HAS_UID=!r.error; }catch(e){} }
  TE_ALL=data; TE_OPEN={};
  data.forEach(e=>{ if(!e.ended_at) TE_OPEN[e.person]=e; });
 }catch(e){} }
 async function teStart(person, meta){ if(typeof sb==="undefined") return;
+ if(!canTime(person)){ boardToast("You can only run your own timer — use ⏱ Time to time this task under your name"); return; }
  _teSelf=Date.now();
  try{
   const now=new Date().toISOString();
   const open=TE_OPEN[person];
   if(open) await sb.from("time_entries").update({ended_at:now, paused:false}).eq("id",open.id); // one timer per person — starting a new task auto-stops the old
-  const {error}=await sb.from("time_entries").insert({person, run_no:meta.run_no, order_num:meta.order_num, step:meta.step, seg:meta.seg, task:meta.task||"", kind:meta.kind||"sew", started_at:now, paused:false, created_by:window._uid||null});
+  const {error}=await sb.from("time_entries").insert({person, run_no:meta.run_no, order_num:meta.order_num, step:meta.step, seg:meta.seg, task:meta.task||"", kind:meta.kind||"sew", started_at:now, paused:false, created_by:window._uid||null, ...(TE_HAS_UID?{user_id:window._uid||null}:{})});
   if(error){ boardToast("Timer didn't start — "+error.message); return; }
   await loadTimeEntries(); render();
   boardToast("▶ Timing "+person.split(" ")[0]+" — "+(meta.task||"task"));
@@ -1236,6 +1250,7 @@ async function teStart(person, meta){ if(typeof sb==="undefined") return;
 }
 async function teStop(person, paused){ if(typeof sb==="undefined") return;
  const open=TE_OPEN[person]; if(!open) return;
+ if(!canTime(person)){ boardToast("Only "+person+" (or a lead) can stop this timer"); return; }
  _teSelf=Date.now();
  try{
   const mins=teMin(open);
@@ -1275,6 +1290,10 @@ function tmrHtml(person,b){
  const open=TE_OPEN[person];
  const runningHere=open && teSameTask(open,meta);
  const tot=teTaskMin(person,meta);
+ if(!canTime(person)){ /* web41: someone else's block — show their time, no buttons */
+  if(runningHere) return `<div class="tmrbar"><span class="tmrlive"><span class="tmrdot"></span><span data-tel="${person.replace(/"/g,"&quot;")}">${fmtMin(tot)}</span></span></div>`;
+  return tot>=1?`<div class="tmrbar"><span class="tmrtot">${fmtMin(tot)} tracked</span></div>`:"";
+ }
  const pq=person.replace(/"/g,"&quot;");
  if(runningHere){
   return `<div class="tmrbar"><span class="tmrlive"><span class="tmrdot"></span><span data-tel="${pq}">${fmtMin(tot)}</span></span>`+
@@ -1321,11 +1340,108 @@ function openTimeSheet(person){
   const meta=(i>=0&&opts[i]) ? Object.assign({},opts[i].m,{kind}) : {order_num:null,run_no:null,step:null,seg:null,task:(w.querySelector("#ts-other").value||"other").trim(),kind};
   const end=new Date(); const start=new Date(end-mins*60000);
   _teSelf=Date.now();
-  try{ const {error}=await sb.from("time_entries").insert({person, run_no:meta.run_no, order_num:meta.order_num, step:meta.step, seg:meta.seg, task:meta.task||"", kind:meta.kind||"sew", started_at:start.toISOString(), ended_at:end.toISOString(), paused:false, created_by:window._uid||null});
+  if(!canTime(person)){ boardToast("You can only add time under your own name"); return; }
+  try{ const {error}=await sb.from("time_entries").insert({person, run_no:meta.run_no, order_num:meta.order_num, step:meta.step, seg:meta.seg, task:meta.task||"", kind:meta.kind||"sew", started_at:start.toISOString(), ended_at:end.toISOString(), paused:false, created_by:window._uid||null, ...(TE_HAS_UID?{user_id:window._uid||null}:{})});
    if(error){ boardToast("Couldn't save — "+error.message); return; }
    closeSheet(); await loadTimeEntries(); render(); boardToast("＋ "+fmtMin(mins)+" added for "+person.split(" ")[0]);
   }catch(e){ boardToast("Couldn't save the time"); }
  };
+}
+/* ============ web41: individual logins — own-name timers + Time history (Clockify-style) ============
+   Each login has a "person" (its name on the board, set by a lead in ShipShape → Team). A Team login
+   starts/pauses/finishes timers only under its own name — any open task, even one assigned to someone
+   else, so two people working the same task each log their own time. Leads can run or fix anyone's.
+   The Time view lists every entry by day; Team logins see only their own, leads see everyone. */
+let ME_PERSON=null, ME_NAME="";
+function canTime(person){ return isLead || !ME_PERSON || person===ME_PERSON; }
+function teTaskOptions(person){
+ const seen={}, opts=[];
+ const add=(m,label)=>{ const k=JSON.stringify([m.order_num,m.run_no,m.step,m.seg,m.task,m.kind]); if(seen[k]) return; seen[k]=1; opts.push({m,label}); };
+ const blocks=(LAST&&LAST.sched)? LAST.sched.blocks.filter(b=>!b.done) : [];
+ // this person's own blocks first, then everyone else's open work
+ blocks.filter(b=>b.person===person).concat(blocks.filter(b=>b.person!==person)).forEach(b=>{ const m=blockMeta(b); const r=(!b.custom&&b.run!=null)?runBy(b.run):null; add(m,(m.task||"task")+(r?" · "+r.name:"")+(b.person&&b.person!==person?"  ("+b.person+"'s)":"")); });
+ (typeof CUSTOM!=="undefined"?CUSTOM:[]).filter(o=>!shipped(o)).forEach(o=>{ ["sew","emb"].forEach(kind=>{ if(kind==="emb"&&!(o.e||o.emb)) return; add({order_num:String(o.num||o.id), run_no:null, step:null, seg:null, task:(kind==="emb"?"Embroidery — ":"Sewing — ")+o.name, kind}, (kind==="emb"?"Embroidery — ":"Sewing — ")+o.name); }); });
+ return opts;
+}
+let TV={range:"week", person:"", from:"", to:""};
+function tvRange(){
+ const d0=new Date(); d0.setHours(0,0,0,0); const day=864e5;
+ const mon=new Date(+d0-((d0.getDay()+6)%7)*day);
+ if(TV.range==="today") return [d0, new Date(+d0+day)];
+ if(TV.range==="week") return [mon, new Date(+mon+7*day)];
+ if(TV.range==="lastweek") return [new Date(+mon-7*day), mon];
+ if(TV.range==="30") return [new Date(+d0-29*day), new Date(+d0+day)];
+ if(TV.range==="custom" && TV.from){ const a=new Date(TV.from+"T00:00:00"), b=TV.to?new Date(TV.to+"T00:00:00"):new Date(+d0); return [a,new Date(+b+day)]; }
+ return [mon, new Date(+mon+7*day)];
+}
+function renderTime(){
+ const w=document.getElementById("timewrap"); if(!w) return;
+ const people=Object.keys(TEAM);
+ const me=ME_PERSON || (isLead?"Taylor":null);
+ const runFor=isLead ? (TV.runAs||me||people[0]) : me;
+ const open=runFor?TE_OPEN[runFor]:null;
+ const opts=runFor?teTaskOptions(runFor):[];
+ let html=`<div class="card"><h3 style="font-size:15px;margin-bottom:6px">⏱ ${runFor?(runFor===ME_PERSON?"My timer":"Timer — "+esc(runFor)):"Timer"}</h3>`;
+ if(!runFor){ html+=`<div class="shsub">This login isn't linked to a name on the board yet. Ask Taylor to set "Times as" for you in ShipShape → Team.</div></div>`; }
+ else {
+  if(isLead) html+=`<div style="margin-bottom:8px"><label class="shl" style="display:inline;margin-right:6px">Timing for</label><select id="tv-runas">${people.map(p=>`<option${p===runFor?" selected":""}>${esc(p)}</option>`).join("")}</select></div>`;
+  if(open){
+   html+=`<div class="tmrbar" style="margin:6px 0"><span class="tmrlive"><span class="tmrdot"></span><span data-tel="${esc(runFor)}">${fmtMin(teTaskMin(runFor,open))}</span></span>
+    <span style="font-weight:700;margin:0 8px">${esc(open.task||"task")}</span>
+    <button class="tmrbtn" data-tpause="${esc(runFor)}">⏸ Pause</button><button class="tmrbtn stop" data-tstop="${esc(runFor)}">✓ Done</button></div>`;
+  }
+  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><select id="tv-task" style="flex:1;min-width:220px">${opts.map((o,i)=>`<option value="${i}">${esc(o.label)}</option>`).join("")}<option value="-1">Something else…</option></select>
+   <input id="tv-other" placeholder="What are you working on?" style="display:none;flex:1;min-width:200px">
+   <button class="btn go" id="tv-start">▶ ${open?"Switch to this":"Start"}</button>
+   <button class="btn" id="tv-add">＋ Add missed time</button></div>
+   <div class="shsub" style="margin-top:6px">Working the same task as someone else? Start it here — each person's time is logged under their own name.</div></div>`;
+ }
+ // history
+ const [a,b]=tvRange();
+ let rows=TE_ALL.filter(e=>{ const t=new Date(e.started_at); return t>=a && t<b; });
+ const who = isLead ? TV.person : (ME_PERSON||"");
+ if(who) rows=rows.filter(e=>e.person===who);
+ else if(!isLead) rows=rows.filter(e=>e.created_by===window._uid || e.user_id===window._uid);
+ rows.sort((x,y)=>new Date(y.started_at)-new Date(x.started_at));
+ const tot=rows.reduce((s,e)=>s+teMin(e),0);
+ html+=`<div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+  <h3 style="font-size:15px;margin-right:auto">Time history</h3>
+  ${isLead?`<select id="tv-person"><option value="">Everyone</option>${people.map(p=>`<option${p===TV.person?" selected":""}>${esc(p)}</option>`).join("")}</select>`:""}
+  <select id="tv-range">${[["today","Today"],["week","This week"],["lastweek","Last week"],["30","Last 30 days"],["custom","Custom…"]].map(([v,l])=>`<option value="${v}"${TV.range===v?" selected":""}>${l}</option>`).join("")}</select>
+  ${TV.range==="custom"?`<input type="date" id="tv-from" value="${TV.from}"><input type="date" id="tv-to" value="${TV.to}">`:""}
+  <span style="font-weight:800;font-size:15px">${fmtMin(tot)}</span></div>`;
+ if(!rows.length) html+=`<div class="shsub">No time logged in this range.</div>`;
+ else {
+  // per-person + per-task totals
+  const byP={}, byT={}; rows.forEach(e=>{ const m=teMin(e); byP[e.person]=(byP[e.person]||0)+m; const k=e.task||"(no task)"; byT[k]=(byT[k]||0)+m; });
+  if(isLead && !who) html+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${Object.entries(byP).sort((x,y)=>y[1]-x[1]).map(([p,m])=>`<span class="tvchip"><b>${esc(p)}</b> ${fmtMin(m)}</span>`).join("")}</div>`;
+  html+=`<details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--soft)">Totals by task</summary>${Object.entries(byT).sort((x,y)=>y[1]-x[1]).map(([t,m])=>`<div class="tvrow"><span style="flex:1">${esc(t)}</span><b>${fmtMin(m)}</b></div>`).join("")}</details>`;
+  const byDay={}; rows.forEach(e=>{ const d=new Date(e.started_at); const k=d.toDateString(); (byDay[k]=byDay[k]||[]).push(e); });
+  Object.entries(byDay).forEach(([d,list])=>{
+   const dm=list.reduce((s,e)=>s+teMin(e),0);
+   html+=`<div class="tvday"><span>${new Date(d).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"})}</span><b>${fmtMin(dm)}</b></div>`;
+   html+=list.map(e=>{ const s=new Date(e.started_at), en=e.ended_at?new Date(e.ended_at):null;
+    const t=x=>x.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+    return `<div class="tvrow"><span style="min-width:${isLead&&!who?84:0}px;font-weight:700">${isLead&&!who?esc(e.person):""}</span>
+     <span style="flex:1">${esc(e.task||"(no task)")}${e.kind==="emb"?' <span class="tvk">embroidery</span>':""}${e.paused?' <span class="tvk">paused</span>':""}</span>
+     <span class="tvt">${t(s)} – ${en?t(en):'<b style="color:#0E9888">running</b>'}</span><b style="min-width:52px;text-align:right">${fmtMin(teMin(e))}</b>
+     ${isLead?`<button class="tmrbtn" data-tvedit="${e.id}" title="Fix minutes">✎</button><button class="tmrbtn" data-tvdel="${e.id}" title="Delete">✕</button>`:""}</div>`; }).join("");
+  });
+ }
+ html+=`</div>`;
+ w.innerHTML=html;
+ const g=id=>document.getElementById(id);
+ if(g("tv-runas")) g("tv-runas").onchange=e=>{ TV.runAs=e.target.value; renderTime(); };
+ if(g("tv-task")) g("tv-task").onchange=e=>{ g("tv-other").style.display = +e.target.value<0?"":"none"; };
+ if(g("tv-start")) g("tv-start").onclick=()=>{ const i=+g("tv-task").value; const meta = i>=0&&opts[i] ? opts[i].m : {order_num:null,run_no:null,step:null,seg:null,task:(g("tv-other").value||"").trim()||"Other",kind:"sew"}; teStart(runFor, meta).then(renderTime); };
+ if(g("tv-add")) g("tv-add").onclick=()=>openTimeSheet(runFor);
+ if(g("tv-person")) g("tv-person").onchange=e=>{ TV.person=e.target.value; renderTime(); };
+ if(g("tv-range")) g("tv-range").onchange=e=>{ TV.range=e.target.value; renderTime(); };
+ if(g("tv-from")) g("tv-from").onchange=e=>{ TV.from=e.target.value; renderTime(); };
+ if(g("tv-to")) g("tv-to").onchange=e=>{ TV.to=e.target.value; renderTime(); };
+ w.querySelectorAll("[data-tvdel]").forEach(el=>el.onclick=async()=>{ if(!confirm("Delete this time entry?")) return; _teSelf=Date.now(); const {error}=await sb.from("time_entries").delete().eq("id",el.dataset.tvdel); if(error){ boardToast("Couldn't delete — "+error.message); return; } await loadTimeEntries(); renderTime(); });
+ w.querySelectorAll("[data-tvedit]").forEach(el=>el.onclick=async()=>{ const e=TE_ALL.find(x=>String(x.id)===el.dataset.tvedit); if(!e) return; const v=prompt("Minutes for this entry:", Math.round(teMin(e))); const m=Math.round(+v); if(!m||m<1) return; const end=new Date(+new Date(e.started_at)+m*60000).toISOString(); _teSelf=Date.now(); const {error}=await sb.from("time_entries").update({ended_at:end}).eq("id",e.id); if(error){ boardToast("Couldn't save — "+error.message); return; } await loadTimeEntries(); renderTime(); });
+ wireTimers();
 }
 /* ============ web37: split a task into weighted parts, and describe each part ============
    A split is stored as OVR.splits[base] = [w1,w2,...] (percentages). Each part becomes its
@@ -4912,6 +5028,7 @@ document.querySelectorAll("nav button").forEach(t=>t.onclick=()=>{
  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===t));
  document.querySelectorAll("section").forEach(s=>s.classList.remove("on"));
  document.getElementById("view-"+t.dataset.v).classList.add("on");
+ if(t.dataset.v==="time") renderTime();
  if(t.dataset.v==="tracker"){ trkOpen.clear(); document.querySelectorAll('#view-tracker details[data-trk]').forEach(d=>d.open=false); try{ const first=RUNS.slice().sort((a,b)=>b.no-a.no).find(r=>!r.done); if(first){ trkOpen.add(first.no); const d=document.querySelector('#view-tracker details[data-trk="'+first.no+'"]'); if(d) d.open=true; } }catch(e){} } /* web21: newest active run opens by default */
 });
 /* web6: deep links from the order app (/scheduler.html#runs etc.) */
@@ -4941,7 +5058,12 @@ function startApp(){ if(APP_STARTED) return; APP_STARTED=true;
    let role=null;
    try{ const r=await withTO(fetch(SUPABASE_URL+"/rest/v1/profiles?select=role&id=eq."+encodeURIComponent(uid),{headers:{apikey:SUPABASE_ANON,Authorization:"Bearer "+((tok&&tok.access_token)||SUPABASE_ANON)}}),8000); const j=await r.json(); if(Array.isArray(j)&&j[0]) role=j[0].role; }catch(e){}
    if(role===null){ try{ const {data:prof}=await withTO(sb.from("profiles").select("role").eq("id",uid).maybeSingle(),8000); role=prof&&prof.role; }catch(e){} }
-   isLead = role===null ? true : role==="lead"; }catch(e){ isLead=true; }
+   isLead = role===null ? true : role==="lead";
+   /* web41: which board name this login times as */
+   try{ const r2=await withTO(fetch(SUPABASE_URL+"/rest/v1/profiles?select=person,display_name,username&id=eq."+encodeURIComponent(uid),{headers:{apikey:SUPABASE_ANON,Authorization:"Bearer "+((tok&&tok.access_token)||SUPABASE_ANON)}}),8000); const j2=await r2.json();
+     if(Array.isArray(j2)&&j2[0]){ ME_PERSON=j2[0].person||null; ME_NAME=j2[0].display_name||j2[0].username||""; } }catch(e){}
+   try{ const so=document.getElementById("soBtn"); if(so&&(ME_NAME||ME_PERSON)) so.textContent="Sign out · "+(ME_NAME||ME_PERSON); }catch(e){}
+   }catch(e){ isLead=true; }
   await bootCloud(); await loadOrders(); await loadTimeEntries(); await loadBIS(); /* web9 tracker · web15 back-in-stock */
   try{ if(isLead) sb.channel("groups-live").on("postgres_changes",{event:"*",schema:"public",table:"customer_groups"},()=>{ if(Date.now()-_grpSelf<2500) return; loadGroups().then(()=>{ try{ if(!document.activeElement||!document.activeElement.classList.contains("grpf")) renderCustom(); }catch(e){} }); }).subscribe(); }catch(e){} /* web40 */
   try{ sb.channel("orders-live").on("postgres_changes",{event:"*",schema:"public",table:"orders"},()=>{ if(Date.now()-_selfWrite<2500) return; loadOrders(); }).subscribe(); }catch(e){}
@@ -4966,7 +5088,13 @@ if(typeof sb!=="undefined"){
   clearTimeout(slow);
   if(session){ ACCESS_TOKEN=session.access_token; startApp(); } else if(!APP_STARTED){ if(lg) lg.style.display="flex"; if(le) le.textContent=""; }
  })();
- var _li=document.getElementById("liBtn"); if(_li) _li.onclick=async()=>{ document.getElementById("liErr").textContent=""; const {error}=await sb.auth.signInWithPassword({email:document.getElementById("liEmail").value.trim(),password:document.getElementById("liPass").value}); if(error) document.getElementById("liErr").textContent=error.message; };
+ var _li=document.getElementById("liBtn"); if(_li) _li.onclick=async()=>{ const le=document.getElementById("liErr"); le.textContent="";
+  /* web41: username + 4-digit PIN (same scheme as ShipShape), or email + password as before */
+  let who=document.getElementById("liEmail").value.trim(), pw=document.getElementById("liPass").value.trim();
+  if(!who||!pw){ le.textContent="Enter your username and PIN."; return; }
+  if(!who.includes("@")){ if(!/^\d{4}$/.test(pw)){ le.textContent="Your PIN is 4 numbers."; return; } who=who.toLowerCase()+"@staff.taylormadescrubhats.com"; pw="tmsh-pin-"+pw; }
+  const {error}=await sb.auth.signInWithPassword({email:who,password:pw});
+  if(error) le.textContent = /invalid/i.test(error.message) ? "That username and PIN don't match." : (/banned/i.test(error.message)?"This login is turned off — ask Taylor.":error.message); };
  var _lp=document.getElementById("liPass"); if(_lp) _lp.addEventListener("keydown",e=>{ if(e.key==="Enter") document.getElementById("liBtn").click(); });
  var _so=document.getElementById("soBtn"); if(_so) _so.onclick=async()=>{ try{ await sb.auth.signOut(); }catch(e){} location.reload(); };
  var _up=document.getElementById("updpill"); if(_up) _up.onclick=()=>location.reload();
